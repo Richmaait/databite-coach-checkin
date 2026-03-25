@@ -2,9 +2,16 @@ import { Request, Response, Express } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db";
-import { users } from "../../drizzle/schema";
+import { users, coaches } from "../../drizzle/schema";
 import { ENV } from "../env";
 import { ADMIN_EMAILS } from "../../shared/const";
+
+/** Coaches that should be auto-created and linked on login */
+const COACH_EMAILS: Record<string, string> = {
+  "steve@databite.com.au": "Steve",
+  "luke@databite.com.au": "Luke",
+  "kyah@databite.com.au": "Kyah",
+};
 
 const JWT_SECRET = new TextEncoder().encode(ENV.cookieSecret || "dev-secret-change-me");
 const COOKIE_NAME = "session";
@@ -112,10 +119,12 @@ export async function registerAuthRoutes(app: Express) {
 
     if (!user) {
       // Create new user
-      const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
+      const emailLc = email.toLowerCase();
+      const isAdmin = ADMIN_EMAILS.includes(emailLc);
+      const knownName = isAdmin ? "Rich" : COACH_EMAILS[emailLc] || null;
       const [result] = await db.insert(users).values({
         email,
-        name: email.split("@")[0],
+        name: knownName || email.split("@")[0],
         role: isAdmin ? "admin" : "coach",
       });
       [user] = await db
@@ -129,6 +138,41 @@ export async function registerAuthRoutes(app: Express) {
     if (ADMIN_EMAILS.includes(email.toLowerCase()) && user.role !== "admin") {
       await db.update(users).set({ role: "admin" }).where(eq(users.id, user.id));
       user = { ...user, role: "admin" };
+    }
+
+    // Auto-create and link coach profile for known coach emails
+    const emailLower = email.toLowerCase();
+    if (COACH_EMAILS[emailLower]) {
+      // Ensure user role is "coach"
+      if (user.role !== "coach") {
+        await db.update(users).set({ role: "coach" }).where(eq(users.id, user.id));
+        user = { ...user, role: "coach" };
+      }
+
+      // Check if a coach record already exists for this email
+      const [existingCoach] = await db
+        .select()
+        .from(coaches)
+        .where(eq(coaches.email, emailLower))
+        .limit(1);
+
+      if (existingCoach) {
+        // Link coach to this user if not already linked
+        if (!existingCoach.userId) {
+          await db
+            .update(coaches)
+            .set({ userId: user.id })
+            .where(eq(coaches.id, existingCoach.id));
+        }
+      } else {
+        // Auto-create coach record linked to this user
+        await db.insert(coaches).values({
+          name: COACH_EMAILS[emailLower],
+          email: emailLower,
+          userId: user.id,
+          isActive: 1,
+        });
+      }
     }
 
     const token = await createToken(user.id);

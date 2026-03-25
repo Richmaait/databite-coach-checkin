@@ -388,11 +388,16 @@ async function toggleClientSubmitted(params) {
 var UNAUTHED_ERR_MSG = "UNAUTHORIZED";
 var CLIENT_CHECKINS_EPOCH = "2026-03-02";
 var ADMIN_EMAILS = [
-  "suzie@databite.com.au"
+  "rich@databite.com.au"
 ];
 var DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 
 // server/_core/auth.ts
+var COACH_EMAILS = {
+  "steve@databite.com.au": "Steve",
+  "luke@databite.com.au": "Luke",
+  "kyah@databite.com.au": "Kyah"
+};
 var JWT_SECRET = new TextEncoder().encode(ENV.cookieSecret || "dev-secret-change-me");
 var COOKIE_NAME = "session";
 var COOKIE_MAX_AGE = 30 * 24 * 60 * 60;
@@ -456,10 +461,12 @@ async function registerAuthRoutes(app) {
     }
     let [user] = await db2.select().from(users).where(eq2(users.email, email)).limit(1);
     if (!user) {
-      const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
+      const emailLc = email.toLowerCase();
+      const isAdmin = ADMIN_EMAILS.includes(emailLc);
+      const knownName = isAdmin ? "Rich" : COACH_EMAILS[emailLc] || null;
       const [result] = await db2.insert(users).values({
         email,
-        name: email.split("@")[0],
+        name: knownName || email.split("@")[0],
         role: isAdmin ? "admin" : "coach"
       });
       [user] = await db2.select().from(users).where(eq2(users.id, result.insertId)).limit(1);
@@ -467,6 +474,26 @@ async function registerAuthRoutes(app) {
     if (ADMIN_EMAILS.includes(email.toLowerCase()) && user.role !== "admin") {
       await db2.update(users).set({ role: "admin" }).where(eq2(users.id, user.id));
       user = { ...user, role: "admin" };
+    }
+    const emailLower = email.toLowerCase();
+    if (COACH_EMAILS[emailLower]) {
+      if (user.role !== "coach") {
+        await db2.update(users).set({ role: "coach" }).where(eq2(users.id, user.id));
+        user = { ...user, role: "coach" };
+      }
+      const [existingCoach] = await db2.select().from(coaches).where(eq2(coaches.email, emailLower)).limit(1);
+      if (existingCoach) {
+        if (!existingCoach.userId) {
+          await db2.update(coaches).set({ userId: user.id }).where(eq2(coaches.id, existingCoach.id));
+        }
+      } else {
+        await db2.insert(coaches).values({
+          name: COACH_EMAILS[emailLower],
+          email: emailLower,
+          userId: user.id,
+          isActive: 1
+        });
+      }
     }
     const token = await createToken(user.id);
     res.cookie(COOKIE_NAME, token, {

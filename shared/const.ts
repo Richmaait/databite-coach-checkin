@@ -3,7 +3,7 @@ export const UNAUTHED_ERR_MSG = "UNAUTHORIZED";
 export const CLIENT_CHECKINS_EPOCH = "2026-03-02";
 
 export const ADMIN_EMAILS = [
-  "suzie@databite.com.au",
+  "rich@databite.com.au",
 ];
 
 export const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"] as const;

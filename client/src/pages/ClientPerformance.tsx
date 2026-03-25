@@ -434,11 +434,11 @@ export default function ClientPerformance() {
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-semibold text-zinc-200">Business Wide</span>
-                <span className={`text-2xl font-bold ${kpiData.business.greenPct >= kpiData.target ? "text-emerald-400" : "text-amber-400"}`}>
-                  {kpiData.business.greenPct.toFixed(1)}%
+                <span className={`text-2xl font-bold ${kpiData.business?.greenPct >= kpiData.target ? "text-emerald-400" : "text-amber-400"}`}>
+                  {kpiData.business?.greenPct.toFixed(1)}%
                 </span>
               </div>
-              <KpiBar pct={kpiData.business.greenPct} target={kpiData.target} />
+              <KpiBar pct={kpiData.business?.greenPct} target={kpiData.target} />
               <div className="flex gap-4 mt-3 text-xs text-zinc-400">
                 <span className="flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
@@ -452,7 +452,7 @@ export default function ClientPerformance() {
                   <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
                   {kpiData.business.red} Off Track
                 </span>
-                <span className="text-zinc-500 ml-auto">{kpiData.business.total} rated</span>
+                <span className="text-zinc-500 ml-auto">{kpiData.business?.total} rated</span>
               </div>
             </div>
 

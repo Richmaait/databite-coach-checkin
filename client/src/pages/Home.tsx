@@ -17,8 +17,8 @@ function ClientPerformanceKpiCard({ onClick }: { onClick: () => void }) {
     { staleTime: 60 * 1000 }
   );
 
-  const greenPct = kpiData?.business.greenPct ?? 0;
-  const total = kpiData?.business.total ?? 0;
+  const greenPct = kpiData?.business?.greenPct ?? 0;
+  const total = kpiData?.business?.total ?? 0;
   const target = kpiData?.target ?? 70;
   const met = greenPct >= target;
 

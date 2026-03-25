@@ -238,6 +238,10 @@ export async function registerAuthRoutes(app: Express) {
       });
 
       if (!tokenRes.ok) {
+        const errBody = await tokenRes.text();
+        console.error("[Google OAuth] Token exchange failed:", tokenRes.status, errBody);
+        console.error("[Google OAuth] redirect_uri used:", redirectUri);
+        console.error("[Google OAuth] client_id used:", ENV.googleClientId);
         return res.redirect("/login?error=google_token_failed");
       }
 

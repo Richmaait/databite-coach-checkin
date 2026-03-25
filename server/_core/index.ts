@@ -45,7 +45,7 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   // Auth routes (login, logout, me)
-  registerAuthRoutes(app);
+  await registerAuthRoutes(app);
 
   // Weekly Summary PDF export
   registerWeeklySummaryPdfRoute(app);
@@ -63,7 +63,7 @@ async function startServer() {
   if (process.env.NODE_ENV === "development") {
     await setupVite(app);
   } else {
-    serveStatic(app);
+    await serveStatic(app);
   }
 
   const preferredPort = parseInt(process.env.PORT || "3000");

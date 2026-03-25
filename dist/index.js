@@ -2565,8 +2565,10 @@ async function createContext(opts) {
 
 // server/_core/vite.ts
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
-var __dirname = path.dirname(fileURLToPath(import.meta.url));
+var __filename = fileURLToPath(import.meta.url);
+var __dirname = path.dirname(__filename);
 async function setupVite(app) {
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createServer2 } = await import("vite");
@@ -2580,10 +2582,36 @@ async function setupVite(app) {
 }
 async function serveStatic(app) {
   const { default: express2 } = await import("express");
-  const distPath = path.resolve(__dirname, "../../dist/public");
+  const candidates = [
+    path.resolve(__dirname, "public"),
+    // dist/public (relative to bundle)
+    path.resolve(process.cwd(), "dist/public"),
+    // dist/public (relative to cwd)
+    path.resolve(process.cwd(), "public")
+    // public (if cwd is dist/)
+  ];
+  let distPath = candidates[0];
+  for (const candidate of candidates) {
+    if (fs.existsSync(path.join(candidate, "index.html"))) {
+      distPath = candidate;
+      break;
+    }
+  }
+  console.log(`[Static] __dirname: ${__dirname}`);
+  console.log(`[Static] process.cwd(): ${process.cwd()}`);
+  console.log(`[Static] Serving files from: ${distPath}`);
+  console.log(`[Static] index.html exists: ${fs.existsSync(path.join(distPath, "index.html"))}`);
   app.use(express2.static(distPath));
-  app.get("*", (_req, res) => {
-    res.sendFile(path.join(distPath, "index.html"));
+  app.get("*", (req, res) => {
+    if (req.path.startsWith("/api/")) {
+      return res.status(404).json({ error: "Not found" });
+    }
+    const indexPath = path.join(distPath, "index.html");
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(500).send("index.html not found at " + indexPath);
+    }
   });
 }
 
@@ -3767,7 +3795,7 @@ async function startServer() {
   registerTypeformWebhook(app);
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  registerAuthRoutes(app);
+  await registerAuthRoutes(app);
   registerWeeklySummaryPdfRoute(app);
   app.use(
     "/api/trpc",
@@ -3779,7 +3807,7 @@ async function startServer() {
   if (process.env.NODE_ENV === "development") {
     await setupVite(app);
   } else {
-    serveStatic(app);
+    await serveStatic(app);
   }
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);

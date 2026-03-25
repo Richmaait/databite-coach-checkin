@@ -25,7 +25,10 @@ export async function setupVite(app: Express) {
  */
 export async function serveStatic(app: Express) {
   const { default: express } = await import("express");
-  const distPath = path.resolve(__dirname, "../../dist/public");
+
+  // In production, dist/index.js runs from the dist/ folder.
+  // Static files are at dist/public/ — which is ./public relative to the bundle.
+  const distPath = path.resolve(process.cwd(), "dist/public");
 
   app.use(express.static(distPath));
 

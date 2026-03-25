@@ -14,11 +14,13 @@ import CoachPerformanceReport from "./pages/CoachPerformanceReport";
 import ClientProgress from "./pages/ClientProgress";
 import WeeklySummary from "./pages/WeeklySummary";
 import SweepReport from "./pages/SweepReport";
+import Login from "./pages/Login";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/login" component={Login} />
       <Route path="/coach" component={CoachPortal} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/team" component={TeamManagement} />

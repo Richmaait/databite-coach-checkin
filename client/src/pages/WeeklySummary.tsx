@@ -197,11 +197,11 @@ export default function WeeklySummary() {
               />
               <StatCard
                 label="Disengaged Clients"
-                value={`${data.disengagedThisWeek.length}`}
+                value={`${(data.disengagedThisWeek ?? []).length}`}
                 sub={data.disengagedTrend !== null && data.disengagedTrend !== undefined
                   ? `${data.disengagedTrend < 0 ? Math.abs(data.disengagedTrend) + " fewer" : data.disengagedTrend > 0 ? data.disengagedTrend + " more" : "same"} than last week`
                   : "missed this week"}
-                accent={data.disengagedThisWeek.length === 0 ? "#10b981" : "#f59e0b"}
+                accent={(data.disengagedThisWeek ?? []).length === 0 ? "#10b981" : "#f59e0b"}
                 trend={data.disengagedTrend}
                 trendPositiveIsGood={false}
               />
@@ -212,7 +212,7 @@ export default function WeeklySummary() {
             <Section title="Coach Activity" subtitle="Daily submissions and outreach messages sent this week.">
               <DarkTable
                 headers={["Coach", "Morning Reviews", "Follow-Up Days", "Follow-Up Msgs", "Disengagement Msgs"]}
-                rows={data.coachActivity.map(c => [
+                rows={(data.coachActivity ?? []).map(c => [
                   <span style={{ fontWeight: 600, color: "#f1f5f9" }}>{c.coachName}</span>,
                   <span>
                     <span style={{ fontWeight: 700, color: c.morningDays >= (c as any).workdayCount ? "#10b981" : c.morningDays >= Math.ceil((c as any).workdayCount / 2) ? "#f59e0b" : "#ef4444" }}>
@@ -233,7 +233,7 @@ export default function WeeklySummary() {
               <DarkTable
                 headers={["Coach", "Scheduled", "Completed", "Missed", "Engagement %"]}
                 rows={[
-                  ...data.engagementStats.filter(e => e.scheduled > 0).map(e => [
+                  ...(data.engagementStats ?? []).filter(e => e.scheduled > 0).map(e => [
                     <span style={{ fontWeight: 600, color: "#f1f5f9" }}>{e.coachName}</span>,
                     e.scheduled,
                     <span style={{ fontWeight: 600, color: "#10b981" }}>{e.completed}</span>,
@@ -243,7 +243,7 @@ export default function WeeklySummary() {
                     </span>,
                   ]),
                   // Totals row
-                  ...(data.engagementStats.filter(e => e.scheduled > 0).length > 0 ? [[
+                  ...((data.engagementStats ?? []).filter(e => e.scheduled > 0).length > 0 ? [[
                     <span style={{ fontWeight: 700, color: "#94a3b8" }}>Total</span>,
                     <span style={{ fontWeight: 700 }}>{data.totalScheduled}</span>,
                     <span style={{ fontWeight: 700, color: "#10b981" }}>{data.totalCompleted}</span>,
@@ -268,20 +268,21 @@ export default function WeeklySummary() {
                     <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "13px" }}>Disengaged Clients This Week</div>
                     <div style={{ color: "#64748b", fontSize: "11px", marginTop: "2px" }}>! = consecutive misses · grouped by coach</div>
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: "18px", color: data.disengagedThisWeek.length === 0 ? "#10b981" : "#f59e0b" }}>
-                    {data.disengagedThisWeek.length}
+                  <div style={{ fontWeight: 700, fontSize: "18px", color: (data.disengagedThisWeek ?? []).length === 0 ? "#10b981" : "#f59e0b" }}>
+                    {(data.disengagedThisWeek ?? []).length}
                   </div>
                 </div>
                 <div style={{ padding: "12px 16px" }}>
-                  {data.disengagedThisWeek.length === 0 ? (
+                  {(data.disengagedThisWeek ?? []).length === 0 ? (
                     <div style={{ textAlign: "center", color: "#475569", fontSize: "13px", padding: "16px 0" }}>
                       No disengaged clients this week ✓
                     </div>
                   ) : (() => {
                     // Group by coachName, preserving order of first appearance
                     const coachOrder: string[] = [];
-                    const byCoach: Record<string, typeof data.disengagedThisWeek> = {};
-                    for (const c of data.disengagedThisWeek) {
+                    const disengagedList = data.disengagedThisWeek ?? [];
+                    const byCoach: Record<string, typeof disengagedList> = {};
+                    for (const c of disengagedList) {
                       if (!byCoach[c.coachName]) { coachOrder.push(c.coachName); byCoach[c.coachName] = []; }
                       byCoach[c.coachName].push(c);
                     }
@@ -354,41 +355,41 @@ export default function WeeklySummary() {
                   <div style={{ color: "#64748b", fontSize: "11px", marginTop: "2px" }}>Current traffic light ratings</div>
                 </div>
                 <div style={{ padding: "16px" }}>
-                  {data.clientHealth.total === 0 ? (
+                  {(data.clientHealth?.total ?? 0) === 0 ? (
                     <div style={{ textAlign: "center", color: "#475569", fontSize: "13px", padding: "16px 0" }}>
                       No ratings recorded yet.
                     </div>
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                       <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-                        <span style={{ fontSize: "36px", fontWeight: 700, color: data.clientHealth.greenPct >= 70 ? "#10b981" : data.clientHealth.greenPct >= 50 ? "#f59e0b" : "#ef4444" }}>
-                          {data.clientHealth.greenPct}%
+                        <span style={{ fontSize: "36px", fontWeight: 700, color: (data.clientHealth?.greenPct ?? 0) >= 70 ? "#10b981" : (data.clientHealth?.greenPct ?? 0) >= 50 ? "#f59e0b" : "#ef4444" }}>
+                          {data.clientHealth?.greenPct ?? 0}%
                         </span>
                         <span style={{ fontSize: "13px", color: "#64748b" }}>clients on track</span>
                       </div>
                       <div style={{ height: "10px", borderRadius: "999px", background: "#1e293b", overflow: "hidden", display: "flex" }}>
-                        <div style={{ background: "#10b981", width: `${data.clientHealth.greenPct}%` }} />
-                        <div style={{ background: "#f59e0b", width: `${data.clientHealth.total > 0 ? Math.round(data.clientHealth.yellow / data.clientHealth.total * 100) : 0}%` }} />
-                        <div style={{ background: "#ef4444", width: `${data.clientHealth.total > 0 ? Math.round(data.clientHealth.red / data.clientHealth.total * 100) : 0}%` }} />
+                        <div style={{ background: "#10b981", width: `${data.clientHealth?.greenPct ?? 0}%` }} />
+                        <div style={{ background: "#f59e0b", width: `${(data.clientHealth?.total ?? 0) > 0 ? Math.round((data.clientHealth?.yellow ?? 0) / (data.clientHealth?.total ?? 1) * 100) : 0}%` }} />
+                        <div style={{ background: "#ef4444", width: `${(data.clientHealth?.total ?? 0) > 0 ? Math.round((data.clientHealth?.red ?? 0) / (data.clientHealth?.total ?? 1) * 100) : 0}%` }} />
                       </div>
                       <div style={{ display: "flex", gap: "20px", fontSize: "12px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                           <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#10b981" }} />
-                          <span style={{ fontWeight: 600, color: "#e2e8f0" }}>{data.clientHealth.green}</span>
+                          <span style={{ fontWeight: 600, color: "#e2e8f0" }}>{data.clientHealth?.green ?? 0}</span>
                           <span style={{ color: "#64748b" }}>On track</span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                           <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#f59e0b" }} />
-                          <span style={{ fontWeight: 600, color: "#e2e8f0" }}>{data.clientHealth.yellow}</span>
+                          <span style={{ fontWeight: 600, color: "#e2e8f0" }}>{data.clientHealth?.yellow ?? 0}</span>
                           <span style={{ color: "#64748b" }}>At risk</span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                           <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#ef4444" }} />
-                          <span style={{ fontWeight: 600, color: "#e2e8f0" }}>{data.clientHealth.red}</span>
+                          <span style={{ fontWeight: 600, color: "#e2e8f0" }}>{data.clientHealth?.red ?? 0}</span>
                           <span style={{ color: "#64748b" }}>Needs attention</span>
                         </div>
                       </div>
-                      <div style={{ fontSize: "11px", color: "#475569" }}>{data.clientHealth.total} clients rated in total.</div>
+                      <div style={{ fontSize: "11px", color: "#475569" }}>{data.clientHealth?.total ?? 0} clients rated in total.</div>
                     </div>
                   )}
                 </div>

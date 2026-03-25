@@ -36,7 +36,9 @@ var ENV = {
   slackBotToken: process.env.SLACK_BOT_TOKEN ?? "",
   googleSheetsApiKey: process.env.GOOGLE_SHEETS_API_KEY ?? "",
   managerSlackId: process.env.MANAGER_SLACK_ID ?? "",
-  port: parseInt(process.env.PORT ?? "3000", 10)
+  port: parseInt(process.env.PORT ?? "3000", 10),
+  googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? ""
 };
 
 // drizzle/schema.ts
@@ -398,6 +400,10 @@ var COACH_EMAILS = {
   "luke@databite.com.au": "Luke",
   "kyah@databite.com.au": "Kyah"
 };
+var ALLOWED_EMAILS = [
+  ...ADMIN_EMAILS,
+  ...Object.keys(COACH_EMAILS)
+];
 var JWT_SECRET = new TextEncoder().encode(ENV.cookieSecret || "dev-secret-change-me");
 var COOKIE_NAME = "session";
 var COOKIE_MAX_AGE = 30 * 24 * 60 * 60;
@@ -509,6 +515,108 @@ async function registerAuthRoutes(app) {
       email: user.email,
       role: user.role
     });
+  });
+  app.get("/api/auth/google", (_req, res) => {
+    const redirectUri = `${ENV.appUrl}/api/auth/google/callback`;
+    const params = new URLSearchParams({
+      client_id: ENV.googleClientId,
+      redirect_uri: redirectUri,
+      response_type: "code",
+      scope: "openid email profile",
+      access_type: "offline",
+      prompt: "select_account"
+    });
+    res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  });
+  app.get("/api/auth/google/callback", async (req, res) => {
+    const { code, error: oauthError } = req.query;
+    if (oauthError || !code || typeof code !== "string") {
+      return res.redirect("/login?error=google_denied");
+    }
+    try {
+      const redirectUri = `${ENV.appUrl}/api/auth/google/callback`;
+      const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          code,
+          client_id: ENV.googleClientId,
+          client_secret: ENV.googleClientSecret,
+          redirect_uri: redirectUri,
+          grant_type: "authorization_code"
+        }).toString()
+      });
+      if (!tokenRes.ok) {
+        return res.redirect("/login?error=google_token_failed");
+      }
+      const tokenData = await tokenRes.json();
+      if (!tokenData.access_token) {
+        return res.redirect("/login?error=google_token_failed");
+      }
+      const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` }
+      });
+      if (!userInfoRes.ok) {
+        return res.redirect("/login?error=google_userinfo_failed");
+      }
+      const userInfo = await userInfoRes.json();
+      const email = userInfo.email?.toLowerCase();
+      if (!email) {
+        return res.redirect("/login?error=no_email");
+      }
+      if (!ALLOWED_EMAILS.includes(email)) {
+        return res.redirect("/login?error=not_approved");
+      }
+      const db2 = await getDb();
+      if (!db2) {
+        return res.redirect("/login?error=db_unavailable");
+      }
+      let [user] = await db2.select().from(users).where(eq2(users.email, email)).limit(1);
+      if (!user) {
+        const isAdmin = ADMIN_EMAILS.includes(email);
+        const knownName = isAdmin ? "Rich" : COACH_EMAILS[email] || null;
+        const [result] = await db2.insert(users).values({
+          email,
+          name: knownName || userInfo.name || email.split("@")[0],
+          role: isAdmin ? "admin" : "coach"
+        });
+        [user] = await db2.select().from(users).where(eq2(users.id, result.insertId)).limit(1);
+      }
+      if (ADMIN_EMAILS.includes(email) && user.role !== "admin") {
+        await db2.update(users).set({ role: "admin" }).where(eq2(users.id, user.id));
+        user = { ...user, role: "admin" };
+      }
+      if (COACH_EMAILS[email]) {
+        if (user.role !== "coach") {
+          await db2.update(users).set({ role: "coach" }).where(eq2(users.id, user.id));
+          user = { ...user, role: "coach" };
+        }
+        const [existingCoach] = await db2.select().from(coaches).where(eq2(coaches.email, email)).limit(1);
+        if (existingCoach) {
+          if (!existingCoach.userId) {
+            await db2.update(coaches).set({ userId: user.id }).where(eq2(coaches.id, existingCoach.id));
+          }
+        } else {
+          await db2.insert(coaches).values({
+            name: COACH_EMAILS[email],
+            email,
+            userId: user.id,
+            isActive: 1
+          });
+        }
+      }
+      const token = await createToken(user.id);
+      res.cookie(COOKIE_NAME, token, {
+        httpOnly: true,
+        secure: ENV.isProduction,
+        sameSite: "lax",
+        maxAge: COOKIE_MAX_AGE * 1e3,
+        path: "/"
+      });
+      res.redirect("/");
+    } catch {
+      res.redirect("/login?error=google_failed");
+    }
   });
   app.post("/api/auth/logout", (_req, res) => {
     res.cookie(COOKIE_NAME, "", {

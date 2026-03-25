@@ -14,4 +14,6 @@ export const ENV = {
   googleSheetsApiKey: process.env.GOOGLE_SHEETS_API_KEY ?? "",
   managerSlackId: process.env.MANAGER_SLACK_ID ?? "",
   port: parseInt(process.env.PORT ?? "3000", 10),
+  googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
 };

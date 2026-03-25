@@ -136,7 +136,7 @@ export async function registerAuthRoutes(app: Express) {
     res.cookie(COOKIE_NAME, token, {
       httpOnly: true,
       secure: ENV.isProduction,
-      sameSite: ENV.isProduction ? "none" : "lax",
+      sameSite: "lax",
       maxAge: COOKIE_MAX_AGE * 1000,
       path: "/",
     });
@@ -154,7 +154,7 @@ export async function registerAuthRoutes(app: Express) {
     res.cookie(COOKIE_NAME, "", {
       httpOnly: true,
       secure: ENV.isProduction,
-      sameSite: ENV.isProduction ? "none" : "lax",
+      sameSite: "lax",
       maxAge: 0,
       path: "/",
     });

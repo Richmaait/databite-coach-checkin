@@ -472,7 +472,7 @@ async function registerAuthRoutes(app) {
     res.cookie(COOKIE_NAME, token, {
       httpOnly: true,
       secure: ENV.isProduction,
-      sameSite: ENV.isProduction ? "none" : "lax",
+      sameSite: "lax",
       maxAge: COOKIE_MAX_AGE * 1e3,
       path: "/"
     });
@@ -487,7 +487,7 @@ async function registerAuthRoutes(app) {
     res.cookie(COOKIE_NAME, "", {
       httpOnly: true,
       secure: ENV.isProduction,
-      sameSite: ENV.isProduction ? "none" : "lax",
+      sameSite: "lax",
       maxAge: 0,
       path: "/"
     });

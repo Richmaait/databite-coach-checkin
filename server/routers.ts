@@ -1649,6 +1649,112 @@ const clientCheckinsRouter = t.router({
     const results = await runTypeformBackfill();
     return results;
   }),
+
+  /** Get ALL client check-in rows for a given week (across all coaches). */
+  getWeekStatusAll: protectedProcedure
+    .input(z.object({ weekStart: z.string() }))
+    .query(async ({ input }) => {
+      const db = await requireDb();
+      const rows = await db
+        .select()
+        .from(clientCheckIns)
+        .where(eq(clientCheckIns.weekStart, input.weekStart));
+      return rows.map((r) => ({
+        id: r.id,
+        coachId: r.coachId,
+        coachName: r.coachName,
+        clientName: r.clientName,
+        dayOfWeek: r.dayOfWeek,
+        weekStart: r.weekStart,
+        completedAt: r.completedAt,
+        completedByUserId: r.completedByUserId,
+        clientSubmitted: r.clientSubmitted,
+        clientSubmittedAt: r.clientSubmittedAt,
+      }));
+    }),
+
+  /** Get the Google Sheets roster for a specific coach. */
+  getRosterByCoach: protectedProcedure
+    .input(z.object({ coachId: z.number(), weekStart: z.string().optional() }))
+    .query(async ({ input }) => {
+      const db = await requireDb();
+      const [coach] = await db
+        .select()
+        .from(coaches)
+        .where(eq(coaches.id, input.coachId))
+        .limit(1);
+      if (!coach) throw new TRPCError({ code: "NOT_FOUND", message: "Coach not found" });
+      const roster = await fetchRosterForCoach(coach.name);
+      return roster as Record<DayKey, string[]>;
+    }),
+
+  /** Get active pauses for a coach (placeholder — no paused column exists yet). */
+  getActivePauses: protectedProcedure
+    .input(z.object({ coachId: z.number() }))
+    .query(async () => {
+      // No dedicated paused column on client_check_ins yet — return empty array.
+      return [] as string[];
+    }),
+
+  /** Get excuses for a given week, optionally filtered by coach. */
+  getExcusesForWeek: protectedProcedure
+    .input(z.object({ weekStart: z.string(), coachId: z.number().optional() }))
+    .query(async ({ input }) => {
+      const db = await requireDb();
+      const conditions = [eq(excusedClients.weekStart, input.weekStart)];
+      if (input.coachId != null) {
+        conditions.push(eq(excusedClients.coachId, input.coachId));
+      }
+      const rows = await db
+        .select()
+        .from(excusedClients)
+        .where(and(...conditions));
+      return rows;
+    }),
+
+  /** Get clients with upcoming UPFRONT end dates (parsed from client names). */
+  getUpfrontAlertsAll: protectedProcedure.query(async () => {
+    const db = await requireDb();
+    const coachList = await db
+      .select({ id: coaches.id, name: coaches.name })
+      .from(coaches)
+      .where(eq(coaches.isActive, 1));
+
+    const alerts: Array<{
+      coachId: number;
+      coachName: string;
+      clientName: string;
+      dayOfWeek: string;
+      endDate: string;
+    }> = [];
+
+    // Match patterns like "UPFRONT 01/04/2026" or "UPFRONT 1/4/26" in client names
+    const upfrontRegex = /UPFRONT\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/i;
+
+    for (const coach of coachList) {
+      const roster = await fetchRosterForCoach(coach.name);
+      for (const day of DAYS) {
+        const clients = roster[day] ?? [];
+        for (const clientName of clients) {
+          const match = clientName.match(upfrontRegex);
+          if (match) {
+            const [, dd, mm, yyyy] = match;
+            const fullYear = yyyy.length === 2 ? `20${yyyy}` : yyyy;
+            const endDate = `${fullYear}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+            alerts.push({
+              coachId: coach.id,
+              coachName: coach.name,
+              clientName,
+              dayOfWeek: day,
+              endDate,
+            });
+          }
+        }
+      }
+    }
+
+    return alerts;
+  }),
 });
 
 // ─── Coaches Router ────────────────────────────────────────────────────────────

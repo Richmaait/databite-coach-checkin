@@ -1598,10 +1598,15 @@ var clientCheckinsRouter = t.router({
   getRosterWeeklyStats: protectedProcedure.input(
     z.object({
       coachId: z.number().optional(),
-      weekStart: z.string()
+      weekStart: z.string().optional(),
+      weekStarts: z.array(z.string()).optional(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional()
     })
   ).query(async ({ input }) => {
     const db2 = await requireDb();
+    const weekStart = input.weekStart || (input.weekStarts ? input.weekStarts[0] : void 0);
+    if (!weekStart) throw new TRPCError({ code: "BAD_REQUEST", message: "weekStart or weekStarts required" });
     let coachList;
     if (input.coachId) {
       const [coach] = await db2.select().from(coaches).where(eq4(coaches.id, input.coachId)).limit(1);
@@ -1617,14 +1622,24 @@ var clientCheckinsRouter = t.router({
         scheduled += (roster[day] ?? []).length;
       }
       const completions = await db2.select().from(clientCheckIns).where(
-        and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, input.weekStart))
+        and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, weekStart))
       );
-      const completed = completions.filter((c) => c.completedAt != null).length;
+      let completed = completions.filter((c) => c.completedAt != null).length;
       const clientSubmittedCount = completions.filter((c) => c.clientSubmitted === 1).length;
+      if (completed === 0) {
+        const [snapshot] = await db2.select().from(rosterWeeklySnapshots).where(
+          and2(eq4(rosterWeeklySnapshots.coachId, coach.id), eq4(rosterWeeklySnapshots.weekStart, weekStart))
+        ).limit(1);
+        if (snapshot?.snapshotJson) {
+          const snap = typeof snapshot.snapshotJson === "string" ? JSON.parse(snapshot.snapshotJson) : snapshot.snapshotJson;
+          completed = snap.completed ?? 0;
+          if (snap.scheduled) scheduled = snap.scheduled;
+        }
+      }
       const excuses = await db2.select().from(excusedClients).where(
         and2(
           eq4(excusedClients.coachId, coach.id),
-          eq4(excusedClients.weekStart, input.weekStart),
+          eq4(excusedClients.weekStart, weekStart),
           eq4(excusedClients.status, "approved")
         )
       );
@@ -1646,9 +1661,15 @@ var clientCheckinsRouter = t.router({
   /** Daily breakdown for activity report. */
   getRosterDailyStats: adminProcedure.input(
     z.object({
-      weekStart: z.string()
+      weekStart: z.string().optional(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional()
     })
   ).query(async ({ input }) => {
+    if (!input.weekStart && input.startDate) {
+      input.weekStart = input.startDate;
+    }
+    if (!input.weekStart) throw new TRPCError({ code: "BAD_REQUEST", message: "weekStart or startDate required" });
     const db2 = await requireDb();
     const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq4(coaches.isActive, 1));
     const results = [];
@@ -1911,15 +1932,16 @@ var clientCheckinsRouter = t.router({
   /** Excuse counts per coach for a week. */
   getExcuseCountsByCoach: adminProcedure.input(
     z.object({
-      weekStart: z.string()
-    })
+      weekStart: z.string().optional()
+    }).optional()
   ).query(async ({ input }) => {
     const db2 = await requireDb();
+    const weekStart = input?.weekStart ?? getTodayMelbourne().slice(0, 8) + "01";
     const rows = await db2.select({
       coachId: excusedClients.coachId,
       coachName: excusedClients.coachName,
       status: excusedClients.status
-    }).from(excusedClients).where(eq4(excusedClients.weekStart, input.weekStart));
+    }).from(excusedClients).where(eq4(excusedClients.weekStart, weekStart));
     const byCoach = /* @__PURE__ */ new Map();
     for (const r of rows) {
       if (!byCoach.has(r.coachId)) {
@@ -2176,6 +2198,74 @@ var clientCheckinsRouter = t.router({
   syncTypeform: protectedProcedure.mutation(async () => {
     const results = await runTypeformBackfill();
     return results;
+  }),
+  /** Get ALL client check-in rows for a given week (across all coaches). */
+  getWeekStatusAll: protectedProcedure.input(z.object({ weekStart: z.string() })).query(async ({ input }) => {
+    const db2 = await requireDb();
+    const rows = await db2.select().from(clientCheckIns).where(eq4(clientCheckIns.weekStart, input.weekStart));
+    return rows.map((r) => ({
+      id: r.id,
+      coachId: r.coachId,
+      coachName: r.coachName,
+      clientName: r.clientName,
+      dayOfWeek: r.dayOfWeek,
+      weekStart: r.weekStart,
+      completedAt: r.completedAt,
+      completedByUserId: r.completedByUserId,
+      clientSubmitted: r.clientSubmitted,
+      clientSubmittedAt: r.clientSubmittedAt
+    }));
+  }),
+  /** Get the Google Sheets roster for a specific coach. */
+  getRosterByCoach: protectedProcedure.input(z.object({ coachId: z.number(), weekStart: z.string().optional() })).query(async ({ input }) => {
+    const db2 = await requireDb();
+    const [coach] = await db2.select().from(coaches).where(eq4(coaches.id, input.coachId)).limit(1);
+    if (!coach) throw new TRPCError({ code: "NOT_FOUND", message: "Coach not found" });
+    const roster = await fetchRosterForCoach(coach.name);
+    return roster;
+  }),
+  /** Get active pauses for a coach (placeholder — no paused column exists yet). */
+  getActivePauses: protectedProcedure.input(z.object({ coachId: z.number() })).query(async () => {
+    return [];
+  }),
+  /** Get excuses for a given week, optionally filtered by coach. */
+  getExcusesForWeek: protectedProcedure.input(z.object({ weekStart: z.string(), coachId: z.number().optional() })).query(async ({ input }) => {
+    const db2 = await requireDb();
+    const conditions = [eq4(excusedClients.weekStart, input.weekStart)];
+    if (input.coachId != null) {
+      conditions.push(eq4(excusedClients.coachId, input.coachId));
+    }
+    const rows = await db2.select().from(excusedClients).where(and2(...conditions));
+    return rows;
+  }),
+  /** Get clients with upcoming UPFRONT end dates (parsed from client names). */
+  getUpfrontAlertsAll: protectedProcedure.query(async () => {
+    const db2 = await requireDb();
+    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq4(coaches.isActive, 1));
+    const alerts = [];
+    const upfrontRegex = /UPFRONT\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/i;
+    for (const coach of coachList) {
+      const roster = await fetchRosterForCoach(coach.name);
+      for (const day of DAYS) {
+        const clients = roster[day] ?? [];
+        for (const clientName of clients) {
+          const match = clientName.match(upfrontRegex);
+          if (match) {
+            const [, dd, mm, yyyy] = match;
+            const fullYear = yyyy.length === 2 ? `20${yyyy}` : yyyy;
+            const endDate = `${fullYear}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+            alerts.push({
+              coachId: coach.id,
+              coachName: coach.name,
+              clientName,
+              dayOfWeek: day,
+              endDate
+            });
+          }
+        }
+      }
+    }
+    return alerts;
   })
 });
 var coachesRouter = t.router({

@@ -537,6 +537,8 @@ const checkinsRouter = t.router({
         completedCount: number | null;
         followupCount: number | null;
         disengagementCount: number | null;
+        followupMessagesSent: number | null;
+        disengagementMessagesSent: number | null;
         submittedAt: Date | null;
       };
 
@@ -556,6 +558,8 @@ const checkinsRouter = t.router({
             completedCount: r.completedCount,
             followupCount: null,
             disengagementCount: null,
+            followupMessagesSent: null,
+            disengagementMessagesSent: null,
             submittedAt: r.morningSubmittedAt,
           });
         }
@@ -573,6 +577,8 @@ const checkinsRouter = t.router({
             completedCount: null,
             followupCount: r.followupCount,
             disengagementCount: null,
+            followupMessagesSent: r.followupCount,
+            disengagementMessagesSent: null,
             submittedAt: r.followupSubmittedAt,
           });
         }
@@ -590,6 +596,8 @@ const checkinsRouter = t.router({
             completedCount: null,
             followupCount: null,
             disengagementCount: r.disengagementCount,
+            followupMessagesSent: null,
+            disengagementMessagesSent: r.disengagementCount,
             submittedAt: r.disengagementSubmittedAt,
           });
         }
@@ -797,6 +805,7 @@ const clientCheckinsRouter = t.router({
         results.push({
           coachId: coach.id,
           coachName: coach.name,
+          weekStart,
           scheduled,
           completed,
           excused: excusedCount,

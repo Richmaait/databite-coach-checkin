@@ -245,12 +245,46 @@ export default function ClientCheckins() {
     Map<string, { reason: string }>
   >(new Map());
 
-  // Reset local state when coach or week changes
+  // Load existing completion data from the database
+  const { data: weekStatuses } = trpc.clientCheckins.getWeekStatusAll.useQuery(
+    { weekStart },
+    { enabled: !!weekStart, staleTime: 2 * 60 * 1000 },
+  );
+
+  // Load excuses for this week
+  const { data: weekExcuses } = trpc.clientCheckins.getExcusesForWeek.useQuery(
+    { weekStart, coachId: effectiveCoachId ?? undefined },
+    { enabled: !!weekStart },
+  );
+
+  // Populate local state from API data when it loads or coach/week changes
   useEffect(() => {
-    setLocalCompleted(new Set());
-    setLocalSubmitted(new Set());
-    setLocalExcused(new Map());
-  }, [effectiveCoachId, weekStart]);
+    const completed = new Set<string>();
+    const submitted = new Set<string>();
+    const excused = new Map<string, { reason: string }>();
+
+    if (weekStatuses) {
+      for (const s of weekStatuses) {
+        if (effectiveCoachId && s.coachId !== effectiveCoachId) continue;
+        const key = `${s.clientName}|${s.dayOfWeek}`;
+        if (s.completedAt) completed.add(key);
+        if (s.clientSubmitted) submitted.add(key);
+      }
+    }
+
+    if (weekExcuses) {
+      for (const e of weekExcuses) {
+        if (effectiveCoachId && e.coachId !== effectiveCoachId) continue;
+        if (e.status === "approved") {
+          excused.set(`${e.clientName}|${e.dayOfWeek}`, { reason: e.reason || "" });
+        }
+      }
+    }
+
+    setLocalCompleted(completed);
+    setLocalSubmitted(submitted);
+    setLocalExcused(excused);
+  }, [weekStatuses, weekExcuses, effectiveCoachId, weekStart]);
 
   // Missed streaks set for this coach
   const missedSet = useMemo(() => {

@@ -2005,7 +2005,35 @@ var clientCheckinsRouter = t.router({
       }
       weeklyData.push({ weekStart: week, coaches: coachEntries });
     }
-    return weeklyData;
+    const coachMap = /* @__PURE__ */ new Map();
+    for (const wd of weeklyData) {
+      for (const ce of wd.coaches) {
+        if (!coachMap.has(ce.coachId)) {
+          coachMap.set(ce.coachId, {
+            coachId: ce.coachId,
+            coachName: ce.coachName,
+            totalScheduled: 0,
+            totalCompleted: 0,
+            scheduledByWeek: {},
+            completedByWeek: {},
+            engagementByWeek: {},
+            scheduledByDay: {},
+            completedByDay: {}
+          });
+        }
+        const entry = coachMap.get(ce.coachId);
+        entry.totalScheduled += ce.scheduled;
+        entry.totalCompleted += ce.completed;
+        entry.scheduledByWeek[wd.weekStart] = ce.scheduled;
+        entry.completedByWeek[wd.weekStart] = ce.completed;
+        entry.engagementByWeek[wd.weekStart] = ce.pct;
+      }
+    }
+    return {
+      coaches: [...coachMap.values()],
+      weeks,
+      weeklyData
+    };
   }),
   /** Clients not yet completed today. */
   getTodayPendingClients: protectedProcedure.input(

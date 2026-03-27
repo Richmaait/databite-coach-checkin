@@ -1964,7 +1964,33 @@ var clientCheckinsRouter = t.router({
       }
       result.push({ day, date: dateStr, coaches: dayCoaches });
     }
-    return result;
+    const coachPivot = /* @__PURE__ */ new Map();
+    for (const dayEntry of result) {
+      for (const ce of dayEntry.coaches) {
+        if (!coachPivot.has(ce.coachId)) {
+          coachPivot.set(ce.coachId, {
+            coachId: ce.coachId,
+            coachName: ce.coachName,
+            totalScheduled: 0,
+            totalCompleted: 0,
+            scheduledByDay: {},
+            completedByDay: {},
+            scheduledByWeek: {},
+            completedByWeek: {},
+            engagementByWeek: {}
+          });
+        }
+        const entry = coachPivot.get(ce.coachId);
+        entry.totalScheduled += ce.scheduled;
+        entry.totalCompleted += ce.completed;
+        entry.scheduledByDay[dayEntry.day] = ce.scheduled;
+        entry.completedByDay[dayEntry.day] = ce.completed;
+      }
+    }
+    return {
+      coaches: [...coachPivot.values()],
+      days: result
+    };
   }),
   /** Excuse counts per coach for a week. */
   getExcuseCountsByCoach: adminProcedure.input(
@@ -2004,12 +2030,14 @@ var clientCheckinsRouter = t.router({
   getPerformanceReport: adminProcedure.input(
     z.object({
       days: z.number().optional(),
-      coachId: z.number().optional()
+      coachId: z.number().optional(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional()
     })
   ).query(async ({ input }) => {
     const db2 = await requireDb();
     const today = getTodayMelbourne();
-    const numDays = input.days ?? 28;
+    const numDays = input.days ?? (input.startDate && input.endDate ? Math.ceil((new Date(input.endDate).getTime() - new Date(input.startDate).getTime()) / 864e5) : 28);
     const startDate = addDays(today, -numDays);
     const startWeek = getMonday2(startDate);
     const endWeek = getMonday2(today);

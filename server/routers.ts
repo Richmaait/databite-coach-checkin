@@ -1289,7 +1289,46 @@ const clientCheckinsRouter = t.router({
         result.push({ day, date: dateStr, coaches: dayCoaches });
       }
 
-      return result;
+      // Pivot: frontend expects { coaches: [{ coachName, totalScheduled, totalCompleted, scheduledByDay, completedByDay }] }
+      const coachPivot = new Map<number, {
+        coachId: number;
+        coachName: string;
+        totalScheduled: number;
+        totalCompleted: number;
+        scheduledByDay: Record<string, number>;
+        completedByDay: Record<string, number>;
+        scheduledByWeek: Record<string, number>;
+        completedByWeek: Record<string, number>;
+        engagementByWeek: Record<string, number>;
+      }>();
+
+      for (const dayEntry of result) {
+        for (const ce of dayEntry.coaches) {
+          if (!coachPivot.has(ce.coachId)) {
+            coachPivot.set(ce.coachId, {
+              coachId: ce.coachId,
+              coachName: ce.coachName,
+              totalScheduled: 0,
+              totalCompleted: 0,
+              scheduledByDay: {},
+              completedByDay: {},
+              scheduledByWeek: {},
+              completedByWeek: {},
+              engagementByWeek: {},
+            });
+          }
+          const entry = coachPivot.get(ce.coachId)!;
+          entry.totalScheduled += ce.scheduled;
+          entry.totalCompleted += ce.completed;
+          entry.scheduledByDay[dayEntry.day] = ce.scheduled;
+          entry.completedByDay[dayEntry.day] = ce.completed;
+        }
+      }
+
+      return {
+        coaches: [...coachPivot.values()],
+        days: result,
+      };
     }),
 
   /** Excuse counts per coach for a week. */
@@ -1349,12 +1388,16 @@ const clientCheckinsRouter = t.router({
       z.object({
         days: z.number().optional(),
         coachId: z.number().optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
       }),
     )
     .query(async ({ input }) => {
       const db = await requireDb();
       const today = getTodayMelbourne();
-      const numDays = input.days ?? 28;
+      const numDays = input.days ?? (input.startDate && input.endDate
+        ? Math.ceil((new Date(input.endDate).getTime() - new Date(input.startDate).getTime()) / 86400000)
+        : 28);
       const startDate = addDays(today, -numDays);
       const startWeek = getMonday(startDate);
       const endWeek = getMonday(today);

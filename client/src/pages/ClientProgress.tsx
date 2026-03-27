@@ -623,6 +623,16 @@ export default function ClientProgress() {
   const [reportTitle, setReportTitle] = useState("");
   const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null); // null = all coaches
 
+  // Compute current Monday as YYYY-MM-DD for weekStart
+  const getCurrentWeekStart = () => {
+    const now = melbourneNow();
+    const day = now.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    const mon = new Date(now);
+    mon.setDate(mon.getDate() + diff);
+    return mon.toISOString().slice(0, 10);
+  };
+
   const openTitleDialog = () => {
     const now = melbourneNow();
     const dateLabel = now.toLocaleDateString("en-AU", {
@@ -749,45 +759,42 @@ export default function ClientProgress() {
               <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
                 KPI Summary — Target: {kpiData.target}% On Track
               </h2>
-              {kpiData.lastReviewedAt && (
-                <span className="text-xs text-zinc-500">
-                  Last reviewed {formatRelativeTime(new Date(kpiData.lastReviewedAt))}
-                </span>
-              )}
             </div>
 
             {/* Business-wide card */}
+            {kpiData.overall && (
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-semibold text-zinc-200">Business Wide</span>
-                <span className={`text-2xl font-bold ${kpiData.business.greenPct >= kpiData.target ? "text-emerald-400" : "text-amber-400"}`}>
-                  {kpiData.business.greenPct.toFixed(1)}%
+                <span className={`text-2xl font-bold ${kpiData.overall.greenPct >= kpiData.target ? "text-emerald-400" : "text-amber-400"}`}>
+                  {kpiData.overall.greenPct.toFixed(1)}%
                 </span>
               </div>
-              <KpiBar pct={kpiData.business.greenPct} target={kpiData.target} />
+              <KpiBar pct={kpiData.overall.greenPct} target={kpiData.target} />
               <div className="flex gap-4 mt-3 text-xs">
                 <span className="flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                  <span className="text-emerald-400 font-medium">{kpiData.business.green} On Track</span>
-                  {kpiData.business.total > 0 && <span className="text-emerald-400/70">· {((kpiData.business.green / kpiData.business.total) * 100).toFixed(0)}%</span>}
+                  <span className="text-emerald-400 font-medium">{kpiData.overall.green} On Track</span>
+                  {kpiData.overall.total > 0 && <span className="text-emerald-400/70">· {((kpiData.overall.green / kpiData.overall.total) * 100).toFixed(0)}%</span>}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-                  <span className="text-amber-400 font-medium">{kpiData.business.yellow} Neutral</span>
-                  {kpiData.business.total > 0 && <span className="text-amber-400/70">· {((kpiData.business.yellow / kpiData.business.total) * 100).toFixed(0)}%</span>}
+                  <span className="text-amber-400 font-medium">{kpiData.overall.yellow} Neutral</span>
+                  {kpiData.overall.total > 0 && <span className="text-amber-400/70">· {((kpiData.overall.yellow / kpiData.overall.total) * 100).toFixed(0)}%</span>}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
-                  <span className="text-red-400 font-medium">{kpiData.business.red} Off Track</span>
-                  {kpiData.business.total > 0 && <span className="text-red-400/70">· {((kpiData.business.red / kpiData.business.total) * 100).toFixed(0)}%</span>}
+                  <span className="text-red-400 font-medium">{kpiData.overall.red} Off Track</span>
+                  {kpiData.overall.total > 0 && <span className="text-red-400/70">· {((kpiData.overall.red / kpiData.overall.total) * 100).toFixed(0)}%</span>}
                 </span>
-                <span className="text-zinc-500 ml-auto">{kpiData.business.total} rated</span>
+                <span className="text-zinc-500 ml-auto">{kpiData.overall.total} rated</span>
               </div>
             </div>
+            )}
 
             {/* Per-coach KPI row */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {kpiData.perCoach.map(c => (
+              {(kpiData.coaches ?? []).map(c => (
                 <button
                   key={c.coachId}
                   onClick={() => setFocusedCoachId(c.coachId)}
@@ -1028,7 +1035,7 @@ export default function ClientProgress() {
                 onChange={e => setReportTitle(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === "Enter" && reportTitle.trim()) {
-                    createSweepReportMutation.mutate({ title: reportTitle.trim(), coachId: selectedCoachId ?? undefined });
+                    createSweepReportMutation.mutate({ title: reportTitle.trim(), weekStart: getCurrentWeekStart(), coachId: selectedCoachId ?? undefined });
                   }
                   if (e.key === "Escape") setShowTitleDialog(false);
                 }}
@@ -1045,7 +1052,7 @@ export default function ClientProgress() {
                 Cancel
               </button>
               <button
-                onClick={() => createSweepReportMutation.mutate({ title: reportTitle.trim() || undefined, coachId: selectedCoachId ?? undefined })}
+                onClick={() => createSweepReportMutation.mutate({ title: reportTitle.trim() || "Post-Sweep Report", weekStart: getCurrentWeekStart(), coachId: selectedCoachId ?? undefined })}
                 disabled={createSweepReportMutation.isPending || !reportTitle.trim()}
                 className="flex items-center gap-2 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white text-sm font-semibold transition-colors"
               >

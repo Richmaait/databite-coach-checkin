@@ -1703,44 +1703,67 @@ var clientCheckinsRouter = t.router({
     }
     return results;
   }),
-  /** Compare actual check-in times vs stated working hours. */
-  getActivityReport: adminProcedure.input(z.object({ date: z.string() })).query(async ({ input }) => {
+  /** Compare actual check-in times vs stated working hours. Accepts { startDate, endDate } or { date }. */
+  getActivityReport: adminProcedure.input(z.object({
+    date: z.string().optional(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional()
+  })).query(async ({ input }) => {
     const db2 = await requireDb();
-    const weekStart = getMonday2(input.date);
+    const startDate = input.startDate ?? input.date;
+    const endDate = input.endDate ?? input.date;
+    if (!startDate || !endDate) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "startDate/endDate or date required" });
+    }
     const records = await db2.select({
       coachId: checkinRecords.coachId,
       recordDate: checkinRecords.recordDate,
       workingHours: checkinRecords.workingHours,
+      actionPlan: checkinRecords.actionPlan,
+      morningNotes: checkinRecords.morningNotes,
+      moodScore: checkinRecords.moodScore,
       morningSubmittedAt: checkinRecords.morningSubmittedAt,
       followupSubmittedAt: checkinRecords.followupSubmittedAt,
       disengagementSubmittedAt: checkinRecords.disengagementSubmittedAt,
       coachName: coaches.name
-    }).from(checkinRecords).leftJoin(coaches, eq4(checkinRecords.coachId, coaches.id)).where(eq4(checkinRecords.recordDate, input.date));
-    const dayKey = getDayKey(input.date);
-    const completions = dayKey ? await db2.select().from(clientCheckIns).where(and2(eq4(clientCheckIns.weekStart, weekStart), eq4(clientCheckIns.dayOfWeek, dayKey))) : [];
-    return records.map((r) => {
-      const coachCompletions = completions.filter(
-        (c) => c.coachId === r.coachId && c.completedAt != null
-      );
-      return {
+    }).from(checkinRecords).leftJoin(coaches, eq4(checkinRecords.coachId, coaches.id)).where(
+      and2(
+        gte2(checkinRecords.recordDate, startDate),
+        lte2(checkinRecords.recordDate, endDate)
+      )
+    ).orderBy(desc(checkinRecords.recordDate));
+    const results = [];
+    for (const r of records) {
+      const weekStart = getMonday2(r.recordDate);
+      const dayKey = getDayKey(r.recordDate);
+      const completions = dayKey ? await db2.select().from(clientCheckIns).where(
+        and2(
+          eq4(clientCheckIns.coachId, r.coachId),
+          eq4(clientCheckIns.weekStart, weekStart),
+          eq4(clientCheckIns.dayOfWeek, dayKey)
+        )
+      ) : [];
+      const coachCompletions = completions.filter((c) => c.completedAt != null);
+      const allTimestamps = coachCompletions.map((c) => c.completedAt).sort((a, b) => a.getTime() - b.getTime());
+      const firstCheckIn = allTimestamps.length > 0 ? allTimestamps[0] : null;
+      const lastCheckIn = allTimestamps.length > 0 ? allTimestamps[allTimestamps.length - 1] : null;
+      const durationMins = firstCheckIn && lastCheckIn ? Math.round((lastCheckIn.getTime() - firstCheckIn.getTime()) / 6e4) : null;
+      results.push({
         coachId: r.coachId,
         coachName: r.coachName,
-        recordDate: r.recordDate,
+        date: r.recordDate,
         workingHours: r.workingHours,
-        morningSubmittedAt: r.morningSubmittedAt,
-        followupSubmittedAt: r.followupSubmittedAt,
-        disengagementSubmittedAt: r.disengagementSubmittedAt,
-        completionsCount: coachCompletions.length,
-        firstCompletionAt: coachCompletions.length > 0 ? coachCompletions.reduce(
-          (earliest, c) => c.completedAt && (!earliest || c.completedAt < earliest) ? c.completedAt : earliest,
-          null
-        ) : null,
-        lastCompletionAt: coachCompletions.length > 0 ? coachCompletions.reduce(
-          (latest, c) => c.completedAt && (!latest || c.completedAt > latest) ? c.completedAt : latest,
-          null
-        ) : null
-      };
-    });
+        actionPlan: r.actionPlan,
+        morningNotes: r.morningNotes,
+        moodScore: r.moodScore,
+        firstCheckIn,
+        lastCheckIn,
+        allTimestamps,
+        checkInCount: coachCompletions.length,
+        durationMins
+      });
+    }
+    return results;
   }),
   /** Compute disengaged clients — missed 1+ consecutive weeks. */
   getAllDisengagedClients: protectedProcedure.query(async () => {
@@ -1857,9 +1880,11 @@ var clientCheckinsRouter = t.router({
     }).from(checkinRecords).leftJoin(coaches, eq4(checkinRecords.coachId, coaches.id)).where(and2(eq4(checkinRecords.recordDate, today), sql`${checkinRecords.morningSubmittedAt} IS NOT NULL`));
     return rows;
   }),
-  /** New clients from roster_client_starts. */
+  /** New clients from roster_client_starts — includes computed weeksOnRoster. */
   getClientTenure: adminProcedure.query(async () => {
     const db2 = await requireDb();
+    const today = getTodayMelbourne();
+    const currentMonday = getMonday2(today);
     const rows = await db2.select({
       id: rosterClientStarts.id,
       coachId: rosterClientStarts.coachId,
@@ -1868,7 +1893,12 @@ var clientCheckinsRouter = t.router({
       dayOfWeek: rosterClientStarts.dayOfWeek,
       firstWeekStart: rosterClientStarts.firstWeekStart
     }).from(rosterClientStarts).orderBy(desc(rosterClientStarts.firstWeekStart));
-    return rows;
+    return rows.map((r) => {
+      const startDate = /* @__PURE__ */ new Date(r.firstWeekStart + "T12:00:00+10:00");
+      const currentDate = /* @__PURE__ */ new Date(currentMonday + "T12:00:00+10:00");
+      const weeksOnRoster = Math.max(1, Math.round((currentDate.getTime() - startDate.getTime()) / (7 * 864e5)) + 1);
+      return { ...r, weeksOnRoster };
+    });
   }),
   /** Working hours analysis. */
   getCoachHoursBreakdown: adminProcedure.input(
@@ -2512,14 +2542,27 @@ var performanceRouter = t.router({
       coaches: coachStats
     };
   }),
-  /** Get roster for a coach (from Google Sheets). */
+  /** Get roster for a coach (from Google Sheets). Accepts coachName or coachId. */
   rosterForCoach: protectedProcedure.input(
     z.object({
-      coachName: z.string()
+      coachName: z.string().optional(),
+      coachId: z.number().optional()
     })
   ).query(async ({ input }) => {
-    const roster = await fetchRosterForCoach(input.coachName);
-    return roster;
+    let coachName = input.coachName;
+    if (!coachName && input.coachId) {
+      const db2 = await requireDb();
+      const [coach] = await db2.select().from(coaches).where(eq4(coaches.id, input.coachId)).limit(1);
+      if (!coach) throw new TRPCError({ code: "NOT_FOUND", message: "Coach not found" });
+      coachName = coach.name;
+    }
+    if (!coachName) throw new TRPCError({ code: "BAD_REQUEST", message: "coachName or coachId required" });
+    const roster = await fetchRosterForCoach(coachName);
+    const allClients = /* @__PURE__ */ new Set();
+    for (const day of DAYS) {
+      for (const c of roster[day] ?? []) allClients.add(c);
+    }
+    return { ...roster, clients: [...allClients].sort() };
   }),
   /** All client ratings. */
   allRatings: adminProcedure.query(async () => {
@@ -2558,12 +2601,12 @@ var performanceRouter = t.router({
       const excusedCount = excuses.length;
       const effectiveScheduled = Math.max(scheduled - excusedCount, 0);
       const pct = effectiveScheduled > 0 ? Math.round(completed / effectiveScheduled * 100) : 0;
-      const weekEnd = addDays(input.weekStart, 4);
+      const weekEnd2 = addDays(input.weekStart, 4);
       const records = await db2.select().from(checkinRecords).where(
         and2(
           eq4(checkinRecords.coachId, coach.id),
           gte2(checkinRecords.recordDate, input.weekStart),
-          lte2(checkinRecords.recordDate, weekEnd)
+          lte2(checkinRecords.recordDate, weekEnd2)
         )
       );
       const moods = records.filter((r) => r.moodScore != null).map((r) => r.moodScore);
@@ -2587,8 +2630,101 @@ var performanceRouter = t.router({
     const totalExcused = coachSummaries.reduce((s, c) => s + c.excused, 0);
     const effectiveTotal = Math.max(totalScheduled - totalExcused, 0);
     const overallPct = effectiveTotal > 0 ? Math.round(totalCompleted / effectiveTotal * 100) : 0;
+    const weekEnd = addDays(input.weekStart, 4);
+    const allRecords = await db2.select().from(checkinRecords).where(
+      and2(
+        gte2(checkinRecords.recordDate, input.weekStart),
+        lte2(checkinRecords.recordDate, weekEnd)
+      )
+    );
+    const today = getTodayMelbourne();
+    let workdayCount = 5;
+    if (weekEnd > today) {
+      const todayDate = /* @__PURE__ */ new Date(today + "T12:00:00+10:00");
+      const weekStartDate = /* @__PURE__ */ new Date(input.weekStart + "T12:00:00+10:00");
+      const diff = Math.floor((todayDate.getTime() - weekStartDate.getTime()) / 864e5) + 1;
+      workdayCount = Math.max(1, Math.min(5, diff));
+    }
+    const coachActivity = coachList.map((coach) => {
+      const coachRecords = allRecords.filter((r) => r.coachId === coach.id);
+      const morningDays = coachRecords.filter((r) => r.morningSubmittedAt).length;
+      const followupDays = coachRecords.filter((r) => r.followupSubmittedAt).length;
+      const totalFollowupMsgs = coachRecords.reduce((s, r) => s + (r.followupCount ?? 0), 0);
+      const totalDisengagementMsgs = coachRecords.reduce((s, r) => s + (r.disengagementCount ?? 0), 0);
+      return {
+        coachId: coach.id,
+        coachName: coach.name,
+        morningDays,
+        workdayCount,
+        followupDays,
+        totalFollowupMsgs,
+        totalDisengagementMsgs
+      };
+    });
+    const engagementStats = coachSummaries.map((c) => ({
+      coachId: c.coachId,
+      coachName: c.coachName,
+      scheduled: c.scheduled,
+      completed: c.completed,
+      missed: c.scheduled - c.completed,
+      engagementPct: c.pct
+    }));
+    const disengagedThisWeek = [];
+    for (const coach of coachList) {
+      const results = await computeDisengagedClients(coach.id, coach.name, input.weekStart);
+      for (const r of results) {
+        disengagedThisWeek.push({
+          coachId: r.coachId,
+          coachName: r.coachName,
+          clientName: r.clientName,
+          consecutiveMissed: r.consecutiveMissed
+        });
+      }
+    }
+    const prevWeekStart = addDays(input.weekStart, -7);
+    let prevTotalScheduled = 0;
+    let prevTotalCompleted = 0;
+    for (const coach of coachList) {
+      const roster = await fetchRosterForCoach(coach.name);
+      let scheduled = 0;
+      for (const day of DAYS) scheduled += (roster[day] ?? []).length;
+      const completions = await db2.select().from(clientCheckIns).where(and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, prevWeekStart)));
+      const completed = completions.filter((c) => c.completedAt != null).length;
+      prevTotalScheduled += scheduled;
+      prevTotalCompleted += completed;
+    }
+    const prevPct = prevTotalScheduled > 0 ? Math.round(prevTotalCompleted / prevTotalScheduled * 100) : 0;
+    const engagementTrend = overallPct - prevPct;
+    let prevDisengagedCount = 0;
+    for (const coach of coachList) {
+      const results = await computeDisengagedClients(coach.id, coach.name, prevWeekStart);
+      prevDisengagedCount += results.length;
+    }
+    const disengagedTrend = disengagedThisWeek.length - prevDisengagedCount;
+    const allRatings = await db2.select().from(clientRatings);
+    const green = allRatings.filter((r) => r.rating === "green").length;
+    const yellow = allRatings.filter((r) => r.rating === "yellow").length;
+    const red = allRatings.filter((r) => r.rating === "red").length;
+    const totalRated = green + yellow + red;
+    const greenPct = totalRated > 0 ? Math.round(green / totalRated * 100) : 0;
     return {
       weekStart: input.weekStart,
+      totalScheduled,
+      totalCompleted,
+      overallEngagementPct: overallPct,
+      engagementTrend,
+      disengagedThisWeek,
+      disengagedTrend,
+      coachActivity,
+      engagementStats,
+      clientHealth: {
+        total: totalRated,
+        green,
+        yellow,
+        red,
+        greenPct
+      },
+      // Keep legacy shape too
       overall: {
         scheduled: totalScheduled,
         completed: totalCompleted,
@@ -2636,10 +2772,14 @@ var performanceRouter = t.router({
     );
     return { success: true };
   }),
-  /** Clear all ratings. */
-  resetAllRatings: adminProcedure.mutation(async () => {
+  /** Clear all ratings, or for a specific coach if coachId provided. */
+  resetAllRatings: adminProcedure.input(z.object({ coachId: z.number().optional() }).optional()).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    await db2.delete(clientRatings);
+    if (input?.coachId) {
+      await db2.delete(clientRatings).where(eq4(clientRatings.coachId, input.coachId));
+    } else {
+      await db2.delete(clientRatings);
+    }
     return { success: true };
   })
 });

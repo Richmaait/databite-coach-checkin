@@ -1987,8 +1987,23 @@ var clientCheckinsRouter = t.router({
         entry.completedByDay[dayEntry.day] = ce.completed;
       }
     }
+    const enrichedDaily = [...coachPivot.values()].map((c) => {
+      const overallEngagementPct = c.totalScheduled > 0 ? Math.round(c.totalCompleted / c.totalScheduled * 1e3) / 10 : 0;
+      const engagementByDay = {};
+      for (const day of DAYS) {
+        const s = c.scheduledByDay[day] ?? 0;
+        const comp = c.completedByDay[day] ?? 0;
+        engagementByDay[day] = s > 0 ? Math.round(comp / s * 100) : 0;
+      }
+      return {
+        ...c,
+        overallEngagementPct,
+        weeklyAvg: overallEngagementPct,
+        engagementByDay
+      };
+    });
     return {
-      coaches: [...coachPivot.values()],
+      coaches: enrichedDaily,
       days: result
     };
   }),
@@ -2087,8 +2102,19 @@ var clientCheckinsRouter = t.router({
         entry.engagementByWeek[wd.weekStart] = ce.pct;
       }
     }
+    const enrichedCoaches = [...coachMap.values()].map((c) => {
+      const overallEngagementPct = c.totalScheduled > 0 ? Math.round(c.totalCompleted / c.totalScheduled * 1e3) / 10 : 0;
+      const weekCount = Object.keys(c.engagementByWeek).length;
+      const weeklyAvg = weekCount > 0 ? Math.round(Object.values(c.engagementByWeek).reduce((s, v) => s + v, 0) / weekCount * 10) / 10 : 0;
+      return {
+        ...c,
+        overallEngagementPct,
+        weeklyAvg,
+        engagementByDay: {}
+      };
+    });
     return {
-      coaches: [...coachMap.values()],
+      coaches: enrichedCoaches,
       weeks,
       weeklyData
     };

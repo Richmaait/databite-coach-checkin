@@ -1325,8 +1325,27 @@ const clientCheckinsRouter = t.router({
         }
       }
 
+      // Add computed fields the frontend expects
+      const enrichedDaily = [...coachPivot.values()].map(c => {
+        const overallEngagementPct = c.totalScheduled > 0
+          ? Math.round((c.totalCompleted / c.totalScheduled) * 1000) / 10
+          : 0;
+        const engagementByDay: Record<string, number> = {};
+        for (const day of DAYS) {
+          const s = c.scheduledByDay[day] ?? 0;
+          const comp = c.completedByDay[day] ?? 0;
+          engagementByDay[day] = s > 0 ? Math.round((comp / s) * 100) : 0;
+        }
+        return {
+          ...c,
+          overallEngagementPct,
+          weeklyAvg: overallEngagementPct,
+          engagementByDay,
+        };
+      });
+
       return {
-        coaches: [...coachPivot.values()],
+        coaches: enrichedDaily,
         days: result,
       };
     }),
@@ -1491,8 +1510,25 @@ const clientCheckinsRouter = t.router({
         }
       }
 
+      // Add computed fields the frontend expects
+      const enrichedCoaches = [...coachMap.values()].map(c => {
+        const overallEngagementPct = c.totalScheduled > 0
+          ? Math.round((c.totalCompleted / c.totalScheduled) * 1000) / 10
+          : 0;
+        const weekCount = Object.keys(c.engagementByWeek).length;
+        const weeklyAvg = weekCount > 0
+          ? Math.round(Object.values(c.engagementByWeek).reduce((s, v) => s + v, 0) / weekCount * 10) / 10
+          : 0;
+        return {
+          ...c,
+          overallEngagementPct,
+          weeklyAvg,
+          engagementByDay: {} as Record<string, number>,
+        };
+      });
+
       return {
-        coaches: [...coachMap.values()],
+        coaches: enrichedCoaches,
         weeks: weeks,
         weeklyData,
       };

@@ -204,6 +204,9 @@ export default function CoachPerformanceReport() {
     { key: "custom", label: "Custom" },
   ];
 
+  // Loading guard — prevent crash when data hasn't loaded yet
+  const dataNotReady = isOneWeek ? !dailyData : !weeklyData;
+
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -344,7 +347,7 @@ export default function CoachPerformanceReport() {
                     </thead>
                     <tbody>
                       {coaches.map((coach, i) => {
-                        const weeklyCoach = !isOneWeek ? (weeklyData?.coaches.find(c => c.coachId === coach.coachId)) : null;
+                        const weeklyCoach = !isOneWeek ? ((weeklyData?.coaches ?? []).find(c => c.coachId === coach.coachId)) : null;
                         const weekValues = weeklyCoach ? (weeklyData?.weeks.map(w => weeklyCoach.completedByWeek[w] ?? 0) ?? []) : [];
                         const best = weekValues.length > 0 ? Math.max(...weekValues) : 0;
                         const worst = weekValues.length > 0 ? Math.min(...weekValues) : 0;

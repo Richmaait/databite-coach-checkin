@@ -118,7 +118,7 @@ function getMonday(dateStr?: string): string {
 function addDays(dateStr: string, days: number): string {
   const d = new Date(dateStr + "T00:00:00");
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 /** Get the day-of-week index (0=Mon, 4=Fri) for a DayKey. */
@@ -135,13 +135,13 @@ function isClientOverdue(
   if (isDone) return false;
   const dateStr = addDays(weekStart, dayIndex(day));
   // Melbourne midday = ~01:00 UTC (AEDT) or ~02:00 UTC (AEST)
-  const now = new Date();
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Australia/Melbourne" }));
   const melbNow = new Date(
     now.toLocaleString("en-US", { timeZone: "Australia/Melbourne" }),
   );
   const dayDate = new Date(dateStr + "T12:00:00");
   // Compare using Melbourne local time
-  const melbDateStr = melbNow.toISOString().slice(0, 10);
+  const melbDateStr = `${melbNow.getFullYear()}-${String(melbNow.getMonth() + 1).padStart(2, "0")}-${String(melbNow.getDate()).padStart(2, "0")}`;
   if (melbDateStr < dateStr) return false; // day hasn't arrived yet
   if (melbDateStr > dateStr) return true; // day has passed entirely
   return melbNow.getHours() >= 12;

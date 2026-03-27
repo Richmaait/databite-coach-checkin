@@ -1,6 +1,7 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { melbourneNow } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { AlertTriangle, Download, FileBarChart2, Loader2 } from "lucide-react";
 import { useRef, useMemo, useState } from "react";
@@ -19,7 +20,7 @@ function getMondayOf(date: Date): string {
 
 function generateWeekOptions(): Array<{ value: string; label: string }> {
   const weeks: string[] = [];
-  const today = new Date();
+  const today = melbourneNow();
   let current = new Date(getMondayOf(today) + "T00:00:00Z");
   const epoch = new Date(CLIENT_CHECKINS_EPOCH + "T00:00:00Z");
   while (current >= epoch) {
@@ -32,7 +33,7 @@ function generateWeekOptions(): Array<{ value: string; label: string }> {
     const end = new Date(start);
     end.setUTCDate(start.getUTCDate() + 4);
     const fmt = (d: Date) => d.toLocaleDateString("en-AU", { day: "numeric", month: "short", timeZone: "UTC" });
-    const isCurrentWeek = w === getMondayOf(new Date());
+    const isCurrentWeek = w === getMondayOf(melbourneNow());
     return {
       value: w,
       label: `${fmt(start)} – ${fmt(end)}${isCurrentWeek ? " (This week)" : ""}`,
@@ -173,7 +174,7 @@ export default function WeeklySummary() {
                 </div>
                 <div style={{ textAlign: "right", fontSize: "11px", color: "#475569" }}>
                   <div>Coach Check-In Tracker</div>
-                  <div>{new Date().toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" })}</div>
+                  <div>{melbourneNow().toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" })}</div>
                 </div>
               </div>
             </div>

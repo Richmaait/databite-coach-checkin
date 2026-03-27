@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { Activity, BarChart3, CheckCircle2, ClipboardCheck, TrendingUp, UserCheck, Users } from "lucide-react";
+import { melbourneNow } from "@/lib/utils";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -144,7 +145,7 @@ export default function Home() {
             Welcome back, {user.name?.split(" ")[0] ?? "there"}
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            {new Date().toLocaleDateString("en-AU", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+            {melbourneNow().toLocaleDateString("en-AU", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
           </p>
         </div>
 

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { formatDateAU, formatWeekAU } from "@/lib/utils";
+import { formatDateAU, formatWeekAU, melbourneNow } from "@/lib/utils";
 import { format, subDays, subMonths, getISOWeek, getYear, startOfWeek, endOfWeek } from "date-fns";
 import { Activity, AlertTriangle, CalendarDays, FileText, ListChecks, MessageSquare, TrendingDown, TrendingUp, Users, ShieldAlert, ShieldCheck, ShieldX, Clock3, Loader2 } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
@@ -32,7 +32,7 @@ import { useLocation } from "wouter";
 type RangeKey = "today" | "wtd" | "7d" | "14d" | "30d" | "90d" | "180d" | "12m" | "custom";
 
 /** Returns the most recent Sunday (the end of the last complete week). */
-function lastSunday(from: Date = new Date()): Date {
+function lastSunday(from: Date = melbourneNow()): Date {
   const d = new Date(from);
   const dow = d.getDay(); // 0=Sun
   // If today is Sunday, that IS the end of the last complete week
@@ -52,7 +52,7 @@ function getDateRange(
   customFrom?: Date | null,
   customTo?: Date | null
 ): { startDate: string; endDate: string } {
-  const today = new Date();
+  const today = melbourneNow();
   switch (range) {
     case "today":
       return { startDate: format(today, "yyyy-MM-dd"), endDate: format(today, "yyyy-MM-dd") };
@@ -350,7 +350,7 @@ export default function Dashboard() {
   const todayDate = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Australia/Melbourne",
     year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(new Date());
+  }).format(melbourneNow());
   const { data: lowMoodAlerts } = trpc.checkins.lowMoodAlerts.useQuery(
     { recordDate: todayDate },
     { enabled: !!user }
@@ -392,7 +392,7 @@ export default function Dashboard() {
   // Current week Monday for excuse queries — use local date parts to avoid UTC timezone shift
   // (server may be in a different timezone; browser local time is what matters here)
   const currentWeekStart = useMemo(() => {
-    const d = new Date();
+    const d = melbourneNow();
     d.setHours(0, 0, 0, 0);
     const dow = d.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
     const diff = dow === 0 ? -6 : 1 - dow; // shift to Monday
@@ -1340,7 +1340,7 @@ export default function Dashboard() {
                 <CardTitle className="text-sm font-semibold text-foreground">Today's Plans</CardTitle>
               </div>
               <p className="text-xs text-muted-foreground">
-                {format(new Date(), "EEEE d MMMM")} — working hours and action plans submitted this morning
+                {format(melbourneNow(), "EEEE d MMMM")} — working hours and action plans submitted this morning
               </p>
             </CardHeader>
             <CardContent>

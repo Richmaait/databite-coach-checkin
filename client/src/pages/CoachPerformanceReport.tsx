@@ -1,6 +1,7 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
+import { melbourneNow } from "@/lib/utils";
 import React, { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import {
@@ -43,7 +44,7 @@ function addDays(d: Date, n: number): Date {
 function addWeeks(d: Date, n: number): Date { return addDays(d, n * 7); }
 
 /** Returns the most recent Sunday (end of last complete week). */
-function lastSundayOf(from: Date = new Date()): Date {
+function lastSundayOf(from: Date = melbourneNow()): Date {
   const d = new Date(from);
   d.setHours(0, 0, 0, 0);
   const dow = d.getDay(); // 0=Sun
@@ -52,7 +53,7 @@ function lastSundayOf(from: Date = new Date()): Date {
 }
 
 function getPresetDates(preset: Preset): { startDate: string; endDate: string } {
-  const today = new Date();
+  const today = melbourneNow();
   const thisMonday = getMondayOf(today);
 
   if (preset === "1w") {
@@ -105,8 +106,8 @@ export default function CoachPerformanceReport() {
   if (user && user.role !== "admin") { navigate("/"); return null; }
 
   const [preset, setPreset] = useState<Preset>("lw");
-  const [customStart, setCustomStart] = useState(() => toDateStr(addWeeks(getMondayOf(new Date()), -7)));
-  const [customEnd, setCustomEnd] = useState(() => toDateStr(getMondayOf(new Date())));
+  const [customStart, setCustomStart] = useState(() => toDateStr(addWeeks(getMondayOf(melbourneNow()), -7)));
+  const [customEnd, setCustomEnd] = useState(() => toDateStr(getMondayOf(melbourneNow())));
 
   const { startDate, endDate } = useMemo(() => {
     if (preset === "custom") return { startDate: customStart, endDate: customEnd };

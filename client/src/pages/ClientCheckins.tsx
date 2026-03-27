@@ -104,11 +104,14 @@ const DAY_COLORS: Record<
 
 /** Returns YYYY-MM-DD of the Monday for any given date string (YYYY-MM-DD). */
 function getMonday(dateStr?: string): string {
-  const d = dateStr ? new Date(dateStr + "T00:00:00") : new Date();
+  // Use Melbourne timezone for "today" to avoid UTC date mismatch
+  const d = dateStr
+    ? new Date(dateStr + "T00:00:00")
+    : new Date(new Date().toLocaleString("en-US", { timeZone: "Australia/Melbourne" }));
   const day = d.getDay(); // 0=Sun, 1=Mon, ...
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   d.setDate(diff);
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 /** Add days to a YYYY-MM-DD string, returns YYYY-MM-DD. */

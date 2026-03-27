@@ -33,3 +33,19 @@ export function formatDateObjAU(date: Date | string | number): string {
   const year = d.getFullYear();
   return `${day}/${month}/${year}`;
 }
+
+/**
+ * Get "now" in Australia/Melbourne timezone as a Date object.
+ * Use this instead of `new Date()` when calculating today's date for display.
+ */
+export function melbourneNow(): Date {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "Australia/Melbourne" }));
+}
+
+/**
+ * Get today's date in Australia/Melbourne as YYYY-MM-DD string.
+ */
+export function todayMelbourne(): string {
+  const d = melbourneNow();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}

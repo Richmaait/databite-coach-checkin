@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
+import { melbourneNow } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -403,7 +404,7 @@ function ClientTenureTable() {
 
   // Only show clients added in the last 7 days
   const sevenDaysAgo = useMemo(() => {
-    const d = new Date();
+    const d = melbourneNow();
     d.setDate(d.getDate() - 7);
     d.setHours(0, 0, 0, 0);
     return d;
@@ -623,7 +624,7 @@ export default function ClientProgress() {
   const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null); // null = all coaches
 
   const openTitleDialog = () => {
-    const now = new Date();
+    const now = melbourneNow();
     const dateLabel = now.toLocaleDateString("en-AU", {
       day: "numeric", month: "short", year: "numeric",
       timeZone: "Australia/Melbourne",
@@ -636,7 +637,7 @@ export default function ClientProgress() {
   // When coach selection changes in the dialog, update the default title
   const handleDialogCoachChange = (coachId: number | null) => {
     setSelectedCoachId(coachId);
-    const now = new Date();
+    const now = melbourneNow();
     const dateLabel = now.toLocaleDateString("en-AU", {
       day: "numeric", month: "short", year: "numeric",
       timeZone: "Australia/Melbourne",

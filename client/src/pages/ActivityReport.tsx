@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
+import { melbourneNow } from "@/lib/utils";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -173,14 +174,14 @@ function computeStatus(
 
 // ─── Date range helpers ───────────────────────────────────────────────────────
 
-function getLocalDateStr(d = new Date()): string {
+function getLocalDateStr(d = melbourneNow()): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 
-function getMondayOfWeek(d = new Date()): Date {
+function getMondayOfWeek(d = melbourneNow()): Date {
   const day = d.getDay(); // 0=Sun
   const diff = day === 0 ? -6 : 1 - day;
   const monday = new Date(d);
@@ -200,7 +201,7 @@ export default function ActivityReport() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
   const { startDate, endDate } = useMemo(() => {
-    const today = new Date();
+    const today = melbourneNow();
     if (range === "this_week") {
       const mon = getMondayOfWeek(today);
       return { startDate: getLocalDateStr(mon), endDate: getLocalDateStr(today) };

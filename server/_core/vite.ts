@@ -13,10 +13,11 @@ const __dirname = path.dirname(__filename);
 export async function setupVite(app: Express) {
   if (process.env.NODE_ENV !== "production") {
     const { createServer } = await import("vite");
+    const projectRoot = path.resolve(__dirname, "../..");
     const vite = await createServer({
+      configFile: path.resolve(projectRoot, "vite.config.ts"),
       server: { middlewareMode: true },
       appType: "spa",
-      root: path.resolve(__dirname, "../../client"),
     });
     app.use(vite.middlewares);
   }

@@ -2754,7 +2754,7 @@ const kudosRouter = t.router({
     }),
 
   /** Recent kudos. */
-  list: adminProcedure.query(async () => {
+  history: adminProcedure.query(async () => {
     const db = await requireDb();
     return db
       .select({

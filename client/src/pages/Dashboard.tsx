@@ -1395,11 +1395,11 @@ export default function Dashboard() {
           const coachNames = Array.from(new Set(allDisengagedClients.map(c => c.coachName))).sort();
           // Also include coaches from allMissedStreaks who may not appear in allDisengagedClients
           if (allMissedStreaks) {
-            for (const item of allMissedStreaks) {
-              if (item?.coach?.name && !coachNames.includes(item.coach.name)) coachNames.push(item.coach.name);
+            for (const { coach } of allMissedStreaks) {
+              if (!coachNames.includes(coach.name)) coachNames.push(coach.name);
             }
           }
-          const hasAny = allDisengagedClients.length > 0 || (allMissedStreaks?.some(c => (c.streaks?.length ?? 0) > 0) ?? false);
+          const hasAny = allDisengagedClients.length > 0 || (allMissedStreaks?.some(c => c.streaks.length > 0) ?? false);
           if (!hasAny) return null;
 
           // Severity helpers

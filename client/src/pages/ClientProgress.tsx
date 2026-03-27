@@ -759,28 +759,28 @@ export default function ClientProgress() {
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-semibold text-zinc-200">Business Wide</span>
-                <span className={`text-2xl font-bold ${kpiData.business?.greenPct >= kpiData.target ? "text-emerald-400" : "text-amber-400"}`}>
-                  {kpiData.business?.greenPct.toFixed(1)}%
+                <span className={`text-2xl font-bold ${kpiData.business.greenPct >= kpiData.target ? "text-emerald-400" : "text-amber-400"}`}>
+                  {kpiData.business.greenPct.toFixed(1)}%
                 </span>
               </div>
-              <KpiBar pct={kpiData.business?.greenPct} target={kpiData.target} />
+              <KpiBar pct={kpiData.business.greenPct} target={kpiData.target} />
               <div className="flex gap-4 mt-3 text-xs">
                 <span className="flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
                   <span className="text-emerald-400 font-medium">{kpiData.business.green} On Track</span>
-                  {kpiData.business?.total > 0 && <span className="text-emerald-400/70">· {((kpiData.business.green / kpiData.business?.total) * 100).toFixed(0)}%</span>}
+                  {kpiData.business.total > 0 && <span className="text-emerald-400/70">· {((kpiData.business.green / kpiData.business.total) * 100).toFixed(0)}%</span>}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
                   <span className="text-amber-400 font-medium">{kpiData.business.yellow} Neutral</span>
-                  {kpiData.business?.total > 0 && <span className="text-amber-400/70">· {((kpiData.business.yellow / kpiData.business?.total) * 100).toFixed(0)}%</span>}
+                  {kpiData.business.total > 0 && <span className="text-amber-400/70">· {((kpiData.business.yellow / kpiData.business.total) * 100).toFixed(0)}%</span>}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
                   <span className="text-red-400 font-medium">{kpiData.business.red} Off Track</span>
-                  {kpiData.business?.total > 0 && <span className="text-red-400/70">· {((kpiData.business.red / kpiData.business?.total) * 100).toFixed(0)}%</span>}
+                  {kpiData.business.total > 0 && <span className="text-red-400/70">· {((kpiData.business.red / kpiData.business.total) * 100).toFixed(0)}%</span>}
                 </span>
-                <span className="text-zinc-500 ml-auto">{kpiData.business?.total} rated</span>
+                <span className="text-zinc-500 ml-auto">{kpiData.business.total} rated</span>
               </div>
             </div>
 

@@ -146,9 +146,9 @@ export default function CoachPerformanceReport() {
 
   const weeklyChartData = useMemo(() => {
     if (!weeklyData) return [];
-    return (weeklyData.weeks ?? []).map(week => {
+    return weeklyData.weeks.map(week => {
       const row: Record<string, string | number> = { week: formatWeekLabel(week) };
-      for (const coach of (weeklyData.coaches ?? [])) {
+      for (const coach of weeklyData.coaches) {
         row[`${coach.coachName} (Scheduled)`] = coach.scheduledByWeek[week] ?? 0;
         row[`${coach.coachName} (Completed)`] = coach.completedByWeek[week] ?? 0;
       }
@@ -162,7 +162,7 @@ export default function CoachPerformanceReport() {
     if (!dailyData) return [];
     return DAYS.map(day => {
       const row: Record<string, string | number> = { day: DAY_LABELS[day] };
-      for (const coach of (dailyData.coaches ?? [])) {
+      for (const coach of dailyData.coaches) {
         row[`${coach.coachName} (Scheduled)`] = coach.scheduledByDay[day] ?? 0;
         row[`${coach.coachName} (Completed)`] = coach.completedByDay[day] ?? 0;
       }
@@ -293,10 +293,10 @@ export default function CoachPerformanceReport() {
                 <CardContent>
                   <ResponsiveContainer width="100%" height={240}>
                     <LineChart
-                      data={(weeklyData.weeks ?? []).map(week => {
+                      data={weeklyData.weeks.map(week => {
                         const row: Record<string, string | number> = { week: formatWeekLabel(week) };
-                        for (const coach of (weeklyData.coaches ?? [])) {
-                          row[coach.coachName] = coach.engagementByWeek?.[week] ?? 0;
+                        for (const coach of weeklyData.coaches) {
+                          row[coach.coachName] = coach.engagementByWeek[week] ?? 0;
                         }
                         return row;
                       })}
@@ -310,7 +310,7 @@ export default function CoachPerformanceReport() {
                         contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "6px", fontSize: "12px" }}
                         labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }} />
                       <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "12px" }} />
-                      {(weeklyData.coaches ?? []).map((coach, i) => (
+                      {weeklyData.coaches.map((coach, i) => (
                         <Line key={coach.coachId} type="monotone" dataKey={coach.coachName}
                           stroke={COACH_COLORS[i % COACH_COLORS.length]} strokeWidth={2}
                           dot={{ r: 3 }} activeDot={{ r: 5 }} connectNulls />
@@ -343,8 +343,8 @@ export default function CoachPerformanceReport() {
                     </thead>
                     <tbody>
                       {coaches.map((coach, i) => {
-                        const weeklyCoach = !isOneWeek ? (weeklyData?.coaches ?? []).find(c => c.coachId === coach.coachId) : null;
-                        const weekValues = weeklyCoach ? (weeklyData?.weeks ?? []).map(w => weeklyCoach.completedByWeek?.[w] ?? 0) : [];
+                        const weeklyCoach = !isOneWeek ? (weeklyData?.coaches.find(c => c.coachId === coach.coachId)) : null;
+                        const weekValues = weeklyCoach ? (weeklyData?.weeks.map(w => weeklyCoach.completedByWeek[w] ?? 0) ?? []) : [];
                         const best = weekValues.length > 0 ? Math.max(...weekValues) : 0;
                         const worst = weekValues.length > 0 ? Math.min(...weekValues) : 0;
                         return (
@@ -419,7 +419,7 @@ export default function CoachPerformanceReport() {
                       <thead>
                         <tr className="border-b border-border">
                           <th className="text-left px-4 py-3 font-medium text-muted-foreground w-16">Day</th>
-                          {(dailyData.coaches ?? []).map((coach, i) => (
+                          {dailyData.coaches.map((coach, i) => (
                             <th key={coach.coachId} className="text-center px-3 py-3 font-medium" colSpan={2}
                               style={{ color: COACH_COLORS[i % COACH_COLORS.length] }}>
                               {coach.coachName}
@@ -429,7 +429,7 @@ export default function CoachPerformanceReport() {
                         </tr>
                         <tr className="border-b border-border/50 bg-muted/10 text-xs text-muted-foreground">
                           <th />
-                          {(dailyData.coaches ?? []).map(coach => (
+                          {dailyData.coaches.map(coach => (
                             <React.Fragment key={coach.coachId}>
                               <th className="text-center px-3 py-1.5 font-normal">Sched / Done</th>
                               <th className="text-center px-3 py-1.5 font-normal">Eng%</th>
@@ -441,17 +441,17 @@ export default function CoachPerformanceReport() {
                       </thead>
                       <tbody>
                         {DAYS.map(day => {
-                          const rowComp = (dailyData.coaches ?? []).reduce((s, c) => s + (c.completedByDay?.[day] ?? 0), 0);
-                          const rowSched = (dailyData.coaches ?? []).reduce((s, c) => s + (c.scheduledByDay?.[day] ?? 0), 0);
+                          const rowComp = dailyData.coaches.reduce((s, c) => s + (c.completedByDay[day] ?? 0), 0);
+                          const rowSched = dailyData.coaches.reduce((s, c) => s + (c.scheduledByDay[day] ?? 0), 0);
                           const rowEng = rowSched > 0 ? Math.round((rowComp / rowSched) * 1000) / 10 : null;
                           const hasData = rowSched > 0 || rowComp > 0;
                           return (
                             <tr key={day} className={`border-b border-border/50 transition-colors ${hasData ? "hover:bg-muted/30" : "opacity-40"}`}>
                               <td className="px-4 py-3 font-medium">{DAY_LABELS[day]}</td>
-                              {(dailyData.coaches ?? []).map(coach => {
-                                const comp = coach.completedByDay?.[day] ?? null;
-                                const sched = coach.scheduledByDay?.[day] ?? null;
-                                const eng = coach.engagementByDay?.[day] ?? null;
+                              {dailyData.coaches.map(coach => {
+                                const comp = coach.completedByDay[day] ?? null;
+                                const sched = coach.scheduledByDay[day] ?? null;
+                                const eng = coach.engagementByDay[day] ?? null;
                                 const noData = comp == null && sched == null;
                                 return (
                                   <React.Fragment key={coach.coachId}>
@@ -484,7 +484,7 @@ export default function CoachPerformanceReport() {
                       <tfoot>
                         <tr className="bg-muted/20 font-semibold border-t border-border">
                           <td className="px-4 py-3">Total</td>
-                          {(dailyData.coaches ?? []).map(coach => (
+                          {dailyData.coaches.map(coach => (
                             <React.Fragment key={coach.coachId}>
                               <td className="text-center px-3 py-3 tabular-nums">
                                 {coach.totalScheduled > 0

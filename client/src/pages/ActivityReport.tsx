@@ -235,7 +235,7 @@ export default function ActivityReport() {
       ...r,
       firstCheckIn: r.firstCheckIn ? new Date(r.firstCheckIn) : null,
       lastCheckIn: r.lastCheckIn ? new Date(r.lastCheckIn) : null,
-      allTimestamps: (r.allTimestamps ?? []).map((t: Date | string) => new Date(t)),
+      allTimestamps: r.allTimestamps.map((t: Date | string) => new Date(t)),
     }));
   }, [rawRows]);
 

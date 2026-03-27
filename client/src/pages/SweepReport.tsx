@@ -320,15 +320,15 @@ function ComparisonPanel({
                 <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" /> On Track %
               </div>
               <div className="text-center py-2 border-t border-zinc-800">
-                <span className={`font-bold ${data.previous.business?.greenPct >= 70 ? "text-emerald-400" : data.previous.business?.greenPct >= 50 ? "text-amber-400" : "text-red-400"}`}>
-                  {data.previous.business?.greenPct.toFixed(1)}%
+                <span className={`font-bold ${data.previous.business.greenPct >= 70 ? "text-emerald-400" : data.previous.business.greenPct >= 50 ? "text-amber-400" : "text-red-400"}`}>
+                  {data.previous.business.greenPct.toFixed(1)}%
                 </span>
               </div>
               <div className="text-center py-2 border-t border-zinc-800 flex flex-col items-center gap-0.5">
-                <span className={`font-bold ${data.current.business?.greenPct >= 70 ? "text-emerald-400" : data.current.business?.greenPct >= 50 ? "text-amber-400" : "text-red-400"}`}>
-                  {data.current.business?.greenPct.toFixed(1)}%
+                <span className={`font-bold ${data.current.business.greenPct >= 70 ? "text-emerald-400" : data.current.business.greenPct >= 50 ? "text-amber-400" : "text-red-400"}`}>
+                  {data.current.business.greenPct.toFixed(1)}%
                 </span>
-                <Diff curr={data.current.business?.greenPct} prev={data.previous.business?.greenPct} suffix="%" />
+                <Diff curr={data.current.business.greenPct} prev={data.previous.business.greenPct} suffix="%" />
               </div>
 
               {/* Green */}

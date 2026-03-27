@@ -709,11 +709,18 @@ const clientCheckinsRouter = t.router({
     .input(
       z.object({
         coachId: z.number().optional(),
-        weekStart: z.string(),
+        weekStart: z.string().optional(),
+        weekStarts: z.array(z.string()).optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
       }),
     )
     .query(async ({ input }) => {
       const db = await requireDb();
+
+      // Support both weekStart (single) and weekStarts (array)
+      const weekStart = input.weekStart || (input.weekStarts ? input.weekStarts[0] : undefined);
+      if (!weekStart) throw new TRPCError({ code: "BAD_REQUEST", message: "weekStart or weekStarts required" });
 
       // Get all coaches if no specific coachId
       let coachList: Array<{ id: number; name: string }>;
@@ -749,7 +756,7 @@ const clientCheckinsRouter = t.router({
           .select()
           .from(clientCheckIns)
           .where(
-            and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, input.weekStart)),
+            and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, weekStart)),
           );
 
         const completed = completions.filter((c) => c.completedAt != null).length;
@@ -762,7 +769,7 @@ const clientCheckinsRouter = t.router({
           .where(
             and(
               eq(excusedClients.coachId, coach.id),
-              eq(excusedClients.weekStart, input.weekStart),
+              eq(excusedClients.weekStart, weekStart),
               eq(excusedClients.status, "approved"),
             ),
           );
@@ -789,10 +796,17 @@ const clientCheckinsRouter = t.router({
   getRosterDailyStats: adminProcedure
     .input(
       z.object({
-        weekStart: z.string(),
+        weekStart: z.string().optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
       }),
     )
     .query(async ({ input }) => {
+      // Support both weekStart and startDate/endDate
+      if (!input.weekStart && input.startDate) {
+        input.weekStart = input.startDate;
+      }
+      if (!input.weekStart) throw new TRPCError({ code: "BAD_REQUEST", message: "weekStart or startDate required" });
       const db = await requireDb();
       const coachList = await db
         .select({ id: coaches.id, name: coaches.name })

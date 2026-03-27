@@ -1254,11 +1254,12 @@ const clientCheckinsRouter = t.router({
   getExcuseCountsByCoach: adminProcedure
     .input(
       z.object({
-        weekStart: z.string(),
-      }),
+        weekStart: z.string().optional(),
+      }).optional(),
     )
     .query(async ({ input }) => {
       const db = await requireDb();
+      const weekStart = input?.weekStart ?? getTodayMelbourne().slice(0, 8) + "01";
 
       const rows = await db
         .select({
@@ -1267,7 +1268,7 @@ const clientCheckinsRouter = t.router({
           status: excusedClients.status,
         })
         .from(excusedClients)
-        .where(eq(excusedClients.weekStart, input.weekStart));
+        .where(eq(excusedClients.weekStart, weekStart));
 
       // Group by coach
       const byCoach = new Map<number, { coachName: string; pending: number; approved: number; rejected: number }>();

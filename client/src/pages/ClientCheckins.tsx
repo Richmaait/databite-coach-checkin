@@ -23,7 +23,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { formatDateAU, formatWeekAU } from "@/lib/utils";
+// formatDateAU and formatWeekAU no longer used — using local formatWeekRange instead
 import {
   CheckCircle2,
   Circle,
@@ -31,7 +31,6 @@ import {
   ShieldAlert,
   ChevronLeft,
   ChevronRight,
-  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -147,6 +146,34 @@ function getDayDateLabel(weekStart: string, day: DayKey): string {
   const dateStr = addDays(weekStart, dayIndex(day));
   const [, m, d] = dateStr.split("-");
   return `${d}/${m}`;
+}
+
+/** Format a date label like "Mon, 23 Mar" for a given day. */
+function getDayFullLabel(weekStart: string, day: DayKey): string {
+  const dateStr = addDays(weekStart, dayIndex(day));
+  const d = new Date(dateStr + "T00:00:00");
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${DAY_LABELS[day]}, ${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+/** Full day name e.g. "Monday" */
+const DAY_FULL_NAMES: Record<DayKey, string> = {
+  monday: "Monday",
+  tuesday: "Tuesday",
+  wednesday: "Wednesday",
+  thursday: "Thursday",
+  friday: "Friday",
+};
+
+/** Format week range like "23 Mar - 29 Mar 2026" from a Monday YYYY-MM-DD. */
+function formatWeekRange(weekStart: string): string {
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const mon = new Date(weekStart + "T00:00:00");
+  const fri = new Date(weekStart + "T00:00:00");
+  fri.setDate(fri.getDate() + 4);
+  const monLabel = `${mon.getDate()} ${months[mon.getMonth()]}`;
+  const friLabel = `${fri.getDate()} ${months[fri.getMonth()]} ${fri.getFullYear()}`;
+  return `${monLabel} \u2013 ${friLabel}`;
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -273,6 +300,46 @@ export default function ClientCheckins() {
     return alerts.sort((a, b) => a.daysLeft - b.daysLeft);
   }, [roster]);
 
+  // Renewal alerts — clients with DEC OFFER or UPFRONT ending within 30 days
+  const renewalAlerts = useMemo(() => {
+    if (!roster) return [];
+    const alerts: Array<{ name: string; coach: string; day: string; offerType: string; daysLeft: number }> = [];
+    const now = new Date();
+    for (const day of DAYS) {
+      for (const name of ((roster as Record<string, string[]>)[day] ?? [])) {
+        const matchUpfront = name.match(/UPFRONT\s*[-–—]\s*(\d{1,2}\s+\w+(?:\s+\d{4})?)/i);
+        const matchDec = name.match(/DEC\s*OFFER\s*[-–—]\s*(\d{1,2}\s+\w+(?:\s+\d{4})?)/i);
+        const match = matchUpfront || matchDec;
+        const offerType = matchUpfront ? "UPFRONT" : matchDec ? "DEC OFFER" : null;
+        if (match && offerType) {
+          const dateStr = match[1];
+          const parsed = new Date(dateStr + (dateStr.match(/\d{4}/) ? '' : ' 2026'));
+          if (!isNaN(parsed.getTime())) {
+            const daysLeft = Math.ceil((parsed.getTime() - now.getTime()) / 86400000);
+            if (daysLeft <= 30 && daysLeft >= 0) {
+              alerts.push({ name, coach: effectiveCoachName ?? "", day, offerType, daysLeft });
+            }
+          }
+        }
+      }
+    }
+    return alerts.sort((a, b) => a.daysLeft - b.daysLeft);
+  }, [roster, effectiveCoachName]);
+
+  // Clients missing 2+ consecutive weeks (for the section below the roster)
+  const clientsMissing2Plus = useMemo(() => {
+    if (!allMissedStreaks || !effectiveCoachId) return [];
+    return allMissedStreaks
+      .filter((s) => s.coachId === effectiveCoachId && s.consecutiveMissed >= 2)
+      .sort((a, b) => b.consecutiveMissed - a.consecutiveMissed);
+  }, [allMissedStreaks, effectiveCoachId]);
+
+  // Count of disengaging clients for this coach
+  const disengagingCount = useMemo(() => {
+    if (!allDisengaged || !effectiveCoachName) return 0;
+    return allDisengaged.filter((d) => d.coachName === effectiveCoachName).length;
+  }, [allDisengaged, effectiveCoachName]);
+
   // ── Build client-level sets from data ──────────────────────────────────────
 
   // We track completed/submitted/excused per `clientName|day` using the
@@ -343,6 +410,28 @@ export default function ClientCheckins() {
   // Approved excuses for this coach from the local state
   const approvedExcuseMap = localExcused;
   const completedSet = localCompleted;
+
+  // Per-day completed/total counts for day column headers
+  const dayStats = useMemo(() => {
+    const stats: Record<DayKey, { completed: number; total: number }> = {
+      monday: { completed: 0, total: 0 },
+      tuesday: { completed: 0, total: 0 },
+      wednesday: { completed: 0, total: 0 },
+      thursday: { completed: 0, total: 0 },
+      friday: { completed: 0, total: 0 },
+    };
+    if (!roster) return stats;
+    for (const day of DAYS) {
+      const clients = (roster as Record<string, string[]>)[day] ?? [];
+      stats[day].total = clients.length;
+      for (const clientName of clients) {
+        if (localCompleted.has(`${clientName}|${day}`)) {
+          stats[day].completed++;
+        }
+      }
+    }
+    return stats;
+  }, [roster, localCompleted]);
   const clientSubmittedSet = localSubmitted;
 
   // Stats from weeklyStats (for header)
@@ -539,94 +628,60 @@ export default function ClientCheckins() {
               Client Check-Ins
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Track weekly client check-in completions
+              Browse any coach&apos;s client roster for the week
             </p>
           </div>
-          {/* Coach selector — top right */}
-          {isAdmin && coaches && (
-            <Select
-              value={selectedCoachId?.toString() ?? ""}
-              onValueChange={(v) => setSelectedCoachId(parseInt(v))}
+          {/* Top-right: Coach selector, Sync button, Date range with arrows */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {isAdmin && coaches && (
+              <Select
+                value={selectedCoachId?.toString() ?? ""}
+                onValueChange={(v) => setSelectedCoachId(parseInt(v))}
+              >
+                <SelectTrigger className="w-44 bg-secondary border-border">
+                  <SelectValue placeholder="Select coach" />
+                </SelectTrigger>
+                <SelectContent>
+                  {coaches.map((c) => (
+                    <SelectItem key={c.id} value={c.id.toString()}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => syncTypeformMutation.mutate()}
+              disabled={syncTypeformMutation.isPending}
             >
-              <SelectTrigger className="w-44 bg-secondary border-border">
-                <SelectValue placeholder="Select coach" />
-              </SelectTrigger>
-              <SelectContent>
-                {coaches.map((c) => (
-                  <SelectItem key={c.id} value={c.id.toString()}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-
-        {/* ── Reminder banner ─────────────────────────────────────────────── */}
-        <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-2 text-sm text-amber-800">
-          Please ensure you mark check-ins as completed as they are sent out for
-          timestamp purposes
-        </div>
-
-        {/* ── Week navigation + stats ─────────────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          {/* Stats badges — left side */}
-          {coachStats && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge
+              {syncTypeformMutation.isPending ? "Syncing..." : "Sync Typeform"}
+            </Button>
+            <div className="flex items-center gap-1">
+              <Button
                 variant="outline"
-                className="text-xs py-1 px-2.5 border-zinc-400 text-zinc-700 bg-zinc-50"
+                size="icon"
+                className="h-8 w-8"
+                onClick={goToPrevWeek}
               >
-                {coachStats.scheduled} Total
-              </Badge>
-              <Badge
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <button
+                onClick={goToCurrentWeek}
+                className="px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-sm font-medium transition-colors whitespace-nowrap"
+              >
+                {formatWeekRange(weekStart)}
+              </button>
+              <Button
                 variant="outline"
-                className="text-xs py-1 px-2.5 border-sky-300 text-sky-700 bg-sky-50"
+                size="icon"
+                className="h-8 w-8"
+                onClick={goToNextWeek}
               >
-                <FileText className="h-3 w-3 mr-1" />
-                {coachStats.clientSubmitted} Submitted
-              </Badge>
-              <Badge
-                variant="outline"
-                className="text-xs py-1 px-2.5 border-emerald-300 text-emerald-700 bg-emerald-50"
-              >
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                {coachStats.completed} Completed
-              </Badge>
-              <Badge
-                variant="outline"
-                className="text-xs py-1 px-2.5 border-red-300 text-red-700 bg-red-50"
-              >
-                <AlertTriangle className="h-3 w-3 mr-1" />
-                {coachStats.scheduled - coachStats.clientSubmitted} Not Submitted
-              </Badge>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
-          )}
-
-          {/* Week selector — right side */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={goToPrevWeek}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <button
-              onClick={goToCurrentWeek}
-              className="px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-sm font-medium transition-colors"
-            >
-              {formatWeekAU(weekStart)}
-            </button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={goToNextWeek}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
           </div>
         </div>
 
@@ -634,13 +689,84 @@ export default function ClientCheckins() {
         <Tabs defaultValue="roster" className="w-full">
           <TabsList className="w-full grid grid-cols-2">
             <TabsTrigger value="roster">Roster</TabsTrigger>
-            <TabsTrigger value="disengagement">
+            <TabsTrigger value="disengagement" className="flex items-center gap-1.5">
               Disengagement Tracking
+              {disengagingCount > 0 && (
+                <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                  {disengagingCount}
+                </span>
+              )}
             </TabsTrigger>
           </TabsList>
 
           {/* ── Roster Tab ──────────────────────────────────────────────── */}
-          <TabsContent value="roster" className="mt-4">
+          <TabsContent value="roster" className="mt-4 space-y-4">
+
+            {/* ── Renewal Alerts (orange banner) ──────────────────────────── */}
+            {renewalAlerts.length > 0 && (
+              <div className="rounded-lg bg-orange-50 border border-orange-200 px-4 py-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                  <span className="text-sm font-semibold text-orange-800">
+                    {renewalAlerts.length} Client Renewal{renewalAlerts.length !== 1 ? "s" : ""} Coming Up
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {renewalAlerts.map((a) => (
+                    <div
+                      key={a.name}
+                      className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-white border border-orange-200 text-sm"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium text-orange-900">{a.name}</span>
+                        <span className="text-xs text-muted-foreground">{a.coach}</span>
+                        <span className="text-xs text-muted-foreground capitalize">{a.day}</span>
+                        <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-orange-300 text-orange-700 bg-orange-50">
+                          {a.offerType}
+                        </Badge>
+                      </div>
+                      <Badge className={`text-[10px] py-0.5 px-2 ${a.daysLeft <= 7 ? "bg-red-500" : a.daysLeft <= 14 ? "bg-orange-500" : "bg-amber-500"} text-white`}>
+                        in {a.daysLeft} day{a.daysLeft !== 1 ? "s" : ""}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── Reminder banner (yellow) ──────────────────────────────────── */}
+            <div className="rounded-lg bg-yellow-50 border border-yellow-200 px-4 py-2 text-sm text-yellow-800">
+              <strong>Reminder:</strong> Please mark check-ins as completed as they are sent out, not at the end of the day.
+            </div>
+
+            {/* ── Stats line ─────────────────────────────────────────────── */}
+            {coachStats && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-sky-500 inline-block" />
+                    <span className="text-muted-foreground">{coachStats.clientSubmitted} submitted</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+                    <span className="text-muted-foreground">{coachStats.completed} completed</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-gray-400 inline-block" />
+                    <span className="text-muted-foreground">{coachStats.scheduled - coachStats.completed} remaining</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-red-500 inline-block" />
+                    <span className="text-muted-foreground">{disengagingCount} disengaging</span>
+                  </span>
+                </div>
+                {!canEdit && (
+                  <span className="text-xs text-muted-foreground italic">View only</span>
+                )}
+              </div>
+            )}
+
+            {/* ── Roster grid ──────────────────────────────────────────────── */}
             {!effectiveCoachId ? (
               <Card>
                 <CardContent className="p-6 text-center text-muted-foreground text-sm">
@@ -658,7 +784,7 @@ export default function ClientCheckins() {
                 {DAYS.map((day) => {
                   const clients = (roster as Record<string, string[]>)[day] ?? [];
                   const colours = DAY_COLORS[day];
-                  const dayDateLabel = getDayDateLabel(weekStart, day);
+                  const ds = dayStats[day];
 
                   return (
                     <div
@@ -667,14 +793,21 @@ export default function ClientCheckins() {
                     >
                       {/* Day header */}
                       <div
-                        className={`${colours.header} text-white px-3 py-2.5 text-center`}
+                        className={`${colours.header} text-white px-3 py-2.5`}
                       >
-                        <div className="text-sm font-semibold">
-                          {DAY_LABELS[day]}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-semibold">
+                              {DAY_FULL_NAMES[day]}
+                            </div>
+                            <span className="text-xs opacity-70">
+                              {getDayFullLabel(weekStart, day)}
+                            </span>
+                          </div>
+                          <span className="text-sm font-bold opacity-90">
+                            {ds.completed}/{ds.total}
+                          </span>
                         </div>
-                        <span className="text-xs opacity-70">
-                          {dayDateLabel}
-                        </span>
                       </div>
 
                       {/* Client list */}
@@ -879,177 +1012,199 @@ export default function ClientCheckins() {
               </div>
             )}
 
-            {/* ── Valid Excuse Submission ──────────────────────────────────── */}
-            {effectiveCoachId && canEdit && (
-              <Card className="mt-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold">Submit Valid Excuse</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {!excuseSelectedClient ? (
-                    <>
-                      <Input
-                        placeholder="Search for a client..."
-                        value={excuseSearch}
-                        onChange={(e) => {
-                          setExcuseSearch(e.target.value);
-                          setExcuseSelectedClient(null);
-                          setExcuseSelectedDay(null);
-                        }}
-                        className="bg-secondary border-border"
-                      />
-                      {excuseSearchResults.length > 0 && (
-                        <div className="space-y-1 max-h-48 overflow-y-auto">
-                          {excuseSearchResults.map((c) => (
-                            <button
-                              key={`${c.name}|${c.day}`}
-                              onClick={() => {
-                                setExcuseSelectedClient(c.name);
-                                setExcuseSelectedDay(c.day);
-                                setExcuseSearch("");
-                              }}
-                              className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-accent transition-colors flex items-center justify-between"
-                            >
-                              <span className="font-medium">{c.name}</span>
-                              <span className="text-xs text-muted-foreground capitalize">{c.day}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between bg-secondary rounded-lg px-3 py-2">
-                        <div>
-                          <span className="text-sm font-medium">{excuseSelectedClient}</span>
-                          <span className="text-xs text-muted-foreground ml-2 capitalize">{excuseSelectedDay}</span>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setExcuseSelectedClient(null);
-                            setExcuseSelectedDay(null);
-                            setExcuseReason("");
-                          }}
-                          className="text-xs text-muted-foreground hover:text-foreground"
-                        >
-                          Change
-                        </button>
-                      </div>
-                      <Textarea
-                        placeholder="Reason for valid excuse..."
-                        value={excuseReason}
-                        onChange={(e) => setExcuseReason(e.target.value)}
-                        rows={2}
-                        className="bg-secondary border-border"
-                      />
-                      <Button
-                        onClick={() => {
-                          if (!excuseSelectedClient || !excuseSelectedDay || !excuseReason.trim()) return;
-                          submitExcuseMutation.mutate({
-                            coachId: effectiveCoachId!,
-                            coachName: effectiveCoachName ?? "",
-                            clientName: excuseSelectedClient,
-                            dayOfWeek: excuseSelectedDay,
-                            weekStart,
-                            reason: excuseReason.trim(),
-                          });
-                          setExcuseSelectedClient(null);
-                          setExcuseSelectedDay(null);
-                          setExcuseReason("");
-                        }}
-                        disabled={!excuseReason.trim() || submitExcuseMutation.isPending}
-                        size="sm"
-                      >
-                        {submitExcuseMutation.isPending ? "Submitting..." : "Submit Excuse for Approval"}
-                      </Button>
+            {/* ── Clients Missing 2+ Consecutive Weeks ──────────────────── */}
+            {clientsMissing2Plus.length > 0 && (
+              <div className="mt-4">
+                <h3 className="text-sm font-semibold text-foreground mb-2">
+                  Clients Missing 2+ Consecutive Weeks
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {clientsMissing2Plus.map((s) => (
+                    <div
+                      key={`${s.clientName}-${s.dayOfWeek}`}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-sm"
+                    >
+                      <span className="font-medium text-gray-800">{s.clientName}</span>
+                      <Badge variant="outline" className="text-[10px] py-0 px-1.5 capitalize border-gray-300">
+                        {s.dayOfWeek}
+                      </Badge>
+                      <Badge className={`text-[10px] py-0 px-1.5 ${s.consecutiveMissed >= 3 ? "bg-red-500" : "bg-orange-500"} text-white`}>
+                        {s.consecutiveMissed}w missed
+                      </Badge>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                  ))}
+                </div>
+              </div>
             )}
 
             {/* ── Pause a Client ──────────────────────────────────────────── */}
-            {effectiveCoachId && canEdit && (
-              <Card className="mt-4">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold">Pause a Client</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Input
-                    placeholder="Search for a client to pause..."
-                    value={pauseSearch}
-                    onChange={(e) => setPauseSearch(e.target.value)}
-                    className="bg-secondary border-border"
-                  />
-                  {pauseSearch.trim() && (
-                    <div className="space-y-1 max-h-48 overflow-y-auto">
-                      {allRosterClients
-                        .filter((c) => c.name.toLowerCase().includes(pauseSearch.toLowerCase()) && !pausedSet.has(c.name))
-                        .slice(0, 8)
-                        .map((c) => (
+            {effectiveCoachId && (
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-foreground">Pause a Client</h3>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Paused clients are hidden from engagement metrics
+                </p>
+                <Input
+                  placeholder="Search for a client to pause..."
+                  value={pauseSearch}
+                  onChange={(e) => setPauseSearch(e.target.value)}
+                  className="bg-secondary border-border max-w-md"
+                />
+                {pauseSearch.trim() && (
+                  <div className="space-y-1 max-h-48 overflow-y-auto mt-2 max-w-md">
+                    {allRosterClients
+                      .filter((c) => c.name.toLowerCase().includes(pauseSearch.toLowerCase()) && !pausedSet.has(c.name))
+                      .slice(0, 8)
+                      .map((c) => (
+                        <button
+                          key={`pause-${c.name}|${c.day}`}
+                          onClick={() => {
+                            pauseClientMutation.mutate({ coachId: effectiveCoachId!, clientName: c.name });
+                            setPauseSearch("");
+                          }}
+                          className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-amber-50 hover:text-amber-800 transition-colors flex items-center justify-between"
+                        >
+                          <span className="font-medium">{c.name}</span>
+                          <span className="text-xs text-muted-foreground capitalize">{c.day}</span>
+                        </button>
+                      ))}
+                  </div>
+                )}
+                {pausedSet.size > 0 && (
+                  <div className="pt-2 mt-2 border-t border-border max-w-md">
+                    <p className="text-xs text-muted-foreground mb-2">Currently paused:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {Array.from(pausedSet).map((name) => (
+                        <button
+                          key={name}
+                          onClick={() => resumeClientMutation.mutate({ coachId: effectiveCoachId!, clientName: name })}
+                          className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+                          title="Click to resume"
+                        >
+                          {name} ✕
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Valid Excuse ──────────────────────────────────────────────── */}
+            {effectiveCoachId && (
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-foreground">Valid Excuse</h3>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Excused clients are excluded from missed check-in counts (soft). Requires manager approval.
+                </p>
+                {!excuseSelectedClient ? (
+                  <div className="max-w-md">
+                    <Input
+                      placeholder="Search for a client..."
+                      value={excuseSearch}
+                      onChange={(e) => {
+                        setExcuseSearch(e.target.value);
+                        setExcuseSelectedClient(null);
+                        setExcuseSelectedDay(null);
+                      }}
+                      className="bg-secondary border-border"
+                    />
+                    {excuseSearchResults.length > 0 && (
+                      <div className="space-y-1 max-h-48 overflow-y-auto mt-2">
+                        {excuseSearchResults.map((c) => (
                           <button
-                            key={`pause-${c.name}|${c.day}`}
+                            key={`${c.name}|${c.day}`}
                             onClick={() => {
-                              pauseClientMutation.mutate({ coachId: effectiveCoachId!, clientName: c.name });
-                              setPauseSearch("");
+                              setExcuseSelectedClient(c.name);
+                              setExcuseSelectedDay(c.day);
+                              setExcuseSearch("");
                             }}
-                            className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-amber-50 hover:text-amber-800 transition-colors flex items-center justify-between"
+                            className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-accent transition-colors flex items-center justify-between"
                           >
                             <span className="font-medium">{c.name}</span>
                             <span className="text-xs text-muted-foreground capitalize">{c.day}</span>
                           </button>
                         ))}
-                    </div>
-                  )}
-                  {pausedSet.size > 0 && (
-                    <div className="pt-2 border-t border-border">
-                      <p className="text-xs text-muted-foreground mb-2">Currently paused:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {Array.from(pausedSet).map((name) => (
-                          <button
-                            key={name}
-                            onClick={() => resumeClientMutation.mutate({ coachId: effectiveCoachId!, clientName: name })}
-                            className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
-                            title="Click to resume"
-                          >
-                            {name} ✕
-                          </button>
-                        ))}
                       </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* ── Upfront Alerts ───────────────────────────────────────────── */}
-            {upfrontAlerts.length > 0 && (
-              <Card className="mt-4 border-orange-200">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-semibold text-orange-700 flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    Upfront Renewals Coming Up ({upfrontAlerts.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-1">
-                    {upfrontAlerts.map((a) => (
-                      <div
-                        key={a.name}
-                        className="flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-orange-50 border border-orange-200 text-sm"
-                      >
-                        <span className="font-medium text-orange-800">{a.name}</span>
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="capitalize text-muted-foreground">{a.day}</span>
-                          <span className={`font-bold ${a.daysLeft <= 14 ? "text-red-600" : a.daysLeft <= 30 ? "text-orange-600" : "text-amber-600"}`}>
-                            {a.daysLeft} days left
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                    )}
                   </div>
-                </CardContent>
-              </Card>
+                ) : (
+                  <div className="space-y-3 max-w-md">
+                    <div className="flex items-center justify-between bg-secondary rounded-lg px-3 py-2">
+                      <div>
+                        <span className="text-sm font-medium">{excuseSelectedClient}</span>
+                        <span className="text-xs text-muted-foreground ml-2 capitalize">{excuseSelectedDay}</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setExcuseSelectedClient(null);
+                          setExcuseSelectedDay(null);
+                          setExcuseReason("");
+                        }}
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        Change
+                      </button>
+                    </div>
+                    <Textarea
+                      placeholder="Reason for valid excuse..."
+                      value={excuseReason}
+                      onChange={(e) => setExcuseReason(e.target.value)}
+                      rows={2}
+                      className="bg-secondary border-border"
+                    />
+                    <Button
+                      onClick={() => {
+                        if (!excuseSelectedClient || !excuseSelectedDay || !excuseReason.trim()) return;
+                        submitExcuseMutation.mutate({
+                          coachId: effectiveCoachId!,
+                          coachName: effectiveCoachName ?? "",
+                          clientName: excuseSelectedClient,
+                          dayOfWeek: excuseSelectedDay,
+                          weekStart,
+                          reason: excuseReason.trim(),
+                        });
+                        setExcuseSelectedClient(null);
+                        setExcuseSelectedDay(null);
+                        setExcuseReason("");
+                      }}
+                      disabled={!excuseReason.trim() || submitExcuseMutation.isPending}
+                      size="sm"
+                    >
+                      {submitExcuseMutation.isPending ? "Submitting..." : "Submit Excuse for Approval"}
+                    </Button>
+                  </div>
+                )}
+
+                {/* THIS WEEK'S EXCUSES */}
+                {localExcused.size > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                      This Week&apos;s Excuses
+                    </h4>
+                    <div className="space-y-1.5 max-w-lg">
+                      {Array.from(localExcused.entries()).map(([key, val]) => {
+                        const [clientName, dayOfWeek] = key.split("|");
+                        return (
+                          <div
+                            key={key}
+                            className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-emerald-50 border border-emerald-200 text-sm"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="font-medium text-emerald-900">{clientName}</span>
+                              <span className="text-xs text-muted-foreground capitalize">{dayOfWeek}</span>
+                              <span className="text-xs text-muted-foreground">{val.reason}</span>
+                            </div>
+                            <Badge className="bg-emerald-500 text-white text-[10px] py-0 px-1.5">
+                              APPROVED
+                            </Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </TabsContent>
 

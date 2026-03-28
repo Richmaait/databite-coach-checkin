@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120" fill="white">
+  <!-- Databite "d" logo mark - simplified white version -->
+  <!-- Stem of the d -->
+  <rect x="58" y="0" width="10" height="70" rx="5"/>
+  <!-- Main circle (d bowl) -->
+  <circle cx="48" cy="58" r="28" fill="none" stroke="white" stroke-width="10"/>
+  <!-- Inner leaf/bite circle -->
+  <circle cx="38" cy="78" r="18" fill="none" stroke="white" stroke-width="8"/>
+  <!-- Overlap mask creates the interlocking effect -->
+</svg>

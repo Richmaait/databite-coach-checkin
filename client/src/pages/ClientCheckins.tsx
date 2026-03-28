@@ -541,6 +541,7 @@ export default function ClientCheckins() {
   const [excuseReason, setExcuseReason] = useState("");
   const [excuseSearch, setExcuseSearch] = useState("");
   const [pauseSearch, setPauseSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<"roster" | "disengagement">("roster");
   const [excuseSelectedClient, setExcuseSelectedClient] = useState<string | null>(null);
   const [excuseSelectedDay, setExcuseSelectedDay] = useState<DayKey | null>(null);
 
@@ -647,44 +648,46 @@ export default function ClientCheckins() {
 
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <div className="max-w-[1440px] mx-auto px-8 pt-8 pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-5">
-              <h1 className="text-lg font-semibold text-white/90 tracking-tight">Client Check-Ins</h1>
+          {/* Top row: Logo + title on left, coach selector on right */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <img src="/databite-icon-white.svg" alt="Databite" className="h-8 w-8 opacity-80" />
+              <h1 className="text-xl font-semibold text-white/90 tracking-tight">Client Check-Ins</h1>
+            </div>
 
-              {/* Coach selector glass pill */}
-              {isAdmin && coaches && (
-                <div className="glass rounded-xl px-3 py-1.5 flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[10px] font-bold">
-                    {effectiveCoachName?.charAt(0) ?? "?"}
-                  </div>
-                  <select
-                    className="bg-transparent text-white/80 text-sm font-medium appearance-none cursor-pointer pr-5 outline-none"
-                    value={selectedCoachId?.toString() ?? ""}
-                    onChange={(e) => setSelectedCoachId(parseInt(e.target.value))}
-                  >
-                    {coaches.map((c) => (
-                      <option key={c.id} value={c.id.toString()} className="bg-zinc-900">{c.name}</option>
-                    ))}
-                  </select>
-                  <svg className="w-3.5 h-3.5 text-white/30 -ml-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
-                </div>
-              )}
-
-              {/* Date range glass pill */}
+            {/* Coach selector — top right */}
+            {isAdmin && coaches && (
               <div className="glass rounded-xl px-3 py-1.5 flex items-center gap-2">
-                <svg className="w-4 h-4 text-violet-400/60" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                <button
-                  onClick={goToCurrentWeek}
-                  className="text-sm text-white/70 font-medium hover:text-white/90 transition-colors"
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[10px] font-bold">
+                  {effectiveCoachName?.charAt(0) ?? "?"}
+                </div>
+                <select
+                  className="bg-transparent text-white/80 text-sm font-medium appearance-none cursor-pointer pr-5 outline-none"
+                  value={selectedCoachId?.toString() ?? ""}
+                  onChange={(e) => setSelectedCoachId(parseInt(e.target.value))}
                 >
-                  {formatWeekRange(weekStart)}
-                </button>
+                  {coaches.map((c) => (
+                    <option key={c.id} value={c.id.toString()} className="bg-zinc-900">{c.name}</option>
+                  ))}
+                </select>
+                <svg className="w-3.5 h-3.5 text-white/30 -ml-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
               </div>
+            )}
+          </div>
+
+          {/* Second row: Prev/Next + Date range on left */}
+          <div className="flex items-center gap-2">
+            <button onClick={goToPrevWeek} className="glass rounded-xl px-3 py-1.5 text-sm text-white/50 hover:text-white/80 transition-colors">&larr;</button>
+            <div className="glass rounded-xl px-3 py-1.5 flex items-center gap-2">
+              <svg className="w-4 h-4 text-violet-400/60" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              <button
+                onClick={goToCurrentWeek}
+                className="text-sm text-white/70 font-medium hover:text-white/90 transition-colors"
+              >
+                {formatWeekRange(weekStart)}
+              </button>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={goToPrevWeek} className="glass rounded-xl px-3 py-1.5 text-sm text-white/50 hover:text-white/80 transition-colors">&larr; Prev</button>
-              <button onClick={goToNextWeek} className="glass rounded-xl px-3 py-1.5 text-sm text-white/50 hover:text-white/80 transition-colors">Next &rarr;</button>
-            </div>
+            <button onClick={goToNextWeek} className="glass rounded-xl px-3 py-1.5 text-sm text-white/50 hover:text-white/80 transition-colors">&rarr;</button>
           </div>
 
           {/* ── Stats Row ─────────────────────────────────────────────────── */}
@@ -720,9 +723,26 @@ export default function ClientCheckins() {
               </div>
             </div>
           )}
+          {/* ── Tab Toggle ──────────────────────────────────────────────── */}
+          <div className="flex items-center gap-1 mt-5 glass rounded-xl p-1 w-fit">
+            <button
+              onClick={() => setActiveTab("roster")}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === "roster" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"}`}
+            >
+              Roster
+            </button>
+            <button
+              onClick={() => setActiveTab("disengagement")}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${activeTab === "disengagement" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"}`}
+            >
+              Disengagement Tracking
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 font-bold">{disengagingCount}</span>
+            </button>
+          </div>
         </div>
 
-        {/* ── Day Columns ─────────────────────────────────────────────────── */}
+        {/* ── ROSTER TAB ─────────────────────────────────────────────────── */}
+        {activeTab === "roster" && (<>
         <div className="max-w-[1440px] mx-auto px-8 mt-4">
           {!effectiveCoachId ? (
             <div className="glass rounded-2xl p-6 text-center text-white/50 text-sm">
@@ -1109,6 +1129,12 @@ export default function ClientCheckins() {
             </div>
           )}
 
+        </div>
+        </>)}
+
+        {/* ── DISENGAGEMENT TAB ──────────────────────────────────────────── */}
+        {activeTab === "disengagement" && (
+        <div className="max-w-[1440px] mx-auto px-8 mt-4 pb-12">
           {/* ── Disengagement Tracking ─────────────────────────────────────── */}
           {disengagedByCoach.length > 0 && (
             <div className="glass rounded-2xl p-5 mt-6">
@@ -1245,6 +1271,7 @@ export default function ClientCheckins() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* ── Confirm Complete Dialog ─────────────────────────────────────────── */}

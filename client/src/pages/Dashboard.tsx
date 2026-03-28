@@ -117,10 +117,10 @@ function getDateRange(
 
 const COACH_COLORS = [
   "oklch(0.72 0.17 162)",  // Kyah — teal/green
-  "oklch(0.75 0.18 55)",   // Luke — orange (was blue-cyan)
+  "oklch(0.75 0.15 220)",  // Luke — sky blue
   "oklch(0.72 0.16 280)",  // Steve — purple/violet
   "oklch(0.78 0.15 320)",  // extra — pink
-  "oklch(0.62 0.22 25)",   // extra — red-orange
+  "oklch(0.72 0.16 340)",  // extra — rose
 ];
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -241,8 +241,8 @@ function SweepReportHistorySection() {
         {/* Report list */}
         <div className="divide-y divide-border rounded-xl overflow-hidden border border-white/[0.08]">
           {savedReports.map((report, i) => {
-            const onTrackColor = report.greenPct >= 70 ? "text-emerald-400" : report.greenPct >= 50 ? "text-amber-400" : "text-red-400";
-            const engColor = report.overallEngagementPct >= 80 ? "text-emerald-400" : report.overallEngagementPct >= 60 ? "text-amber-400" : "text-red-400";
+            const onTrackColor = report.greenPct >= 70 ? "text-emerald-400" : report.greenPct >= 50 ? "text-yellow-200" : "text-red-400";
+            const engColor = report.overallEngagementPct >= 80 ? "text-emerald-400" : report.overallEngagementPct >= 60 ? "text-yellow-200" : "text-red-400";
             return (
               <button
                 key={report.id}
@@ -270,9 +270,9 @@ function SweepReportHistorySection() {
                     <div className="text-white/50">On Track</div>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /><span className="text-emerald-400 font-semibold">{report.greenCount}</span></span>
-                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-400" /><span className="text-amber-400 font-semibold">{report.yellowCount}</span></span>
-                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" /><span className="text-red-400 font-semibold">{report.redCount}</span></span>
+                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-400" /><span className="text-emerald-400 font-semibold">{report.greenCount}</span></span>
+                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-yellow-200/80" /><span className="text-yellow-200 font-semibold">{report.yellowCount}</span></span>
+                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-400" /><span className="text-red-400 font-semibold">{report.redCount}</span></span>
                   </div>
                   <div className="text-center hidden sm:block">
                     <div className={`font-bold tabular-nums ${engColor}`}>{report.overallEngagementPct.toFixed(0)}%</div>
@@ -530,7 +530,7 @@ export default function Dashboard() {
       const teamEngPct = vals.__totalScheduled > 0
         ? Math.round((vals.__totalCompleted / vals.__totalScheduled) * 1000) / 10
         : 0;
-      // One row per coach — includes that coach's engagement % for the line
+      // One row per coach — always show coach name on X-axis
       filteredCoaches.forEach((coach, ci) => {
         const coachSched = vals[`${coach.name}_scheduled`] ?? 0;
         const coachComp = vals[`${coach.name}_completed`] ?? 0;
@@ -538,29 +538,33 @@ export default function Dashboard() {
           ? Math.round((coachComp / coachSched) * 1000) / 10
           : null;
         rows.push({
-          date: ci === 0 ? weekLabel : coach.name,
+          date: coach.name,
           coachLabel: coach.name,
           weekStart,
+          __weekLabel: weekLabel,
           Scheduled: coachSched,
           Completed: coachComp,
-          "Engagement %": null as any, // team line placeholder
-          [`eng_${coach.name}`]: coachEngPct, // per-coach engagement line
+          "Engagement %": null as any,
+          [`eng_${coach.name}`]: coachEngPct,
           __coachIdx: ci,
           __coachId: coach.id,
           __coachEngPct: coachEngPct,
+          __teamScheduled: vals.__totalScheduled,
         });
       });
-      // Team totals row — shown after all coach rows for this week
+      // Team totals row
       rows.push({
         date: "Team",
         coachLabel: "Team",
         weekStart,
+        __weekLabel: weekLabel,
         Scheduled: vals.__totalScheduled,
         Completed: vals.__totalCompleted,
         "Engagement %": teamEngPct as any,
         __coachIdx: -1,
         __isTeam: 1,
         __teamEngPct: teamEngPct,
+        __teamScheduled: vals.__totalScheduled,
       });
       // Blank separator between weeks (except after last week)
       if (wi < sortedWeeks.length - 1) {
@@ -599,7 +603,7 @@ export default function Dashboard() {
       const cDisengagement = (rawRecords ?? []).filter(r => r.coachId === coach.id && r.submissionType === "disengagement");
       const scheduled = cRoster.reduce((s, r) => s + r.scheduled, 0);
       const completed = cRoster.reduce((s, r) => s + r.completed, 0);
-      const weeklyPcts = cRoster.filter(r => r.scheduled > 0).map(r => r.engagementPct);
+      const weeklyPcts = cRoster.filter(r => r.scheduled > 0).map(r => (r as any).pct ?? (r as any).engagementPct).filter((p: any) => p != null && !isNaN(p));
       const bestWeek = weeklyPcts.length > 0 ? Math.round(Math.max(...weeklyPcts) * 10) / 10 : null;
       const worstWeek = weeklyPcts.length > 0 ? Math.round(Math.min(...weeklyPcts) * 10) / 10 : null;
       let stdDev: number | null = null;
@@ -708,9 +712,9 @@ export default function Dashboard() {
   };
 
   function getEngagementBadge(pct: number) {
-    if (pct >= 90) return <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs">{pct}%</Badge>;
+    if (pct >= 90) return <Badge className="bg-emerald-400/10 text-emerald-400 border-emerald-400/20 text-xs">{pct}%</Badge>;
     if (pct >= 75) return <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-xs">{pct}%</Badge>;
-    if (pct >= 50) return <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-xs">{pct}%</Badge>;
+    if (pct >= 50) return <Badge className="bg-yellow-400/10 text-yellow-200 border-yellow-400/20 text-xs">{pct}%</Badge>;
     return <Badge className="bg-rose-500/10 text-rose-400 border-rose-500/20 text-xs">{pct}%</Badge>;
   }
 
@@ -731,11 +735,11 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-6 py-2">
+      <div className="max-w-6xl mx-auto space-y-6 pt-20 pb-2">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white/90">Manager Dashboard</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-white/90" style={{ fontFamily: "'Comfortaa', cursive" }}>Manager Dashboard</h1>
             <p className="text-white/50 text-sm mt-0.5 flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded-md px-2.5 py-0.5 text-xs font-semibold tracking-wide">
                 {range === "today"
@@ -837,10 +841,10 @@ export default function Dashboard() {
 
         {/* Low mood alert banner */}
         {lowMoodAlerts && lowMoodAlerts.length > 0 && (
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-400 mt-0.5 shrink-0" />
+          <div className="rounded-xl border border-yellow-400/30 bg-yellow-400/10 p-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-yellow-200 mt-0.5 shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-amber-300 mb-1">Wellbeing Check Needed Today</p>
+              <p className="text-sm font-semibold text-yellow-200 mb-1">Wellbeing Check Needed Today</p>
               <p className="text-xs text-white/50">
                 {lowMoodAlerts.map(r => {
                   const coach = coaches?.find(c => c.id === r.coachId);
@@ -868,7 +872,7 @@ export default function Dashboard() {
                       const isUp = delta >= 0;
                       return (
                         <span className={`inline-flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded-full ${
-                          isUp ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
+                          isUp ? "bg-emerald-400/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
                         }`}>
                           {isUp ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
                           {isUp ? "+" : ""}{delta}% vs prev
@@ -884,7 +888,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl border-l-[3px] border-l-blue-500">
+          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl border-l-[3px] border-l-blue-400">
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
@@ -897,7 +901,7 @@ export default function Dashboard() {
                       const isUp = delta >= 0;
                       return (
                         <span className={`inline-flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded-full ${
-                          isUp ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
+                          isUp ? "bg-emerald-400/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
                         }`}>
                           {isUp ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
                           {isUp ? "+" : ""}{delta} vs prev
@@ -913,7 +917,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl border-l-[3px] border-l-amber-500">
+          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl border-l-[3px] border-l-yellow-200">
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
@@ -921,8 +925,8 @@ export default function Dashboard() {
                   <p className="text-3xl font-bold text-white/90 mt-1">{totalFollowup}</p>
                   <p className="text-xs text-white/50 mt-1">Messages sent</p>
                 </div>
-                <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                  <MessageSquare className="h-4 w-4 text-amber-400" />
+                <div className="h-8 w-8 rounded-lg bg-yellow-400/10 flex items-center justify-center">
+                  <MessageSquare className="h-4 w-4 text-yellow-200" />
                 </div>
               </div>
             </CardContent>
@@ -976,25 +980,36 @@ export default function Dashboard() {
             {combinedChartData.length === 0 ? (
               <div className="h-56 flex items-center justify-center text-white/50 text-sm">No data for this period</div>
             ) : (
-              <ResponsiveContainer width="100%" height={300}>
-<ComposedChart data={combinedChartData} margin={{ top: 24, right: 40, left: -10, bottom: 0 }} barCategoryGap="20%" barGap={6}>
+              <ResponsiveContainer width="100%" height={420}>
+{(() => {
+  // Calculate the max team scheduled to set as 100% mark on Y-axis, plus 20% headroom
+  const maxTeamSched = Math.max(...combinedChartData.filter((d: any) => d.__isTeam).map((d: any) => d.Scheduled as number), 1);
+  const yMax = maxTeamSched;
+  return (
+<ComposedChart data={combinedChartData} margin={{ top: 48, right: 40, left: -10, bottom: 28 }} barCategoryGap="20%" barGap={6}>
                   <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.24 0.012 240)" vertical={false} />
                   <XAxis
                     dataKey="date"
-                    tick={({ x, y, payload }: any) => {
-                      const isWeekLabel = combinedChartData.find(d => d.date === payload.value && (d as any).__coachIdx === 0);
+                    tick={({ x, y, payload, index }: any) => {
+                      const entry = combinedChartData[index] as any;
+                      const isTeam = entry?.__isTeam;
+                      const isSep = entry?.__separator;
+                      const coachIdx = entry?.__coachIdx ?? 0;
+                      const isCoach = !isTeam && !isSep && payload.value;
+                      const coachColor = isCoach ? COACH_COLORS[coachIdx % COACH_COLORS.length] : undefined;
                       return (
-                        <text x={x} y={y + 12} textAnchor="middle" fontSize={isWeekLabel ? 11 : 9}
-                          fill={isWeekLabel ? "oklch(0.75 0.010 240)" : "oklch(0.48 0.010 240)"}
-                          fontWeight={isWeekLabel ? 600 : 400}>
-                          {payload.value}
+                        <text x={x} y={y + 14} textAnchor="middle"
+                          fontSize={isTeam ? 10 : 11}
+                          fill={isTeam ? "oklch(0.70 0.010 240)" : isCoach ? coachColor : "oklch(0.48 0.010 240)"}
+                          fontWeight={700}>
+                          {isSep ? "" : payload.value}
                         </text>
                       );
                     }}
                     tickLine={false} axisLine={false}
                   />
-                  <YAxis yAxisId="left" tick={{ fontSize: 10, fill: "oklch(0.52 0.010 240)" }} tickLine={false} axisLine={false} />
-                  <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fontSize: 10, fill: "oklch(0.52 0.010 240)" }} tickLine={false} axisLine={false} />
+                  <YAxis yAxisId="left" tick={{ fontSize: 10, fill: "oklch(0.52 0.010 240)" }} tickLine={false} axisLine={false} domain={[0, yMax]} />
+                  <YAxis yAxisId="right" orientation="right" domain={[0, 120]} tickFormatter={(v: number) => v <= 100 ? `${v}%` : ''} tick={{ fontSize: 10, fill: "oklch(0.52 0.010 240)" }} tickLine={false} axisLine={false} />
                   <Tooltip
                     content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
@@ -1035,7 +1050,35 @@ export default function Dashboard() {
                       const color = isTeam ? "oklch(0.78 0.01 240)" : COACH_COLORS[(entry.__coachIdx ?? 0) % COACH_COLORS.length];
                       return <Cell key={idx} fill={color} fillOpacity={isSep ? 0 : isTeam ? 0.18 : 0.22} />;
                     })}
-                    <LabelList dataKey="Scheduled" position="top" style={{ fontSize: 9, fill: "oklch(0.55 0.010 240)", fontWeight: 500 }} formatter={(v: any) => (v === 0 ? "" : v)} />
+                    <LabelList dataKey="Scheduled" position="top"
+                      content={({ x, y, width, value, index }: any) => {
+                        if (!value) return null;
+                        const entry = combinedChartData[index] as any;
+                        const isTeam = entry?.__isTeam;
+                        const coachIdx = entry?.__coachIdx ?? 0;
+                        const engPct = isTeam ? entry?.__teamEngPct : entry?.__coachEngPct;
+                        const badgeColor = isTeam ? "oklch(0.88 0.01 240)" : COACH_COLORS[coachIdx % COACH_COLORS.length];
+                        const pairCx = (x ?? 0) + 25;
+                        // Badge sits just above the scheduled bar label, between the dots and the bar numbers
+                        const badgeTopY = (y ?? 0) - 42;
+                        return (
+                          <g>
+                            <text x={(x ?? 0) + (width ?? 0) / 2} y={(y ?? 0) - 4} textAnchor="middle" fontSize={10} fill="oklch(0.60 0.010 240)" fontWeight={600}>{value}</text>
+                            {engPct != null && (
+                              <g>
+                                <rect x={pairCx - 26} y={badgeTopY - 6} width={52} height={20} rx={10}
+                                  fill={isTeam ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)"}
+                                  stroke={isTeam ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.10)"}
+                                  strokeWidth={1} />
+                                <text x={pairCx} y={badgeTopY + 8} textAnchor="middle" fontSize={11} fontWeight={700} fill={badgeColor}>
+                                  {engPct.toFixed(0)}%
+                                </text>
+                              </g>
+                            )}
+                          </g>
+                        );
+                      }}
+                    />
                   </Bar>
                   {/* Completed bars — bright, coloured per coach; white/silver for Team */}
                   <Bar yAxisId="left" dataKey="Completed" radius={[3, 3, 0, 0]} barSize={22}>
@@ -1045,68 +1088,21 @@ export default function Dashboard() {
                       const color = isTeam ? "oklch(0.88 0.01 240)" : COACH_COLORS[(entry.__coachIdx ?? 0) % COACH_COLORS.length];
                       return <Cell key={idx} fill={color} fillOpacity={isSep ? 0 : 0.95} />;
                     })}
-                    <LabelList dataKey="Completed" position="top" style={{ fontSize: 9, fontWeight: 700 }} formatter={(v: any) => (v === 0 ? "" : v)}
-                      content={({ x, y, value, index }: any) => {
+                    <LabelList dataKey="Completed" position="top"
+                      content={({ x, y, width, value, index }: any) => {
                         if (!value) return null;
                         const entry = combinedChartData[index] as any;
                         const isTeam = entry.__isTeam;
                         const color = isTeam ? "oklch(0.88 0.01 240)" : COACH_COLORS[(entry?.__coachIdx ?? 0) % COACH_COLORS.length];
-                        return <text x={x} y={(y ?? 0) - 3} textAnchor="middle" fontSize={9} fontWeight={700} fill={color}>{value}</text>;
+                        return <text x={(x ?? 0) + (width ?? 0) / 2} y={(y ?? 0) - 4} textAnchor="middle" fontSize={10} fontWeight={700} fill={color}>{value}</text>;
                       }}
                     />
                   </Bar>
-                  {/* Team Engagement % line — only has a value on Team rows */}
-                  <Line
-                    yAxisId="right"
-                    type="linear"
-                    dataKey="Engagement %"
-                    name="Team"
-                    stroke="oklch(0.88 0.01 240)"
-                    strokeWidth={2}
-                    strokeDasharray="5 3"
-                    dot={({ cx, cy, payload }: any) =>
-                      payload["Engagement %"] != null
-                        ? <circle key={`${cx}-team`} cx={cx} cy={cy} r={3.5} fill="oklch(0.88 0.01 240)" stroke="oklch(0.3 0 0)" strokeWidth={1} />
-                        : <g key={`${cx}-team`} />
-                    }
-                    activeDot={{ r: 5 }}
-                    connectNulls={false}
-                    label={({ x, y, value }: any) =>
-                      value != null
-                        ? <text x={x} y={(y ?? 0) - 8} textAnchor="middle" fontSize={9} fontWeight={700} fill="oklch(0.88 0.01 240)">{(value as number).toFixed(0)}%</text>
-                        : <g />
-                    }
-                  />
-                  {/* Per-coach Engagement % lines */}
-                  {(chartCoachFilter === "all" ? coaches : coaches?.filter(c => c.id === chartCoachFilter))?.map((coach, i) => (
-                    <Line
-                      key={coach.id}
-                      yAxisId="right"
-                      type="linear"
-                      dataKey={`eng_${coach.name}`}
-                      name={coach.name}
-                      stroke={COACH_COLORS[i % COACH_COLORS.length]}
-                      strokeWidth={1.5}
-                      dot={({ cx, cy, payload }: any) =>
-                        payload[`eng_${coach.name}`] != null
-                          ? <circle key={`${cx}-${coach.id}`} cx={cx} cy={cy} r={2.5} fill={COACH_COLORS[i % COACH_COLORS.length]} />
-                          : <g key={`${cx}-${coach.id}`} />
-                      }
-                      activeDot={{ r: 4 }}
-                      connectNulls={false}
-                      label={({ x, y, value, index }: any) => {
-                        // Only show label on the last occurrence of this coach per week to avoid clutter
-                        const entry = combinedChartData[index] as any;
-                        if (value == null || !entry || entry.__coachId !== coach.id) return <g />;
-                        // Check if this is the last row for this coach in its week
-                        const nextEntry = combinedChartData[index + 1] as any;
-                        const isLastForCoach = !nextEntry || nextEntry.__coachId !== coach.id;
-                        if (!isLastForCoach) return <g />;
-                        return <text x={x} y={(y ?? 0) - 6} textAnchor="middle" fontSize={9} fontWeight={600} fill={COACH_COLORS[i % COACH_COLORS.length]}>{(value as number).toFixed(0)}%</text>;
-                      }}
-                    />
-                  ))}
+                  {/* Engagement % badges are rendered from the Scheduled bar's LabelList above */}
+                  {/* Engagement lines removed — badges above bars show engagement % */}
                 </ComposedChart>
+  );
+})()}
               </ResponsiveContainer>
             )}
           </CardContent>
@@ -1316,11 +1312,11 @@ export default function Dashboard() {
                           {row.stdDev !== null ? <span className="text-white/50">±{row.stdDev}%</span> : <span className="text-white/50">—</span>}
                         </td>
                         <td className="py-3 px-3 text-right">
-                          <span className={`font-medium ${row.streak >= 5 ? "text-emerald-400" : row.streak >= 2 ? "text-amber-400" : "text-white/50"}`}>
+                          <span className={`font-medium ${row.streak >= 5 ? "text-emerald-400" : row.streak >= 2 ? "text-yellow-200" : "text-white/50"}`}>
                             {row.streak > 0 ? `🔥 ${row.streak}d` : "—"}
                           </span>
                         </td>
-                        <td className="py-3 px-3 text-right text-amber-400">{row.followups}</td>
+                        <td className="py-3 px-3 text-right text-yellow-200">{row.followups}</td>
                         <td className="py-3 px-3 text-right text-rose-400">{row.disengagement}</td>
                       </tr>
                     ))}
@@ -1404,16 +1400,16 @@ export default function Dashboard() {
 
           // Severity helpers
           const tierLabel = (n: number) =>
-            n >= 3 ? { label: "Critical", bg: "bg-red-950/50", border: "border-red-700/60", text: "text-red-300", dot: "bg-red-500" } :
-            n === 2 ? { label: "Alert", bg: "bg-orange-950/40", border: "border-orange-700/50", text: "text-orange-300", dot: "bg-orange-500" } :
-                      { label: "Warning", bg: "bg-yellow-950/30", border: "border-yellow-700/40", text: "text-yellow-300", dot: "bg-yellow-500" };
+            n >= 3 ? { label: "Critical", bg: "bg-red-400/10", border: "border-red-400/30", text: "text-red-400", dot: "bg-red-400" } :
+            n === 2 ? { label: "Alert", bg: "bg-rose-500/10", border: "border-rose-400/30", text: "text-rose-400", dot: "bg-rose-400" } :
+                      { label: "Warning", bg: "bg-yellow-400/10", border: "border-yellow-400/20", text: "text-yellow-200", dot: "bg-yellow-200/80" };
 
           return (
             <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-orange-400" />
+                    <AlertTriangle className="h-4 w-4 text-rose-400" />
                     <CardTitle className="text-sm font-semibold text-white/90">Disengagement Tracking</CardTitle>
                   </div>
                   <span className="text-xs text-white/50">
@@ -1428,13 +1424,13 @@ export default function Dashboard() {
                 {/* Legend */}
                 <div className="flex items-center gap-4 mb-4 pb-3 border-b border-white/[0.08]/50">
                   <div className="flex items-center gap-1.5 text-[11px] text-white/50">
-                    <span className="inline-block w-2 h-2 rounded-full bg-red-500" /> Critical (3+ misses)
+                    <span className="inline-block w-2 h-2 rounded-full bg-red-400" /> Critical (3+ misses)
                   </div>
                   <div className="flex items-center gap-1.5 text-[11px] text-white/50">
-                    <span className="inline-block w-2 h-2 rounded-full bg-orange-500" /> Alert (2 misses)
+                    <span className="inline-block w-2 h-2 rounded-full bg-rose-400" /> Alert (2 misses)
                   </div>
                   <div className="flex items-center gap-1.5 text-[11px] text-white/50">
-                    <span className="inline-block w-2 h-2 rounded-full bg-yellow-500" /> Warning (1 miss)
+                    <span className="inline-block w-2 h-2 rounded-full bg-yellow-200/80" /> Warning (1 miss)
                   </div>
                 </div>
                 {/* Per-coach columns */}
@@ -1470,12 +1466,12 @@ export default function Dashboard() {
                                 </span>
                               )}
                               {orangeClients.length > 0 && (
-                                <span className="text-[9px] font-medium text-orange-400">
+                                <span className="text-[9px] font-medium text-rose-400">
                                   {orangeClients.length} alert ({pct(orangeClients.length)}%)
                                 </span>
                               )}
                               {yellowClients.length > 0 && (
-                                <span className="text-[9px] font-medium text-yellow-400">
+                                <span className="text-[9px] font-medium text-yellow-200">
                                   {yellowClients.length} warning ({pct(yellowClients.length)}%)
                                 </span>
                               )}
@@ -1491,9 +1487,9 @@ export default function Dashboard() {
                             {redClients.length > 0 && (
                               <>
                                 <div className="flex items-center gap-1.5 py-1 mt-0.5">
-                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
                                   <span className="text-[9px] font-semibold text-red-400 uppercase tracking-wider">Critical</span>
-                                  <div className="flex-1 h-px bg-red-900/40" />
+                                  <div className="flex-1 h-px bg-red-400/20" />
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   {redClients.map(c => {
@@ -1518,9 +1514,9 @@ export default function Dashboard() {
                             {orangeClients.length > 0 && (
                               <>
                                 <div className="flex items-center gap-1.5 py-1 mt-1.5">
-                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-orange-500 flex-shrink-0" />
-                                  <span className="text-[9px] font-semibold text-orange-400 uppercase tracking-wider">Alert</span>
-                                  <div className="flex-1 h-px bg-orange-900/40" />
+                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-rose-400 flex-shrink-0" />
+                                  <span className="text-[9px] font-semibold text-rose-400 uppercase tracking-wider">Alert</span>
+                                  <div className="flex-1 h-px bg-rose-400/20" />
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   {orangeClients.map(c => {
@@ -1543,9 +1539,9 @@ export default function Dashboard() {
                             {yellowClients.length > 0 && (
                               <>
                                 <div className="flex items-center gap-1.5 py-1 mt-1.5">
-                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-500 flex-shrink-0" />
-                                  <span className="text-[9px] font-semibold text-yellow-400 uppercase tracking-wider">Warning</span>
-                                  <div className="flex-1 h-px bg-yellow-900/40" />
+                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-200/80 flex-shrink-0" />
+                                  <span className="text-[9px] font-semibold text-yellow-200 uppercase tracking-wider">Warning</span>
+                                  <div className="flex-1 h-px bg-yellow-400/20" />
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   {yellowClients.map(c => {
@@ -1583,7 +1579,7 @@ export default function Dashboard() {
           const allDates = Array.from(new Set([
             ...followupRecs.map(r => r.recordDate),
             ...disengagementRecs.map(r => r.recordDate),
-          ])).sort().reverse();
+          ])).sort();
           if (allDates.length === 0) return null;
           return (
             <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
@@ -1636,13 +1632,13 @@ export default function Dashboard() {
                             totalFu += fu; totalDis += dis;
                             return (
                               <Fragment key={coach.id}>
-                                <td className={`py-2 px-2 text-center ${fu > 0 ? 'text-blue-300 font-medium' : 'text-white/50/40'}`}>{fu > 0 ? fu : '—'}</td>
-                                <td className={`py-2 px-2 text-center ${dis > 0 ? 'text-rose-300 font-medium' : 'text-white/50/40'}`}>{dis > 0 ? dis : '—'}</td>
+                                <td className={`py-2 px-2 text-center ${fu > 0 ? 'text-blue-400 font-medium' : 'text-white/50/40'}`}>{fu > 0 ? fu : '—'}</td>
+                                <td className={`py-2 px-2 text-center ${dis > 0 ? 'text-rose-400 font-medium' : 'text-white/50/40'}`}>{dis > 0 ? dis : '—'}</td>
                               </Fragment>
                             );
                           })}
-                          <td className={`py-2 px-2 text-center font-semibold ${totalFu > 0 ? 'text-blue-300' : 'text-white/50/40'}`}>{totalFu > 0 ? totalFu : '—'}</td>
-                          <td className={`py-2 px-2 text-center font-semibold ${totalDis > 0 ? 'text-rose-300' : 'text-white/50/40'}`}>{totalDis > 0 ? totalDis : '—'}</td>
+                          <td className={`py-2 px-2 text-center font-semibold ${totalFu > 0 ? 'text-blue-400' : 'text-white/50/40'}`}>{totalFu > 0 ? totalFu : '—'}</td>
+                          <td className={`py-2 px-2 text-center font-semibold ${totalDis > 0 ? 'text-rose-400' : 'text-white/50/40'}`}>{totalDis > 0 ? totalDis : '—'}</td>
                         </tr>
                       );
                     })}
@@ -1654,15 +1650,15 @@ export default function Dashboard() {
                         const dis = disengagementRecs.filter(r => r.coachId === coach.id).reduce((s, r) => s + (r.disengagementMessagesSent ?? 0), 0);
                         return (
                           <Fragment key={coach.id}>
-                            <td className="py-2 px-2 text-center text-blue-300 font-semibold">{fu}</td>
-                            <td className="py-2 px-2 text-center text-rose-300 font-semibold">{dis}</td>
+                            <td className="py-2 px-2 text-center text-blue-400 font-semibold">{fu}</td>
+                            <td className="py-2 px-2 text-center text-rose-400 font-semibold">{dis}</td>
                           </Fragment>
                         );
                       })}
-                      <td className="py-2 px-2 text-center text-blue-300 font-bold">
+                      <td className="py-2 px-2 text-center text-blue-400 font-bold">
                         {followupRecs.reduce((s, r) => s + (r.followupMessagesSent ?? 0), 0)}
                       </td>
-                      <td className="py-2 px-2 text-center text-rose-300 font-bold">
+                      <td className="py-2 px-2 text-center text-rose-400 font-bold">
                         {disengagementRecs.reduce((s, r) => s + (r.disengagementMessagesSent ?? 0), 0)}
                       </td>
                     </tr>
@@ -1681,12 +1677,12 @@ export default function Dashboard() {
             <>
               {/* Pending approvals */}
               {pending.length > 0 && (
-                <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl border-l-[3px] border-l-blue-500">
+                <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl border-l-[3px] border-l-blue-400">
                   <CardHeader className="pb-2">
                     <div className="flex items-center gap-2">
-                      <ShieldAlert className="h-4 w-4 text-blue-500" />
+                      <ShieldAlert className="h-4 w-4 text-blue-400" />
                       <CardTitle className="text-sm font-semibold text-white/90">Pending Excuse Approvals</CardTitle>
-                      <span className="ml-auto text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{pending.length}</span>
+                      <span className="ml-auto text-xs font-semibold bg-blue-400/15 text-blue-400 px-2 py-0.5 rounded-full">{pending.length}</span>
                     </div>
                     <p className="text-xs text-white/50">Coaches have flagged clients as excused — approve or reject each request below</p>
                   </CardHeader>
@@ -1695,7 +1691,7 @@ export default function Dashboard() {
                       {pending.map((e: any) => (
                         <div key={e.id} className="flex items-start justify-between gap-3 rounded-xl bg-white/5/50 border px-3 py-2.5">
                           <div className="flex items-start gap-2 min-w-0">
-                            <Clock3 className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />
+                            <Clock3 className="h-3.5 w-3.5 text-blue-400 shrink-0 mt-0.5" />
                             <div className="min-w-0">
                               <p className="text-xs font-semibold text-white/90">{e.clientName} <span className="font-normal text-white/50 capitalize">({e.dayOfWeek})</span></p>
                               <p className="text-[11px] text-white/50">Coach: {e.coachName} &middot; Week of {formatDateAU(e.weekStart)}</p>
@@ -1706,14 +1702,14 @@ export default function Dashboard() {
                             <button
                               onClick={() => reviewExcuseMutation.mutate({ excuseId: e.id, status: "approved" })}
                               disabled={reviewExcuseMutation.isPending}
-                              className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 font-semibold transition-colors"
+                              className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg bg-emerald-400/15 text-emerald-400 hover:bg-emerald-400/25 font-semibold transition-colors"
                             >
                               <ShieldCheck className="h-3.5 w-3.5" /> Approve
                             </button>
                             <button
                               onClick={() => reviewExcuseMutation.mutate({ excuseId: e.id, status: "rejected" })}
                               disabled={reviewExcuseMutation.isPending}
-                              className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 font-semibold transition-colors"
+                              className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg bg-red-400/15 text-red-400 hover:bg-red-400/25 font-semibold transition-colors"
                             >
                               <ShieldX className="h-3.5 w-3.5" /> Reject
                             </button>
@@ -1748,9 +1744,9 @@ export default function Dashboard() {
                             <p className="text-xs font-semibold text-white/90">{c.coachName}</p>
                             <p className="text-[11px] text-white/50">
                               {c.total} excuse{c.total !== 1 ? "s" : ""}
-                              {c.pending > 0 && <span className="text-blue-500 ml-1">({c.pending} pending)</span>}
-                              {c.approved > 0 && <span className="text-green-600 ml-1">({c.approved} approved)</span>}
-                              {c.rejected > 0 && <span className="text-red-500 ml-1">({c.rejected} rejected)</span>}
+                              {c.pending > 0 && <span className="text-blue-400 ml-1">({c.pending} pending)</span>}
+                              {c.approved > 0 && <span className="text-emerald-400 ml-1">({c.approved} approved)</span>}
+                              {c.rejected > 0 && <span className="text-red-400 ml-1">({c.rejected} rejected)</span>}
                             </p>
                           </div>
                         </div>
@@ -1782,7 +1778,7 @@ export default function Dashboard() {
                 {recentNotes.map((note, i) => {
                   const coach = coaches?.find(c => c.id === note.coachId);
                   const typeLabels: Record<string, string> = { morning: "Morning Review", followup: "Follow-Up", disengagement: "Disengagement" };
-                  const typeColors: Record<string, string> = { morning: "text-amber-400", followup: "text-blue-400", disengagement: "text-rose-400" };
+                  const typeColors: Record<string, string> = { morning: "text-yellow-200", followup: "text-blue-400", disengagement: "text-rose-400" };
                   const noteType = (note as any).submissionType as string ?? "morning";
                   return (
                     <div key={i} className="flex items-start gap-3 rounded-xl bg-white/5/50 px-3 py-2.5">

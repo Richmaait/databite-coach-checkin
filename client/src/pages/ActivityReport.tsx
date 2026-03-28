@@ -288,11 +288,11 @@ export default function ActivityReport() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6 max-w-6xl mx-auto">
+      <div className="px-6 pb-6 pt-20 space-y-6 max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-white/90">Activity Report</h1>
+            <h1 className="text-3xl font-bold text-white/90" style={{ fontFamily: "'Comfortaa', cursive" }}>Activity Report</h1>
             <p className="text-sm text-white/50 mt-1">
               Compare actual check-in timestamps against each coach's declared working hours.
               <span className="ml-2 text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded font-medium">

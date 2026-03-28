@@ -32,7 +32,7 @@ const DAY_ACCENT_COLORS: Record<DayKey, string> = {
   monday: "#8b5cf6",    // violet
   tuesday: "#0ea5e9",   // sky
   wednesday: "#14b8a6",  // teal
-  thursday: "#fde047",   // neon yellow
+  thursday: "#f472b6",   // rose
   friday: "#a855f7",     // purple
 };
 
@@ -40,67 +40,16 @@ const DAY_GRADIENT_PILLS: Record<DayKey, string> = {
   monday: "from-violet-400 to-fuchsia-400",
   tuesday: "from-sky-400 to-cyan-400",
   wednesday: "from-teal-400 to-emerald-400",
-  thursday: "from-yellow-300 to-amber-300",
+  thursday: "from-rose-400 to-pink-300",
   friday: "from-purple-400 to-pink-400",
 };
 
-const DAY_COLORS: Record<
-  string,
-  {
-    header: string;
-    headerAccent: string;
-    completedBg: string;
-    pendingBg: string;
-    pendingHover: string;
-    subActive: string;
-    subHover: string;
-  }
-> = {
-  monday: {
-    header: "bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl",
-    headerAccent: "bg-gradient-to-r from-violet-500/20 to-transparent",
-    completedBg: "bg-emerald-500/10 border-emerald-500/20",
-    pendingBg: "bg-white/[0.03] border-white/[0.06]",
-    pendingHover: "hover:bg-white/[0.08]",
-    subActive: "text-violet-400 drop-shadow-[0_0_6px_rgba(139,92,246,0.6)]",
-    subHover: "text-white/20 hover:text-violet-400",
-  },
-  tuesday: {
-    header: "bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl",
-    headerAccent: "bg-gradient-to-r from-sky-500/20 to-transparent",
-    completedBg: "bg-emerald-500/10 border-emerald-500/20",
-    pendingBg: "bg-white/[0.03] border-white/[0.06]",
-    pendingHover: "hover:bg-white/[0.08]",
-    subActive: "text-sky-400 drop-shadow-[0_0_6px_rgba(14,165,233,0.6)]",
-    subHover: "text-white/20 hover:text-sky-400",
-  },
-  wednesday: {
-    header: "bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl",
-    headerAccent: "bg-gradient-to-r from-teal-500/20 to-transparent",
-    completedBg: "bg-emerald-500/10 border-emerald-500/20",
-    pendingBg: "bg-white/[0.03] border-white/[0.06]",
-    pendingHover: "hover:bg-white/[0.08]",
-    subActive: "text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.6)]",
-    subHover: "text-white/20 hover:text-teal-400",
-  },
-  thursday: {
-    header: "bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl",
-    headerAccent: "bg-gradient-to-r from-amber-500/20 to-transparent",
-    completedBg: "bg-emerald-500/10 border-emerald-500/20",
-    pendingBg: "bg-white/[0.03] border-white/[0.06]",
-    pendingHover: "hover:bg-white/[0.08]",
-    subActive: "text-yellow-300 drop-shadow-[0_0_6px_rgba(253,224,71,0.6)]",
-    subHover: "text-white/20 hover:text-amber-400",
-  },
-  friday: {
-    header: "bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl",
-    headerAccent: "bg-gradient-to-r from-purple-500/20 to-transparent",
-    completedBg: "bg-emerald-500/10 border-emerald-500/20",
-    pendingBg: "bg-white/[0.03] border-white/[0.06]",
-    pendingHover: "hover:bg-white/[0.08]",
-    subActive: "text-pink-400 drop-shadow-[0_0_6px_rgba(244,114,182,0.6)]",
-    subHover: "text-white/20 hover:text-purple-400",
-  },
+const DAY_COLORS: Record<string, { subActive: string; doneBg: string }> = {
+  monday: { subActive: "text-violet-400 drop-shadow-[0_0_6px_rgba(139,92,246,0.6)]", doneBg: "rgba(139,92,246,0.06)" },
+  tuesday: { subActive: "text-sky-400 drop-shadow-[0_0_6px_rgba(14,165,233,0.6)]", doneBg: "rgba(14,165,233,0.06)" },
+  wednesday: { subActive: "text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.6)]", doneBg: "rgba(20,184,166,0.06)" },
+  thursday: { subActive: "text-rose-400 drop-shadow-[0_0_6px_rgba(244,114,182,0.6)]", doneBg: "rgba(244,114,182,0.06)" },
+  friday: { subActive: "text-pink-400 drop-shadow-[0_0_6px_rgba(244,114,182,0.6)]", doneBg: "rgba(168,85,247,0.06)" },
 };
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -288,47 +237,52 @@ export default function ClientCheckins() {
     onError: (e) => toast.error(e.message),
   });
 
-  // Upfront alerts — clients with UPFRONT dates in their name
-  const upfrontAlerts = useMemo(() => {
-    if (!roster) return [];
-    const alerts: Array<{ name: string; day: string; dateStr: string; daysLeft: number }> = [];
-    const now = new Date();
-    for (const day of DAYS) {
-      for (const name of ((roster as Record<string, string[]>)[day] ?? [])) {
-        const match = name.match(/UPFRONT\s*[-–—]\s*(\d{1,2}\s+\w+(?:\s+\d{4})?)/i);
-        if (match) {
-          const dateStr = match[1];
-          const parsed = new Date(dateStr + (dateStr.match(/\d{4}/) ? '' : ' 2026'));
-          if (!isNaN(parsed.getTime())) {
-            const daysLeft = Math.ceil((parsed.getTime() - now.getTime()) / 86400000);
-            if (daysLeft <= 60) {
-              alerts.push({ name, day, dateStr, daysLeft });
-            }
-          }
-        }
-      }
-    }
-    return alerts.sort((a, b) => a.daysLeft - b.daysLeft);
-  }, [roster]);
+  // Upfront alerts are now handled by the unified renewalAlerts below
 
-  // Renewal alerts — clients with DEC OFFER or UPFRONT ending within 30 days
+  // Renewal alerts — clients with DEC OFFER or UPFRONT ending within 30/60 days
   const renewalAlerts = useMemo(() => {
     if (!roster) return [];
-    const alerts: Array<{ name: string; coach: string; day: string; offerType: string; daysLeft: number }> = [];
+    const alerts: Array<{ name: string; coach: string; day: string; offerType: string; daysLeft: number; dateLabel: string }> = [];
     const now = new Date();
+    const months: Record<string, number> = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 };
     for (const day of DAYS) {
       for (const name of ((roster as Record<string, string[]>)[day] ?? [])) {
-        const matchUpfront = name.match(/UPFRONT\s*[-–—]\s*(\d{1,2}\s+\w+(?:\s+\d{4})?)/i);
-        const matchDec = name.match(/DEC\s*OFFER\s*[-–—]\s*(\d{1,2}\s+\w+(?:\s+\d{4})?)/i);
+        // Match UPFRONT - 12 Apr 2026, DEC OFFER - 5 May, UPFRONT 12/04/2026, etc.
+        const matchUpfront = name.match(/UPFRONT\s*[-–—]\s*(\d{1,2}[\s/.-]+\w+[\s/.-]*\d{0,4})/i);
+        const matchDec = name.match(/DEC\s*OFFER\s*[-–—]\s*(\d{1,2}[\s/.-]+\w+[\s/.-]*\d{0,4})/i);
         const match = matchUpfront || matchDec;
         const offerType = matchUpfront ? "UPFRONT" : matchDec ? "DEC OFFER" : null;
         if (match && offerType) {
-          const dateStr = match[1];
-          const parsed = new Date(dateStr + (dateStr.match(/\d{4}/) ? '' : ' 2026'));
-          if (!isNaN(parsed.getTime())) {
+          const raw = match[1].trim();
+          let parsed: Date | null = null;
+          // Try "12 Apr 2026" or "12 Apr"
+          const namedMonth = raw.match(/^(\d{1,2})\s+(\w{3,})\s*(\d{4})?$/i);
+          if (namedMonth) {
+            const d = parseInt(namedMonth[1]);
+            const m = months[namedMonth[2].toLowerCase().slice(0, 3)];
+            const y = namedMonth[3] ? parseInt(namedMonth[3]) : now.getFullYear();
+            if (m !== undefined) parsed = new Date(y, m, d);
+          }
+          // Try "12/04/2026" or "12/04" (DD/MM)
+          if (!parsed) {
+            const slashed = raw.match(/^(\d{1,2})[/.-](\d{1,2})[/.-]?(\d{2,4})?$/);
+            if (slashed) {
+              const d = parseInt(slashed[1]);
+              const m = parseInt(slashed[2]) - 1;
+              const y = slashed[3] ? (slashed[3].length === 2 ? 2000 + parseInt(slashed[3]) : parseInt(slashed[3])) : now.getFullYear();
+              parsed = new Date(y, m, d);
+            }
+          }
+          if (parsed && !isNaN(parsed.getTime())) {
+            // If parsed date is in the past and no year was specified, try next year
+            if (parsed < now && !raw.match(/\d{4}/)) {
+              parsed.setFullYear(parsed.getFullYear() + 1);
+            }
             const daysLeft = Math.ceil((parsed.getTime() - now.getTime()) / 86400000);
-            if (daysLeft <= 30 && daysLeft >= 0) {
-              alerts.push({ name, coach: effectiveCoachName ?? "", day, offerType, daysLeft });
+            const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            const dateLabel = `${parsed.getDate()} ${monthNames[parsed.getMonth()]} ${parsed.getFullYear()}`;
+            if (daysLeft <= 60 && daysLeft >= -7) {
+              alerts.push({ name, coach: effectiveCoachName ?? "", day, offerType, daysLeft, dateLabel });
             }
           }
         }
@@ -383,6 +337,16 @@ export default function ClientCheckins() {
     const submitted = new Set<string>();
     const excused = new Map<string, { reason: string }>();
 
+    // Build a list of all roster client names for fuzzy matching excuses
+    const rosterNames: Array<{ name: string; day: string }> = [];
+    if (roster) {
+      for (const day of DAYS) {
+        for (const name of ((roster as Record<string, string[]>)[day] ?? [])) {
+          rosterNames.push({ name, day });
+        }
+      }
+    }
+
     if (weekStatuses) {
       for (const s of weekStatuses) {
         if (effectiveCoachId && s.coachId !== effectiveCoachId) continue;
@@ -396,7 +360,13 @@ export default function ClientCheckins() {
       for (const e of weekExcuses) {
         if (effectiveCoachId && e.coachId !== effectiveCoachId) continue;
         if (e.status === "approved") {
-          excused.set(`${e.clientName}|${e.dayOfWeek}`, { reason: e.reason || "" });
+          // Match excuse clientName to roster name — excuse may have extra text like "(7 Apr)"
+          const excuseName = e.clientName;
+          const dayMatch = rosterNames.find(
+            (r) => r.day === e.dayOfWeek && (r.name === excuseName || excuseName.startsWith(r.name) || r.name.startsWith(excuseName)),
+          );
+          const resolvedName = dayMatch ? dayMatch.name : excuseName;
+          excused.set(`${resolvedName}|${e.dayOfWeek}`, { reason: e.reason || "" });
         }
       }
     }
@@ -404,7 +374,7 @@ export default function ClientCheckins() {
     setLocalCompleted(completed);
     setLocalSubmitted(submitted);
     setLocalExcused(excused);
-  }, [weekStatuses, weekExcuses, effectiveCoachId, weekStart]);
+  }, [weekStatuses, weekExcuses, effectiveCoachId, weekStart, roster]);
 
   // Missed streaks set for this coach
   const missedSet = useMemo(() => {
@@ -647,231 +617,262 @@ export default function ClientCheckins() {
       <div className="relative z-10">
 
         {/* ── Header ──────────────────────────────────────────────────────── */}
-        <div className="max-w-[1440px] mx-auto px-8 pt-8 pb-4">
-          {/* Top row: Logo + title on left, coach selector on right */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <img src="/databite-wordmark.png" alt="Databite" className="h-7 brightness-0 invert opacity-80" />
-              <div className="w-px h-6 bg-white/10"></div>
-              <h1 className="text-2xl font-bold text-white/90 tracking-tight">Client Check-Ins</h1>
+        <div className="max-w-[1600px] mx-auto px-8 pt-20 pb-4">
+          {/* Top row: Logo + title on left, coach + date selectors on right */}
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <img src="/databite-wordmark.png" alt="Databite" className="h-10 brightness-0 invert opacity-80" />
+              <h1 className="text-2xl font-bold text-white/50 tracking-tight mt-1" style={{ fontFamily: "'Comfortaa', cursive" }}>Client Check-Ins</h1>
             </div>
 
-            {/* Coach selector — top right */}
-            {isAdmin && coaches && (
-              <div className="glass rounded-xl px-3 py-1.5 flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[10px] font-bold">
-                  {effectiveCoachName?.charAt(0) ?? "?"}
+            {/* Coach selector + Date selector — top right */}
+            <div className="flex items-center gap-3">
+              {isAdmin && coaches && (
+                <div className="glass rounded-xl px-3 py-1.5 flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[10px] font-bold">
+                    {effectiveCoachName?.charAt(0) ?? "?"}
+                  </div>
+                  <select
+                    className="bg-transparent text-white/80 text-sm font-medium appearance-none cursor-pointer pr-5 outline-none"
+                    value={selectedCoachId?.toString() ?? ""}
+                    onChange={(e) => setSelectedCoachId(parseInt(e.target.value))}
+                  >
+                    {coaches.map((c) => (
+                      <option key={c.id} value={c.id.toString()} className="bg-zinc-900">{c.name}</option>
+                    ))}
+                  </select>
+                  <svg className="w-3.5 h-3.5 text-white/30 -ml-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
                 </div>
-                <select
-                  className="bg-transparent text-white/80 text-sm font-medium appearance-none cursor-pointer pr-5 outline-none"
-                  value={selectedCoachId?.toString() ?? ""}
-                  onChange={(e) => setSelectedCoachId(parseInt(e.target.value))}
-                >
-                  {coaches.map((c) => (
-                    <option key={c.id} value={c.id.toString()} className="bg-zinc-900">{c.name}</option>
-                  ))}
-                </select>
-                <svg className="w-3.5 h-3.5 text-white/30 -ml-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
+              )}
+              <div className="flex items-center gap-1.5">
+                <button onClick={goToPrevWeek} className="glass rounded-xl px-3.5 py-2 text-base text-white/50 hover:text-white/80 hover:bg-white/10 transition-all">&larr;</button>
+                <div className="glass rounded-xl px-4 py-2 flex items-center gap-2.5">
+                  <svg className="w-4.5 h-4.5 text-violet-400/60" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  <button
+                    onClick={goToCurrentWeek}
+                    className="text-base text-white/70 font-semibold hover:text-white/90 transition-colors"
+                  >
+                    {formatWeekRange(weekStart)}
+                  </button>
+                </div>
+                <button onClick={goToNextWeek} className="glass rounded-xl px-3.5 py-2 text-base text-white/50 hover:text-white/80 hover:bg-white/10 transition-all">&rarr;</button>
               </div>
-            )}
-          </div>
-
-          {/* Second row: Prev/Next + Date range on left */}
-          <div className="flex items-center gap-2">
-            <button onClick={goToPrevWeek} className="glass rounded-xl px-3 py-1.5 text-sm text-white/50 hover:text-white/80 transition-colors">&larr;</button>
-            <div className="glass rounded-xl px-3 py-1.5 flex items-center gap-2">
-              <svg className="w-4 h-4 text-violet-400/60" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-              <button
-                onClick={goToCurrentWeek}
-                className="text-sm text-white/70 font-medium hover:text-white/90 transition-colors"
-              >
-                {formatWeekRange(weekStart)}
-              </button>
             </div>
-            <button onClick={goToNextWeek} className="glass rounded-xl px-3 py-1.5 text-sm text-white/50 hover:text-white/80 transition-colors">&rarr;</button>
           </div>
 
-          {/* ── Stats Row ─────────────────────────────────────────────────── */}
+          {/* ── Stats Row — 25% bigger ────────────────────────────────────── */}
           {coachStats && (
-            <div className="flex items-center gap-4 mt-5">
-              <div className="glass rounded-2xl px-4 py-2.5 flex items-center gap-2.5">
-                <div className="w-2 h-2 rounded-full bg-violet-400 glow-violet"></div>
+            <div className="flex items-center gap-5 mt-6">
+              <div className="glass rounded-2xl px-6 py-4 flex items-center gap-3.5">
+                <div className="w-3 h-3 rounded-full bg-violet-400 glow-violet"></div>
                 <div>
-                  <div className="text-[10px] text-white/40 uppercase tracking-wider">Submitted</div>
-                  <div className="text-lg font-bold text-white/90 -mt-0.5">{coachStats.clientSubmitted}</div>
+                  <div className="text-xs text-white/40 uppercase tracking-wider font-medium">Submitted</div>
+                  <div className="text-2xl font-bold text-white/90 -mt-0.5">{coachStats.clientSubmitted}</div>
                 </div>
               </div>
-              <div className="glass rounded-2xl px-4 py-2.5 flex items-center gap-2.5">
-                <div className="w-2 h-2 rounded-full bg-emerald-400 status-dot-green"></div>
+              <div className="glass rounded-2xl px-6 py-4 flex items-center gap-3.5">
+                <div className="w-3 h-3 rounded-full bg-emerald-400 status-dot-green"></div>
                 <div>
-                  <div className="text-[10px] text-white/40 uppercase tracking-wider">Completed</div>
-                  <div className="text-lg font-bold text-white/90 -mt-0.5">{coachStats.completed}</div>
+                  <div className="text-xs text-white/40 uppercase tracking-wider font-medium">Completed</div>
+                  <div className="text-2xl font-bold text-white/90 -mt-0.5">{coachStats.completed}</div>
                 </div>
               </div>
-              <div className="glass rounded-2xl px-4 py-2.5 flex items-center gap-2.5">
-                <div className="w-2 h-2 rounded-full bg-white/30"></div>
+              <div className="glass rounded-2xl px-6 py-4 flex items-center gap-3.5">
+                <div className="w-3 h-3 rounded-full bg-white/30"></div>
                 <div>
-                  <div className="text-[10px] text-white/40 uppercase tracking-wider">Remaining</div>
-                  <div className="text-lg font-bold text-white/90 -mt-0.5">{coachStats.scheduled - coachStats.completed}</div>
+                  <div className="text-xs text-white/40 uppercase tracking-wider font-medium">Remaining</div>
+                  <div className="text-2xl font-bold text-white/90 -mt-0.5">{coachStats.scheduled - coachStats.completed}</div>
                 </div>
               </div>
-              <div className="glass rounded-2xl px-4 py-2.5 flex items-center gap-2.5">
-                <div className="w-2 h-2 rounded-full bg-red-400 status-dot-red"></div>
+              <div className="glass rounded-2xl px-6 py-4 flex items-center gap-3.5">
+                <div className="w-3 h-3 rounded-full bg-red-400 status-dot-red"></div>
                 <div>
-                  <div className="text-[10px] text-white/40 uppercase tracking-wider">Disengaging</div>
-                  <div className="text-lg font-bold text-white/90 -mt-0.5">{disengagingCount}</div>
+                  <div className="text-xs text-white/40 uppercase tracking-wider font-medium">Disengaging</div>
+                  <div className="text-2xl font-bold text-white/90 -mt-0.5">{disengagingCount}</div>
                 </div>
               </div>
+              {coachStats.excused > 0 && (
+                <div className="glass rounded-2xl px-6 py-4 flex items-center gap-3.5">
+                  <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+                  <div>
+                    <div className="text-xs text-white/40 uppercase tracking-wider font-medium">Excused</div>
+                    <div className="text-2xl font-bold text-white/90 -mt-0.5">{coachStats.excused}</div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
-          {/* ── Tab Toggle ──────────────────────────────────────────────── */}
-          <div className="flex items-center gap-1 mt-5 glass rounded-xl p-1 w-fit">
-            <button
-              onClick={() => setActiveTab("roster")}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === "roster" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"}`}
-            >
-              Roster
-            </button>
-            <button
-              onClick={() => setActiveTab("disengagement")}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${activeTab === "disengagement" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"}`}
-            >
-              Disengagement Tracking
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 font-bold">{disengagingCount}</span>
-            </button>
+          {/* ── Tab Toggle — centered, wider ───────────────────────────── */}
+          <div className="flex justify-center mt-6">
+            <div className="flex items-center gap-1 glass rounded-xl p-1.5 w-full max-w-xl">
+              <button
+                onClick={() => setActiveTab("roster")}
+                className={`flex-1 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all text-center ${activeTab === "roster" ? "bg-white/10 text-white shadow-lg shadow-white/5" : "text-white/40 hover:text-white/70"}`}
+              >
+                Roster
+              </button>
+              <button
+                onClick={() => setActiveTab("disengagement")}
+                className={`flex-1 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${activeTab === "disengagement" ? "bg-white/10 text-white shadow-lg shadow-white/5" : "text-white/40 hover:text-white/70"}`}
+              >
+                Disengagement Tracking
+                {disengagingCount > 0 && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 font-bold">{disengagingCount}</span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
         {/* ── ROSTER TAB ─────────────────────────────────────────────────── */}
         {activeTab === "roster" && (<>
-        <div className="max-w-[1440px] mx-auto px-8 mt-4">
+        <div className="max-w-[1600px] mx-auto px-8 mt-6">
           {!effectiveCoachId ? (
-            <div className="glass rounded-2xl p-6 text-center text-white/50 text-sm">
+            <div className="glass rounded-2xl p-8 text-center text-white/50">
               Select a coach above to view their roster.
             </div>
           ) : !roster ? (
-            <div className="glass rounded-2xl p-6 text-center text-white/50 text-sm">
+            <div className="glass rounded-2xl p-8 text-center text-white/50">
               Loading roster...
             </div>
           ) : (
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-5 gap-5">
               {DAYS.map((day) => {
                 const clients = (roster as Record<string, string[]>)[day] ?? [];
                 const colours = DAY_COLORS[day];
+                const stats = dayStats[day];
 
                 return (
-                  <div key={day} className="glass rounded-2xl p-4">
+                  <div key={day} className="glass rounded-2xl p-5">
                     {/* Day header */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-1 h-5 rounded-full bg-gradient-to-b ${DAY_GRADIENT_PILLS[day]}`}></div>
-                        <span className="text-sm font-semibold text-white/80">{DAY_FULL_NAMES[day]}</span>
+                    <div className="flex items-center justify-between mb-5">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-1.5 h-6 rounded-full bg-gradient-to-b ${DAY_GRADIENT_PILLS[day]}`}></div>
+                        <div>
+                          <span className="text-base font-bold text-white/90 block leading-tight">{DAY_FULL_NAMES[day]}</span>
+                          <span className="text-xs text-white/40">{getDayShortLabel(weekStart, day)}</span>
+                        </div>
                       </div>
-                      <span className="text-xs text-white/30">{getDayShortLabel(weekStart, day)}</span>
+                      <div className="text-right">
+                        <span className="text-lg font-bold text-white/80">{stats.completed}<span className="text-white/30">/{stats.total}</span></span>
+                      </div>
                     </div>
 
                     {/* Client list */}
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       {clients.length === 0 ? (
-                        <p className="text-xs text-white/30 text-center py-4">No clients</p>
+                        <p className="text-sm text-white/30 text-center py-6">No clients</p>
                       ) : (
                         clients.map((clientName: string) => {
                           const isCompleted = completedSet.has(`${clientName}|${day}`);
                           const isClientSub = clientSubmittedSet.has(`${clientName}|${day}`);
                           const excuseEntry = approvedExcuseMap.get(`${clientName}|${day}`);
-                          const isExcused = !!excuseEntry && !isCompleted;
+                          const isExcused = !!excuseEntry;
                           const isPaused = pausedSet.has(clientName);
                           const isMissedStreak = missedSet.has(`${clientName}|${day}`);
                           const isOverdue = isClientOverdue(weekStart, day, isCompleted || isExcused || isPaused);
                           const showRed = (isOverdue || isMissedStreak) && !isCompleted && !isExcused && !isPaused;
+                          const isActionable = canEdit && !isCompleted && !isExcused && !isPaused;
 
-                          // Status-based classes
+                          // Status logic — excused OVERRIDES submitted/completed appearance
                           const dotClass = isPaused
                             ? "bg-white/20"
-                            : isCompleted || isExcused
-                              ? "bg-emerald-400 status-dot-green"
-                              : showRed
-                                ? "bg-red-400 status-dot-red"
-                                : "bg-white/20";
+                            : isExcused
+                              ? "bg-white/20"
+                              : isCompleted
+                                ? "bg-emerald-400 status-dot-green"
+                                : showRed
+                                  ? "bg-red-400 status-dot-red"
+                                  : "bg-white/20";
 
                           const nameClass = isPaused
-                            ? "text-white/50 line-through"
-                            : isCompleted || isExcused
-                              ? "text-white/80"
+                            ? "text-white/40 line-through"
+                            : isExcused
+                              ? "text-white/50"
+                              : isCompleted
+                                ? "text-white/80"
+                                : showRed
+                                  ? "text-red-300/80"
+                                  : "text-white/50";
+
+                          // Excused overrides submitted icon glow
+                          const formIconClass = isExcused
+                            ? "text-white/10"
+                            : isClientSub
+                              ? colours.subActive
+                              : isCompleted
+                                ? "text-violet-400/40"
+                                : "text-white/10";
+
+                          const rowStyle = isExcused
+                            ? undefined
+                            : isCompleted
+                              ? { background: colours.doneBg }
                               : showRed
-                                ? "text-red-300/80"
-                                : "text-white/50";
+                                ? { borderColor: "rgba(248,113,113,0.15)" }
+                                : undefined;
 
-                          const formIconClass = isCompleted || isExcused
-                            ? "text-violet-400/40"
-                            : "text-white/10";
-
-                          const btnStyle = showRed
-                            ? { borderColor: "rgba(248,113,113,0.15)" }
-                            : undefined;
+                          // Strip UPFRONT/DEC OFFER tags from display name
+                          const displayName = clientName
+                            .replace(/\s*(UPFRONT|DEC\s*OFFER)\s*[-–—]\s*\d{1,2}[\s/.-]+\w+[\s/.-]*\d{0,4}/gi, "")
+                            .trim();
 
                           return (
                             <div
                               key={clientName}
-                              className={`glass-btn w-full rounded-xl px-3 py-2 flex items-center justify-between ${isPaused ? "opacity-40" : ""}`}
-                              style={btnStyle}
+                              onClick={() => isActionable && handleClientClick(clientName, day)}
+                              className={`group glass-btn w-full rounded-xl px-3.5 py-2.5 flex items-center justify-between transition-all duration-150
+                                ${isPaused ? "opacity-40" : ""} ${isActionable ? "cursor-pointer active:scale-[0.98]" : ""}`}
+                              style={rowStyle}
                             >
                               {/* Left: form icon + status dot + name */}
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                 {/* Form icon (sub toggle) */}
                                 <button
-                                  onClick={() =>
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     toggleClientSubmittedMutation.mutate({
                                       clientName,
                                       dayOfWeek: day,
                                       weekStart,
                                       ...(effectiveCoachId ? { coachId: effectiveCoachId } : {}),
-                                    })
-                                  }
+                                    });
+                                  }}
                                   title={isClientSub ? "Client submitted (click to unmark)" : "Mark client as submitted"}
-                                  className="shrink-0"
+                                  className="shrink-0 p-1 -m-1 rounded-lg hover:bg-white/10 transition-colors"
                                 >
-                                  <svg className={`w-3.5 h-3.5 ${isClientSub ? colours.subActive : formIconClass}`} fill="currentColor" viewBox="0 0 20 20">
+                                  <svg className={`w-4 h-4 transition-colors ${formIconClass}`} fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
                                     <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/>
                                   </svg>
                                 </button>
 
-                                {/* Client name button with status dot */}
-                                <button
-                                  onClick={() =>
-                                    canEdit && !isCompleted && !isExcused && !isPaused && handleClientClick(clientName, day)
-                                  }
-                                  disabled={isCompleted || isExcused || !canEdit || isPaused}
-                                  title={
-                                    isPaused
-                                      ? "Client is paused"
-                                      : isExcused
-                                        ? `Excused — ${excuseEntry?.reason}`
-                                        : undefined
-                                  }
-                                  className="flex items-center gap-2 min-w-0"
-                                >
-                                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotClass}`}></div>
-                                  <span className={`text-xs font-medium ${nameClass} truncate flex items-center gap-1`}>
-                                    {clientName}
-                                    {isExcused && (
-                                      <svg className="w-3 h-3 text-emerald-400/60 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M10 1.944A11.954 11.954 0 012.166 5C2.056 5.649 2 6.319 2 7c0 5.225 3.34 9.67 8 11.317C14.66 16.67 18 12.225 18 7c0-.682-.057-1.351-.166-2.001A11.954 11.954 0 0110 1.944zM13.707 8.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
+                                {/* Status dot */}
+                                <div className={`w-2 h-2 rounded-full shrink-0 ${dotClass}`}></div>
+
+                                {/* Client name */}
+                                <span className={`text-sm font-medium ${nameClass} truncate flex items-center gap-1.5`}>
+                                  {displayName}
+                                  {isExcused && (
+                                    <span className="shrink-0" title={excuseEntry?.reason}>
+                                      <svg className="w-4 h-4 text-white/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                        <line x1="12" y1="8" x2="12" y2="12"/>
+                                        <line x1="12" y1="16" x2="12.01" y2="16"/>
                                       </svg>
-                                    )}
-                                  </span>
-                                </button>
+                                    </span>
+                                  )}
+                                </span>
                               </div>
 
                               {/* Right: resume/undo buttons */}
-                              <div className="flex items-center gap-1 shrink-0 ml-1">
+                              <div className="flex items-center gap-1.5 shrink-0 ml-2">
                                 {/* Resume button for paused clients */}
                                 {isPaused && canEdit && (
                                   <button
-                                    onClick={() => resumeClientMutation.mutate({ coachId: effectiveCoachId ?? 0, clientName })}
+                                    onClick={(e) => { e.stopPropagation(); resumeClientMutation.mutate({ coachId: effectiveCoachId ?? 0, clientName }); }}
                                     title="Click to resume"
-                                    className="text-[10px] font-medium text-violet-400 hover:text-violet-300 transition-colors"
+                                    className="text-xs font-medium text-violet-400 hover:text-violet-300 px-2 py-1 rounded-lg hover:bg-violet-500/10 transition-all"
                                   >
                                     Resume
                                   </button>
@@ -880,13 +881,13 @@ export default function ClientCheckins() {
                                 {/* Undo button */}
                                 {isCompleted && canEdit && (
                                   <button
-                                    onClick={() => setUndoPending({ clientName, day })}
+                                    onClick={(e) => { e.stopPropagation(); setUndoPending({ clientName, day }); }}
                                     title="Undo check-in"
-                                    className="shrink-0 p-1 rounded text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                    className="shrink-0 p-1.5 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
                                   >
                                     <svg
                                       xmlns="http://www.w3.org/2000/svg"
-                                      className="h-3 w-3"
+                                      className="h-3.5 w-3.5"
                                       viewBox="0 0 24 24"
                                       fill="none"
                                       stroke="currentColor"
@@ -913,7 +914,7 @@ export default function ClientCheckins() {
         </div>
 
         {/* ── Bottom Sections: Pause a Client & Valid Excuse side by side ── */}
-        <div className="max-w-[1440px] mx-auto px-8 mt-8 pb-12">
+        <div className="max-w-[1600px] mx-auto px-8 mt-8 pb-12">
           <div className="grid grid-cols-2 gap-6">
 
             {/* Pause a Client */}
@@ -1100,29 +1101,34 @@ export default function ClientCheckins() {
 
           {/* ── Renewal Alerts (orange banner) ──────────────────────────── */}
           {renewalAlerts.length > 0 && (
-            <div className="glass rounded-2xl p-5 mt-6" style={{ borderColor: "rgba(245,158,11,0.2)" }}>
-              <div className="flex items-center gap-2 mb-4">
-                <AlertTriangle className="h-4 w-4 text-amber-300" />
-                <h3 className="text-sm font-semibold text-amber-200">
+            <div className="glass rounded-2xl p-6 mt-6" style={{ borderColor: "rgba(245,158,11,0.2)" }}>
+              <div className="flex items-center gap-2.5 mb-5">
+                <AlertTriangle className="h-5 w-5 text-amber-300" />
+                <h3 className="text-base font-bold text-amber-200">
                   {renewalAlerts.length} Client Renewal{renewalAlerts.length !== 1 ? "s" : ""} Coming Up
                 </h3>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {renewalAlerts.map((a) => (
                   <div
                     key={a.name}
-                    className="glass-btn rounded-xl px-3 py-2 flex items-center justify-between"
+                    className="rounded-xl px-4 py-3 flex items-center justify-between border border-amber-500/10 bg-amber-500/[0.04] hover:bg-amber-500/[0.08] transition-colors"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-medium text-amber-200">{a.name}</span>
-                      <span className="text-[10px] text-white/40">{a.coach}</span>
-                      <span className="text-[10px] text-white/40 capitalize">{a.day}</span>
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <span className="text-sm font-medium text-amber-200 truncate">{a.name.replace(/\s*(UPFRONT|DEC\s*OFFER)\s*[-–—].*/gi, "").trim()}</span>
+                      <span className="text-xs text-white/40 capitalize shrink-0">{a.day}</span>
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 shrink-0">
                         {a.offerType}
                       </span>
+                      <span className="text-xs text-white/40 shrink-0">{a.dateLabel}</span>
                     </div>
-                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${a.daysLeft <= 7 ? "bg-red-500/10 text-red-400 border border-red-500/20" : a.daysLeft <= 14 ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" : "bg-amber-500/10 text-amber-400 border border-amber-500/20"}`}>
-                      in {a.daysLeft} day{a.daysLeft !== 1 ? "s" : ""}
+                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ml-3 ${
+                      a.daysLeft <= 0 ? "bg-red-500/20 text-red-300 border border-red-500/30" :
+                      a.daysLeft <= 7 ? "bg-red-500/10 text-red-400 border border-red-500/20" :
+                      a.daysLeft <= 14 ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" :
+                      "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                    }`}>
+                      {a.daysLeft <= 0 ? `${Math.abs(a.daysLeft)}d overdue` : `in ${a.daysLeft}d`}
                     </span>
                   </div>
                 ))}
@@ -1135,7 +1141,7 @@ export default function ClientCheckins() {
 
         {/* ── DISENGAGEMENT TAB ──────────────────────────────────────────── */}
         {activeTab === "disengagement" && (
-        <div className="max-w-[1440px] mx-auto px-8 mt-4 pb-12">
+        <div className="max-w-[1600px] mx-auto px-8 mt-4 pb-12">
           {/* ── Disengagement Tracking ─────────────────────────────────────── */}
           {disengagedByCoach.length > 0 && (
             <div className="glass rounded-2xl p-5 mt-6">

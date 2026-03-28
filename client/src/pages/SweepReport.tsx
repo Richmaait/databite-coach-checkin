@@ -37,8 +37,8 @@ interface Snapshot {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const RATING_CONFIG: Record<Rating, { label: string; bg: string; text: string; dot: string; border: string }> = {
   green:  { label: "On Track",  bg: "bg-emerald-500/15", text: "text-emerald-300", dot: "bg-emerald-500", border: "border-emerald-500/30" },
-  yellow: { label: "Neutral",   bg: "bg-amber-400/15",   text: "text-amber-300",   dot: "bg-amber-400",   border: "border-amber-400/30"   },
-  red:    { label: "Off Track", bg: "bg-red-500/15",     text: "text-red-300",     dot: "bg-red-500",     border: "border-red-500/30"     },
+  yellow: { label: "Neutral",   bg: "bg-yellow-400/15",  text: "text-yellow-200",  dot: "bg-yellow-200/80", border: "border-yellow-200/30" },
+  red:    { label: "Off Track", bg: "bg-red-400/15",     text: "text-red-400",     dot: "bg-red-400",     border: "border-red-400/30"     },
 };
 
 function formatDateAU(iso: string): string {
@@ -57,9 +57,9 @@ function formatDateTimeAU(iso: string): string {
 
 function DisengagementBadge({ streak }: { streak: number }) {
   if (streak === 0) return null;
-  const color = streak >= 3 ? "bg-red-500/20 text-red-300 border-red-500/40"
-    : streak === 2 ? "bg-orange-500/20 text-orange-300 border-orange-500/40"
-    : "bg-amber-400/20 text-amber-300 border-amber-400/40";
+  const color = streak >= 3 ? "bg-red-400/20 text-red-400 border-red-400/40"
+    : streak === 2 ? "bg-rose-500/20 text-rose-400 border-rose-500/40"
+    : "bg-yellow-400/20 text-yellow-200 border-yellow-200/40";
   return (
     <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border ${color} font-medium`}>
       {"!".repeat(Math.min(streak, 3))} {streak}w missed
@@ -103,7 +103,7 @@ function CoachCard({ section }: { section: CoachSection }) {
   const redClients = section.clients.filter(c => c.rating === "red");
 
   const engPct = section.engagement.pct;
-  const engColor = engPct >= 80 ? "text-emerald-400" : engPct >= 60 ? "text-amber-400" : "text-red-400";
+  const engColor = engPct >= 80 ? "text-emerald-400" : engPct >= 60 ? "text-yellow-200" : "text-red-400";
 
   return (
     <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
@@ -118,11 +118,11 @@ function CoachCard({ section }: { section: CoachSection }) {
               <span className="text-emerald-400 font-semibold">{section.green}</span>
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-amber-400" />
-              <span className="text-amber-400 font-semibold">{section.yellow}</span>
+              <span className="h-2 w-2 rounded-full bg-yellow-200/80" />
+              <span className="text-yellow-200 font-semibold">{section.yellow}</span>
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-red-500" />
+              <span className="h-2 w-2 rounded-full bg-red-400" />
               <span className="text-red-400 font-semibold">{section.red}</span>
             </span>
           </div>
@@ -138,11 +138,11 @@ function CoachCard({ section }: { section: CoachSection }) {
       </div>
 
       {/* Clients grouped by rating */}
-      <div className="divide-y divide-zinc-800/50">
+      <div className="divide-y divide-white/[0.06]">
         {redClients.length > 0 && (
           <div className="px-5 py-3">
             <div className="flex items-center gap-2 mb-2">
-              <span className="h-2 w-2 rounded-full bg-red-500" />
+              <span className="h-2 w-2 rounded-full bg-red-400" />
               <span className="text-xs font-semibold uppercase tracking-wider text-red-400">Off Track ({redClients.length})</span>
             </div>
             {redClients.map(c => <ClientRow key={c.clientName} client={c} />)}
@@ -151,8 +151,8 @@ function CoachCard({ section }: { section: CoachSection }) {
         {yellowClients.length > 0 && (
           <div className="px-5 py-3">
             <div className="flex items-center gap-2 mb-2">
-              <span className="h-2 w-2 rounded-full bg-amber-400" />
-              <span className="text-xs font-semibold uppercase tracking-wider text-amber-400">Neutral ({yellowClients.length})</span>
+              <span className="h-2 w-2 rounded-full bg-yellow-200/80" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-yellow-200">Neutral ({yellowClients.length})</span>
             </div>
             {yellowClients.map(c => <ClientRow key={c.clientName} client={c} />)}
           </div>
@@ -178,7 +178,7 @@ function CoachCard({ section }: { section: CoachSection }) {
 function BusinessSummary({ snapshot }: { snapshot: Snapshot }) {
   const { business } = snapshot;
   const onTrackPct = business.greenPct;
-  const onTrackColor = onTrackPct >= 70 ? "text-emerald-400" : onTrackPct >= 50 ? "text-amber-400" : "text-red-400";
+  const onTrackColor = onTrackPct >= 70 ? "text-emerald-400" : onTrackPct >= 50 ? "text-yellow-200" : "text-red-400";
 
   // Count disengaged clients across all coaches
   const disengagedCount = snapshot.coaches.reduce((sum, c) =>
@@ -197,7 +197,7 @@ function BusinessSummary({ snapshot }: { snapshot: Snapshot }) {
           <div className="text-xs text-white/30 mt-1">Green</div>
         </div>
         <div className="text-center">
-          <div className="text-3xl font-bold text-amber-400">{business.yellow}</div>
+          <div className="text-3xl font-bold text-yellow-200">{business.yellow}</div>
           <div className="text-xs text-white/30 mt-1">Neutral</div>
         </div>
         <div className="text-center">
@@ -219,7 +219,7 @@ function BusinessSummary({ snapshot }: { snapshot: Snapshot }) {
         <span>Target: 70% On Track</span>
       </div>
       {disengagedCount > 0 && (
-        <div className="mt-4 flex items-center gap-2 text-sm text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-xl px-4 py-2.5">
+        <div className="mt-4 flex items-center gap-2 text-sm text-yellow-200 bg-yellow-400/10 border border-yellow-200/20 rounded-xl px-4 py-2.5">
           <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
           </svg>
@@ -248,8 +248,8 @@ function ComparisonPanel({
   const RATING_LABELS: Record<string, string> = { green: "On Track", yellow: "Neutral", red: "Off Track" };
   const RATING_ARROW: Record<string, { icon: string; color: string; bg: string }> = {
     improved: { icon: "↑", color: "text-emerald-300", bg: "bg-emerald-500/10 border-emerald-500/30" },
-    declined:  { icon: "↓", color: "text-red-300",     bg: "bg-red-500/10 border-red-500/30"         },
-    unchanged: { icon: "→", color: "text-white/50",    bg: "bg-white/5/50 border-white/10/50"       },
+    declined:  { icon: "↓", color: "text-red-400",     bg: "bg-red-400/10 border-red-400/30"         },
+    unchanged: { icon: "→", color: "text-white/50",    bg: "bg-white/[0.03] border-white/[0.06]"    },
   };
 
   // Helper: diff value with colour
@@ -320,12 +320,12 @@ function ComparisonPanel({
                 <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" /> On Track %
               </div>
               <div className="text-center py-2 border-t border-white/[0.08]">
-                <span className={`font-bold ${data.previous.business.greenPct >= 70 ? "text-emerald-400" : data.previous.business.greenPct >= 50 ? "text-amber-400" : "text-red-400"}`}>
+                <span className={`font-bold ${data.previous.business.greenPct >= 70 ? "text-emerald-400" : data.previous.business.greenPct >= 50 ? "text-yellow-200" : "text-red-400"}`}>
                   {data.previous.business.greenPct.toFixed(1)}%
                 </span>
               </div>
               <div className="text-center py-2 border-t border-white/[0.08] flex flex-col items-center gap-0.5">
-                <span className={`font-bold ${data.current.business.greenPct >= 70 ? "text-emerald-400" : data.current.business.greenPct >= 50 ? "text-amber-400" : "text-red-400"}`}>
+                <span className={`font-bold ${data.current.business.greenPct >= 70 ? "text-emerald-400" : data.current.business.greenPct >= 50 ? "text-yellow-200" : "text-red-400"}`}>
                   {data.current.business.greenPct.toFixed(1)}%
                 </span>
                 <Diff curr={data.current.business.greenPct} prev={data.previous.business.greenPct} suffix="%" />
@@ -343,17 +343,17 @@ function ComparisonPanel({
 
               {/* Neutral */}
               <div className="text-white/50 flex items-center gap-1.5 py-2 border-t border-white/[0.08]">
-                <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" /> Neutral
+                <span className="h-2 w-2 rounded-full bg-yellow-200/80 shrink-0" /> Neutral
               </div>
-              <div className="text-center py-2 border-t border-white/[0.08] text-amber-400 font-bold">{data.previous.business.yellow}</div>
+              <div className="text-center py-2 border-t border-white/[0.08] text-yellow-200 font-bold">{data.previous.business.yellow}</div>
               <div className="text-center py-2 border-t border-white/[0.08] flex flex-col items-center gap-0.5">
-                <span className="text-amber-400 font-bold">{data.current.business.yellow}</span>
+                <span className="text-yellow-200 font-bold">{data.current.business.yellow}</span>
                 <Diff curr={data.current.business.yellow} prev={data.previous.business.yellow} higherIsBetter={false} />
               </div>
 
               {/* Off Track */}
               <div className="text-white/50 flex items-center gap-1.5 py-2 border-t border-white/[0.08]">
-                <span className="h-2 w-2 rounded-full bg-red-500 shrink-0" /> Off Track
+                <span className="h-2 w-2 rounded-full bg-red-400 shrink-0" /> Off Track
               </div>
               <div className="text-center py-2 border-t border-white/[0.08] text-red-400 font-bold">{data.previous.business.red}</div>
               <div className="text-center py-2 border-t border-white/[0.08] flex flex-col items-center gap-0.5">
@@ -366,12 +366,12 @@ function ComparisonPanel({
                 <span className="h-2 w-2 rounded-full bg-blue-400 shrink-0" /> Engagement
               </div>
               <div className="text-center py-2 border-t border-white/[0.08]">
-                <span className={`font-bold ${data.previous.engagementPct >= 80 ? "text-emerald-400" : data.previous.engagementPct >= 60 ? "text-amber-400" : "text-red-400"}`}>
+                <span className={`font-bold ${data.previous.engagementPct >= 80 ? "text-emerald-400" : data.previous.engagementPct >= 60 ? "text-yellow-200" : "text-red-400"}`}>
                   {data.previous.engagementPct.toFixed(1)}%
                 </span>
               </div>
               <div className="text-center py-2 border-t border-white/[0.08] flex flex-col items-center gap-0.5">
-                <span className={`font-bold ${data.current.engagementPct >= 80 ? "text-emerald-400" : data.current.engagementPct >= 60 ? "text-amber-400" : "text-red-400"}`}>
+                <span className={`font-bold ${data.current.engagementPct >= 80 ? "text-emerald-400" : data.current.engagementPct >= 60 ? "text-yellow-200" : "text-red-400"}`}>
                   {data.current.engagementPct.toFixed(1)}%
                 </span>
                 <Diff curr={data.current.engagementPct} prev={data.previous.engagementPct} suffix="%" />
@@ -426,7 +426,7 @@ function ComparisonPanel({
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-white/30 mb-2">New Clients ({data.newClients.length})</h3>
                   <div className="space-y-1">
                     {data.newClients.map((c, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-white/5/50 border border-white/10/50">
+                      <div key={i} className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
                         <span className="text-white/70 font-medium">{c.clientName}</span>
                         <span className="text-white/30">({c.coachName})</span>
                         <RatingBadge rating={c.rating} />
@@ -440,7 +440,7 @@ function ComparisonPanel({
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-white/30 mb-2">No Longer Listed ({data.removedClients.length})</h3>
                   <div className="space-y-1">
                     {data.removedClients.map((c, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-white/5/50 border border-white/10/50">
+                      <div key={i} className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
                         <span className="text-white/50 font-medium line-through">{c.clientName}</span>
                         <span className="text-white/30">({c.coachName})</span>
                       </div>
@@ -518,7 +518,7 @@ export default function SweepReportPage() {
   if (!reportId || isNaN(reportId)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center">
-        <div className="text-center">
+        <div className="glass p-8 text-center">
           <p className="text-white/50 text-lg">Invalid report ID.</p>
           <button onClick={() => setLocation("/client-progress")} className="mt-4 text-sm text-violet-400 hover:underline">
             ← Back to Client Progress
@@ -531,7 +531,7 @@ export default function SweepReportPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
+        <div className="glass p-8 flex flex-col items-center gap-3">
           <div className="h-8 w-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
           <p className="text-white/50 text-sm">Loading report…</p>
         </div>
@@ -542,7 +542,7 @@ export default function SweepReportPage() {
   if (error || !data) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center">
-        <div className="text-center">
+        <div className="glass p-8 text-center">
           <p className="text-white/50 text-lg">Report not found.</p>
           <button onClick={() => setLocation("/client-progress")} className="mt-4 text-sm text-violet-400 hover:underline">
             ← Back to Client Progress
@@ -570,13 +570,13 @@ export default function SweepReportPage() {
         }
       `}</style>
 
-      <div ref={printRef} className="max-w-4xl mx-auto px-4 py-8">
+      <div ref={printRef} className="max-w-4xl mx-auto px-4 pt-8 pb-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <h1 className="text-2xl font-bold text-white/90">{data.title}</h1>
+                <h1 className="text-2xl font-bold text-white/90" style={{ fontFamily: "'Comfortaa', cursive" }}>{data.title}</h1>
                 {data.scopeType === "coach" && data.scopeCoachName && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-300 border border-blue-500/30">
                     <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -586,7 +586,7 @@ export default function SweepReportPage() {
                   </span>
                 )}
                 {(!data.scopeType || data.scopeType === "all") && (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/10/60 text-white/50 border border-zinc-600/40">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/10 text-white/50 border border-white/10">
                     All Coaches
                   </span>
                 )}
@@ -607,7 +607,7 @@ export default function SweepReportPage() {
                 <button
                   onClick={() => saveMutation.mutate({ id: reportId })}
                   disabled={saveMutation.isPending}
-                  className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white transition-colors font-semibold"
+                  className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white transition-colors font-semibold shadow-lg shadow-violet-500/20"
                 >
                   {saveMutation.isPending ? (
                     <><span className="h-3.5 w-3.5 border-2 border-emerald-300/40 border-t-emerald-100 rounded-full animate-spin" /> Saving…</>
@@ -622,7 +622,7 @@ export default function SweepReportPage() {
                 </button>
               )}
               {(data.isSaved || saved) && (
-                <span className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-emerald-400">
+                <span className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl glass-btn text-emerald-400">
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                   </svg>
@@ -633,10 +633,10 @@ export default function SweepReportPage() {
               {previousReport && previousReport.id !== reportId && (
                 <button
                   onClick={() => setShowComparison(v => !v)}
-                  className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border transition-colors font-medium ${
+                  className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl border transition-colors font-medium ${
                     showComparison
-                      ? "bg-violet-600 border-violet-500 text-white"
-                      : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10"
+                      ? "bg-violet-600 border-violet-500 text-white shadow-lg shadow-violet-500/20"
+                      : "glass-btn text-white/70"
                   }`}
                 >
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -648,7 +648,7 @@ export default function SweepReportPage() {
               <button
                 id="copy-link-btn"
                 onClick={handleCopyLink}
-                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 transition-colors"
+                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl glass-btn text-white/70"
               >
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
@@ -657,7 +657,7 @@ export default function SweepReportPage() {
               </button>
               <button
                 onClick={handlePrint}
-                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white transition-colors font-medium"
+                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white transition-colors font-medium shadow-lg shadow-violet-500/20"
               >
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.056 48.056 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z" />
@@ -666,7 +666,7 @@ export default function SweepReportPage() {
               </button>
               <button
                 onClick={() => setLocation("/client-progress")}
-                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/50 hover:bg-white/10 transition-colors no-print"
+                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl glass-btn text-white/50 no-print"
               >
                 ← Back
               </button>

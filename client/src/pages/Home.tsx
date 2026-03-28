@@ -139,10 +139,10 @@ export default function Home() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto space-y-8 py-2">
+      <div className="max-w-4xl mx-auto space-y-8 pt-20 pb-2">
         {/* Welcome */}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white/90">
+          <h1 className="text-3xl font-bold tracking-tight text-white/90" style={{ fontFamily: "'Comfortaa', cursive" }}>
             Welcome back, {user.name?.split(" ")[0] ?? "there"}
           </h1>
           <p className="text-white/50 mt-1 text-sm">

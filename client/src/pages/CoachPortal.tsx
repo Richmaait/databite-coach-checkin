@@ -177,11 +177,11 @@ export default function CoachPortal() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-2xl mx-auto space-y-6 py-2">
+      <div className="max-w-2xl mx-auto space-y-6 pt-20 pb-2">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white/90">Daily Check-Ins</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-white/90" style={{ fontFamily: "'Comfortaa', cursive" }}>Daily Check-Ins</h1>
             <p className="text-white/50 text-sm mt-0.5">
               {new Date().toLocaleDateString("en-AU", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
             </p>
@@ -217,8 +217,8 @@ export default function CoachPortal() {
             <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                    <Sun className="h-4 w-4 text-amber-400" />
+                  <div className="h-9 w-9 rounded-xl bg-yellow-400/10 border border-yellow-200/20 flex items-center justify-center">
+                    <Sun className="h-4 w-4 text-yellow-200" />
                   </div>
                   <div>
                     <CardTitle className="text-base font-semibold">Morning Review</CardTitle>
@@ -393,7 +393,7 @@ export default function CoachPortal() {
                       </Button>
                       {/* Validation warnings */}
                       {validateTimeBlocks(block1Start, block1End, hasSplitDay, block2Start, block2End).map((warn, i) => (
-                        <p key={i} className="text-xs text-amber-400 flex items-center gap-1">
+                        <p key={i} className="text-xs text-yellow-200 flex items-center gap-1">
                           <span>⚠</span> {warn}
                         </p>
                       ))}

@@ -1950,6 +1950,90 @@ const clientCheckinsRouter = t.router({
 
     return alerts;
   }),
+
+  /** Public: client self-check-in. Finds the client by name (case-insensitive) and marks submitted. */
+  clientSelfCheckin: publicProcedure
+    .input(
+      z.object({
+        clientName: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+
+      // Determine current week (Melbourne time) and day of week
+      const melbNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Australia/Melbourne" }));
+      const dayIdx = melbNow.getDay(); // 0=Sun
+      const diff = melbNow.getDate() - dayIdx + (dayIdx === 0 ? -6 : 1);
+      const monday = new Date(melbNow);
+      monday.setDate(diff);
+      const weekStart = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, "0")}-${String(monday.getDate()).padStart(2, "0")}`;
+
+      const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
+      const todayName = dayNames[melbNow.getDay()];
+      if (!["monday", "tuesday", "wednesday", "thursday", "friday"].includes(todayName)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Check-ins are only available Monday to Friday." });
+      }
+      const dayOfWeek = todayName as "monday" | "tuesday" | "wednesday" | "thursday" | "friday";
+
+      // Find client in any active coach's roster for today
+      const allCoaches = await db.select().from(coaches).where(eq(coaches.isActive, 1));
+      let foundCoach: { id: number; name: string } | null = null;
+      let foundClientName: string | null = null;
+      const searchName = input.clientName.toLowerCase().trim();
+
+      for (const coach of allCoaches) {
+        const roster = await fetchRosterForCoach(coach.name);
+        const dayClients: string[] = (roster as Record<string, string[]>)[dayOfWeek] ?? [];
+        const match = dayClients.find((c) => c.toLowerCase().includes(searchName));
+        if (match) {
+          foundCoach = { id: coach.id, name: coach.name };
+          foundClientName = match;
+          break;
+        }
+      }
+
+      if (!foundCoach || !foundClientName) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Could not find your name on today's roster. Please check with your coach." });
+      }
+
+      // Upsert check-in row with clientSubmitted = true
+      const existing = await db
+        .select()
+        .from(clientCheckIns)
+        .where(
+          and(
+            eq(clientCheckIns.coachId, foundCoach.id),
+            eq(clientCheckIns.clientName, foundClientName),
+            eq(clientCheckIns.dayOfWeek, dayOfWeek),
+            eq(clientCheckIns.weekStart, weekStart),
+          ),
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        if (existing[0].clientSubmitted === 1) {
+          return { alreadySubmitted: true, clientName: foundClientName, coachName: foundCoach.name, dayOfWeek };
+        }
+        await db
+          .update(clientCheckIns)
+          .set({ clientSubmitted: 1, clientSubmittedAt: new Date() })
+          .where(eq(clientCheckIns.id, existing[0].id));
+        return { alreadySubmitted: false, clientName: foundClientName, coachName: foundCoach.name, dayOfWeek };
+      }
+
+      await db.insert(clientCheckIns).values({
+        coachId: foundCoach.id,
+        coachName: foundCoach.name,
+        clientName: foundClientName,
+        dayOfWeek,
+        weekStart,
+        clientSubmitted: 1,
+        clientSubmittedAt: new Date(),
+      });
+
+      return { alreadySubmitted: false, clientName: foundClientName, coachName: foundCoach.name, dayOfWeek };
+    }),
 });
 
 // ─── Coaches Router ────────────────────────────────────────────────────────────

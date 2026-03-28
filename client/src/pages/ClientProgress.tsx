@@ -11,34 +11,41 @@ type Rating = "green" | "yellow" | "red";
 const TARGET_PCT = 70;
 
 // ─── Traffic light colour helpers ────────────────────────────────────────────
-const RATING_STYLES: Record<Rating, { bg: string; border: string; text: string; label: string }> = {
-  green:  { bg: "bg-emerald-500",  border: "border-emerald-600", text: "text-white", label: "On Track"  },
-  yellow: { bg: "bg-amber-400",    border: "border-amber-500",   text: "text-white", label: "Neutral"   },
-  red:    { bg: "bg-red-500",      border: "border-red-600",     text: "text-white", label: "Off Track"  },
+const RATING_STYLES: Record<Rating, { bg: string; border: string; text: string; label: string; glow: string }> = {
+  green:  { bg: "bg-emerald-400/20",  border: "border-emerald-400/30", text: "text-emerald-300", label: "On Track",  glow: "shadow-[0_0_8px_rgba(52,211,153,0.2)]"  },
+  yellow: { bg: "bg-amber-300/15", border: "border-amber-300/25", text: "text-amber-200", label: "Neutral",   glow: "shadow-[0_0_8px_rgba(252,211,77,0.15)]"  },
+  red:    { bg: "bg-red-400/20",      border: "border-red-400/30",     text: "text-red-300", label: "Off Track", glow: "shadow-[0_0_8px_rgba(248,113,113,0.2)]"  },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function formatRelativeTime(date: Date): string {
-  const now = Date.now();
-  const diff = now - date.getTime();
-  const minutes = Math.floor(diff / 60_000);
-  const hours = Math.floor(diff / 3_600_000);
-  const days = Math.floor(diff / 86_400_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days === 1) return "yesterday";
-  if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+function formatDateTime(date: Date): string {
+  const d = new Date(date);
+  const day = d.getDate();
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const month = months[d.getMonth()];
+  const year = d.getFullYear();
+  const hours = d.getHours();
+  const mins = String(d.getMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "pm" : "am";
+  const h12 = hours % 12 || 12;
+  return `${day} ${month} ${year}, ${h12}:${mins}${ampm}`;
+}
+
+/** Percentage color: 0 = white, <50 = red, 50-70 = yellow, 70+ = green */
+function pctColor(pct: number): { text: string; glow: string } {
+  if (pct === 0) return { text: "text-white/50", glow: "" };
+  if (pct < 50) return { text: "text-red-400", glow: "drop-shadow-[0_0_6px_rgba(248,113,113,0.5)]" };
+  if (pct < 70) return { text: "text-amber-200", glow: "drop-shadow-[0_0_6px_rgba(252,211,77,0.3)]" };
+  return { text: "text-emerald-400", glow: "drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]" };
 }
 
 // ─── KPI Bar ─────────────────────────────────────────────────────────────────
 function KpiBar({ pct, target }: { pct: number; target: number }) {
-  const met = pct >= target;
+  const barColor = pct === 0 ? "bg-white/20" : pct < 50 ? "bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.6)]" : pct < 70 ? "bg-amber-300/70 shadow-[0_0_8px_rgba(252,211,77,0.3)]" : "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]";
   return (
     <div className="relative h-3 w-full rounded-full bg-white/10 overflow-hidden">
       <div
-        className={`h-full rounded-full transition-all duration-500 ${met ? "bg-emerald-500" : "bg-amber-400"}`}
+        className={`h-full rounded-full transition-all duration-500 ${barColor}`}
         style={{ width: `${Math.min(pct, 100)}%` }}
       />
       <div
@@ -86,7 +93,7 @@ function RatingPicker({
   return (
     <div
       ref={ref}
-      className="absolute z-50 top-full left-0 mt-1 bg-white/5 border border-white/10 rounded-xl shadow-2xl p-3 flex flex-col gap-2 min-w-[220px]"
+      className="absolute z-50 top-full left-0 mt-1 bg-zinc-900 border border-white/15 rounded-xl shadow-2xl p-3 flex flex-col gap-2 min-w-[220px]"
     >
       {/* Rating options */}
       <div className="flex flex-col gap-1">
@@ -162,9 +169,9 @@ function ClientButton({
         onClick={() => setOpen(v => !v)}
         className={`
           w-full text-left px-3 py-2.5 rounded-lg border text-sm font-medium
-          transition-all duration-150 flex flex-col gap-0.5
+          transition-all duration-150 flex flex-col gap-0.5 min-h-[68px] justify-center
           ${style
-            ? `${style.bg} ${style.border} ${style.text}`
+            ? `${style.bg} ${style.border} ${style.text} ${style.glow}`
             : "bg-white/5 border-white/10 text-white/70 hover:bg-white/[0.08] hover:border-zinc-600"
           }
         `}
@@ -176,16 +183,12 @@ function ClientButton({
             <span className="text-xs opacity-80 shrink-0">{style.label}</span>
           )}
         </div>
-        {notes && (
-          <span className={`text-xs ${style ? "opacity-75" : "text-white/50"} pl-4 leading-snug line-clamp-1`}>
-            {notes}
-          </span>
-        )}
-        {updatedAt && (
-          <span className={`text-xs ${style ? "opacity-60" : "text-white/30"} pl-4`}>
-            {formatRelativeTime(updatedAt)}
-          </span>
-        )}
+        <span className={`text-xs ${style ? "opacity-65" : "text-white/40"} pl-4 leading-snug line-clamp-1`}>
+          {notes || (style ? "\u00A0" : "Not yet rated")}
+        </span>
+        <span className={`text-xs ${style ? "opacity-50" : "text-white/30"} pl-4`}>
+          {updatedAt ? formatDateTime(updatedAt) : "\u00A0"}
+        </span>
       </button>
       {open && (
         <RatingPicker
@@ -305,15 +308,15 @@ function CoachRosterCard({
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-3 text-xs text-white/50">
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
               <span className="text-emerald-400 font-medium">{green}{rated > 0 ? ` · ${greenPct.toFixed(0)}%` : ""}</span>
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-amber-400" />
-              <span className="text-amber-400 font-medium">{yellow}{rated > 0 ? ` · ${yellowPct.toFixed(0)}%` : ""}</span>
+              <span className="h-2 w-2 rounded-full bg-amber-300/70 shadow-[0_0_6px_rgba(252,211,77,0.4)]" />
+              <span className="text-amber-200 font-medium">{yellow}{rated > 0 ? ` · ${yellowPct.toFixed(0)}%` : ""}</span>
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-red-500" />
+              <span className="h-2 w-2 rounded-full bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.7)]" />
               <span className="text-red-400 font-medium">{red}{rated > 0 ? ` · ${redPct.toFixed(0)}%` : ""}</span>
             </span>
           </div>
@@ -322,7 +325,7 @@ function CoachRosterCard({
               onClick={handleResetClick}
               className={`text-xs px-2.5 py-1 rounded-lg border transition-all ${
                 confirmReset
-                  ? "bg-red-500/20 border-red-500/50 text-red-400 font-semibold"
+                  ? "bg-red-400/20 border-red-400/50 text-red-400 font-semibold shadow-[0_0_8px_rgba(248,113,113,0.3)]"
                   : "bg-white/5 border-white/10 text-white/50 hover:border-zinc-600 hover:text-white/70"
               }`}
             >
@@ -387,9 +390,9 @@ function CoachRosterCard({
 // ─── Filter Toggle ───────────────────────────────────────────────────────────
 const FILTER_OPTIONS: { value: FilterRating; label: string; dot?: string }[] = [
   { value: "all",     label: "All" },
-  { value: "red",     label: "Off Track",   dot: "bg-red-500" },
-  { value: "yellow",  label: "Neutral",     dot: "bg-amber-400" },
-  { value: "green",   label: "On Track",    dot: "bg-emerald-500" },
+  { value: "red",     label: "Off Track",   dot: "bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.7)]" },
+  { value: "yellow",  label: "Neutral",     dot: "bg-amber-300/70 shadow-[0_0_6px_rgba(252,211,77,0.4)]" },
+  { value: "green",   label: "On Track",    dot: "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" },
   { value: "unrated", label: "Not Yet Rated" },
 ];
 
@@ -498,9 +501,9 @@ function ClientTenureTable() {
               const sinceDate = new Date(r.firstWeekStart + "T00:00:00");
               const sinceLabel = sinceDate.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" });
               const tenureColor = r.weeksOnRoster >= 12
-                ? "text-emerald-400"
+                ? "text-emerald-400 drop-shadow-[0_0_4px_rgba(52,211,153,0.4)]"
                 : r.weeksOnRoster >= 4
-                  ? "text-amber-400"
+                  ? "text-white/70 drop-shadow-[0_0_4px_rgba(253,224,71,0.4)]"
                   : "text-white/50";
               return (
                 <tr key={i} className="border-t border-white/[0.08] hover:bg-white/5/40 transition-colors">
@@ -720,11 +723,11 @@ export default function ClientProgress() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-8 p-6 max-w-5xl mx-auto">
+      <div className="flex flex-col gap-8 p-6 pt-20 max-w-5xl mx-auto">
         {/* Page header */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-white/90">Client Progress</h1>
+            <h1 className="text-3xl font-bold text-white/90" style={{ fontFamily: "'Comfortaa', cursive" }}>Client Progress</h1>
             <p className="text-sm text-white/50 mt-1">
               Click a client to assign a rating and add a note.
             </p>
@@ -757,7 +760,7 @@ export default function ClientProgress() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-white/50">
-                KPI Summary — Target: {kpiData.target}% On Track
+                KPI Target: <span className="text-emerald-400">{kpiData.target}%+ On Track</span>
               </h2>
             </div>
 
@@ -766,24 +769,24 @@ export default function ClientProgress() {
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-semibold text-white/80">Business Wide</span>
-                <span className={`text-2xl font-bold ${kpiData.overall.greenPct >= kpiData.target ? "text-emerald-400" : "text-amber-400"}`}>
+                <span className={`text-2xl font-bold ${pctColor(kpiData.overall.greenPct).text} ${pctColor(kpiData.overall.greenPct).glow}`}>
                   {kpiData.overall.greenPct.toFixed(1)}%
                 </span>
               </div>
               <KpiBar pct={kpiData.overall.greenPct} target={kpiData.target} />
               <div className="flex gap-4 mt-3 text-xs">
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
                   <span className="text-emerald-400 font-medium">{kpiData.overall.green} On Track</span>
                   {kpiData.overall.total > 0 && <span className="text-emerald-400/70">· {((kpiData.overall.green / kpiData.overall.total) * 100).toFixed(0)}%</span>}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-                  <span className="text-amber-400 font-medium">{kpiData.overall.yellow} Neutral</span>
-                  {kpiData.overall.total > 0 && <span className="text-amber-400/70">· {((kpiData.overall.yellow / kpiData.overall.total) * 100).toFixed(0)}%</span>}
+                  <span className="h-2.5 w-2.5 rounded-full bg-amber-300/70 shadow-[0_0_6px_rgba(252,211,77,0.4)]" />
+                  <span className="text-amber-200 font-medium">{kpiData.overall.yellow} Neutral</span>
+                  {kpiData.overall.total > 0 && <span className="text-amber-200/60">· {((kpiData.overall.yellow / kpiData.overall.total) * 100).toFixed(0)}%</span>}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.7)]" />
                   <span className="text-red-400 font-medium">{kpiData.overall.red} Off Track</span>
                   {kpiData.overall.total > 0 && <span className="text-red-400/70">· {((kpiData.overall.red / kpiData.overall.total) * 100).toFixed(0)}%</span>}
                 </span>
@@ -803,15 +806,15 @@ export default function ClientProgress() {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-white/80 group-hover:text-emerald-300 transition-colors">{c.coachName}</span>
-                    <span className={`text-lg font-bold ${c.greenPct >= kpiData.target ? "text-emerald-400" : "text-amber-400"}`}>
+                    <span className={`text-lg font-bold ${pctColor(c.greenPct).text} ${pctColor(c.greenPct).glow}`}>
                       {c.greenPct.toFixed(1)}%
                     </span>
                   </div>
                   <KpiBar pct={c.greenPct} target={kpiData.target} />
                   <div className="flex gap-3 mt-2 text-xs">
-                    <span className="flex items-center gap-1 text-emerald-400/80"><span className="h-2 w-2 rounded-full bg-emerald-500" />{c.green}{c.total > 0 ? ` · ${((c.green / c.total) * 100).toFixed(0)}%` : ""}</span>
-                    <span className="flex items-center gap-1 text-amber-400/80"><span className="h-2 w-2 rounded-full bg-amber-400" />{c.yellow}{c.total > 0 ? ` · ${((c.yellow / c.total) * 100).toFixed(0)}%` : ""}</span>
-                    <span className="flex items-center gap-1 text-red-400/80"><span className="h-2 w-2 rounded-full bg-red-500" />{c.red}{c.total > 0 ? ` · ${((c.red / c.total) * 100).toFixed(0)}%` : ""}</span>
+                    <span className="flex items-center gap-1 text-emerald-400/80"><span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />{c.green}{c.total > 0 ? ` · ${((c.green / c.total) * 100).toFixed(0)}%` : ""}</span>
+                    <span className="flex items-center gap-1 text-amber-200/80"><span className="h-2 w-2 rounded-full bg-amber-300/70 shadow-[0_0_6px_rgba(252,211,77,0.4)]" />{c.yellow}{c.total > 0 ? ` · ${((c.yellow / c.total) * 100).toFixed(0)}%` : ""}</span>
+                    <span className="flex items-center gap-1 text-red-400/80"><span className="h-2 w-2 rounded-full bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.7)]" />{c.red}{c.total > 0 ? ` · ${((c.red / c.total) * 100).toFixed(0)}%` : ""}</span>
                     {c.total === 0 && <span className="text-white/20 italic">No ratings yet</span>}
                   </div>
                 </button>
@@ -873,11 +876,11 @@ export default function ClientProgress() {
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                 filterRating === opt.value
                   ? opt.value === "red"
-                    ? "bg-red-500/20 border-red-500/50 text-red-300"
+                    ? "bg-red-400/20 border-red-400/50 text-red-300 shadow-[0_0_8px_rgba(248,113,113,0.3)]"
                     : opt.value === "yellow"
-                    ? "bg-amber-400/20 border-amber-400/50 text-amber-300"
+                    ? "bg-amber-300/15 border-amber-300/30 text-amber-200 shadow-[0_0_8px_rgba(252,211,77,0.15)]"
                     : opt.value === "green"
-                    ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300"
+                    ? "bg-emerald-400/20 border-emerald-400/50 text-emerald-300 shadow-[0_0_8px_rgba(52,211,153,0.3)]"
                     : "bg-white/10 border-zinc-600 text-white/80"
                   : "bg-transparent border-white/10 text-white/50 hover:border-zinc-600 hover:text-white/70"
               }`}

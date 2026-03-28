@@ -47,7 +47,7 @@ function streakBangs(n: number): string {
 
 function engagementColor(pct: number): string {
   if (pct >= 80) return "text-emerald-400";
-  if (pct >= 60) return "text-amber-400";
+  if (pct >= 60) return "text-yellow-200";
   return "text-red-400";
 }
 
@@ -97,14 +97,14 @@ export default function WeeklySummary() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6 max-w-5xl mx-auto">
+      <div className="px-6 pb-6 pt-20 space-y-6 max-w-5xl mx-auto">
 
         {/* ── Header ── */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2.5 mb-1">
               <FileBarChart2 className="h-5 w-5 text-violet-400" />
-              <h1 className="text-xl font-semibold text-white/90">Weekly Summary</h1>
+              <h1 className="text-2xl font-bold text-white/90" style={{ fontFamily: "'Comfortaa', cursive" }}>Weekly Summary</h1>
             </div>
             <p className="text-sm text-white/50">
               Key metrics for the selected week — ready to share with the team.
@@ -185,13 +185,13 @@ export default function WeeklySummary() {
                 label="Check-ins Completed"
                 value={`${data.totalCompleted}`}
                 sub={`of ${data.totalScheduled} scheduled`}
-                accent="#10b981"
+                accent="#34d399"
               />
               <StatCard
                 label="Overall Engagement"
                 value={`${data.overallEngagementPct}%`}
                 sub={data.overallEngagementPct >= 80 ? "On track" : data.overallEngagementPct >= 60 ? "Needs attention" : "Below target"}
-                accent={data.overallEngagementPct >= 80 ? "#10b981" : data.overallEngagementPct >= 60 ? "#f59e0b" : "#ef4444"}
+                accent={data.overallEngagementPct >= 80 ? "#34d399" : data.overallEngagementPct >= 60 ? "#fde047" : "#ef4444"}
                 trend={data.engagementTrend}
                 trendLabel="%"
                 trendPositiveIsGood={true}
@@ -202,7 +202,7 @@ export default function WeeklySummary() {
                 sub={data.disengagedTrend !== null && data.disengagedTrend !== undefined
                   ? `${data.disengagedTrend < 0 ? Math.abs(data.disengagedTrend) + " fewer" : data.disengagedTrend > 0 ? data.disengagedTrend + " more" : "same"} than last week`
                   : "missed this week"}
-                accent={data.disengagedThisWeek.length === 0 ? "#10b981" : "#f59e0b"}
+                accent={data.disengagedThisWeek.length === 0 ? "#34d399" : "#fde047"}
                 trend={data.disengagedTrend}
                 trendPositiveIsGood={false}
               />
@@ -216,7 +216,7 @@ export default function WeeklySummary() {
                 rows={data.coachActivity.map(c => [
                   <span style={{ fontWeight: 600, color: "#f1f5f9" }}>{c.coachName}</span>,
                   <span>
-                    <span style={{ fontWeight: 700, color: c.morningDays >= (c as any).workdayCount ? "#10b981" : c.morningDays >= Math.ceil((c as any).workdayCount / 2) ? "#f59e0b" : "#ef4444" }}>
+                    <span style={{ fontWeight: 700, color: c.morningDays >= (c as any).workdayCount ? "#34d399" : c.morningDays >= Math.ceil((c as any).workdayCount / 2) ? "#fde047" : "#ef4444" }}>
                       {c.morningDays}
                     </span>
                     <span style={{ color: "#475569", fontSize: "12px" }}> / {(c as any).workdayCount ?? 5}</span>
@@ -237,9 +237,9 @@ export default function WeeklySummary() {
                   ...data.engagementStats.filter(e => e.scheduled > 0).map(e => [
                     <span style={{ fontWeight: 600, color: "#f1f5f9" }}>{e.coachName}</span>,
                     e.scheduled,
-                    <span style={{ fontWeight: 600, color: "#10b981" }}>{e.completed}</span>,
+                    <span style={{ fontWeight: 600, color: "#34d399" }}>{e.completed}</span>,
                     <span style={{ fontWeight: 600, color: "#ef4444" }}>{e.missed}</span>,
-                    <span style={{ fontWeight: 700, fontSize: "16px", color: e.engagementPct >= 80 ? "#10b981" : e.engagementPct >= 60 ? "#f59e0b" : "#ef4444" }}>
+                    <span style={{ fontWeight: 700, fontSize: "16px", color: e.engagementPct >= 80 ? "#34d399" : e.engagementPct >= 60 ? "#fde047" : "#ef4444" }}>
                       {e.engagementPct}%
                     </span>,
                   ]),
@@ -247,9 +247,9 @@ export default function WeeklySummary() {
                   ...(data.engagementStats.filter(e => e.scheduled > 0).length > 0 ? [[
                     <span style={{ fontWeight: 700, color: "#94a3b8" }}>Total</span>,
                     <span style={{ fontWeight: 700 }}>{data.totalScheduled}</span>,
-                    <span style={{ fontWeight: 700, color: "#10b981" }}>{data.totalCompleted}</span>,
+                    <span style={{ fontWeight: 700, color: "#34d399" }}>{data.totalCompleted}</span>,
                     <span style={{ fontWeight: 700, color: "#ef4444" }}>{data.totalScheduled - data.totalCompleted}</span>,
-                    <span style={{ fontWeight: 700, fontSize: "16px", color: data.overallEngagementPct >= 80 ? "#10b981" : data.overallEngagementPct >= 60 ? "#f59e0b" : "#ef4444" }}>
+                    <span style={{ fontWeight: 700, fontSize: "16px", color: data.overallEngagementPct >= 80 ? "#34d399" : data.overallEngagementPct >= 60 ? "#fde047" : "#ef4444" }}>
                       {data.overallEngagementPct}%
                     </span>,
                   ]] : []),
@@ -269,7 +269,7 @@ export default function WeeklySummary() {
                     <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "13px" }}>Disengaged Clients This Week</div>
                     <div style={{ color: "#64748b", fontSize: "11px", marginTop: "2px" }}>! = consecutive misses · grouped by coach</div>
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: "18px", color: data.disengagedThisWeek.length === 0 ? "#10b981" : "#f59e0b" }}>
+                  <div style={{ fontWeight: 700, fontSize: "18px", color: data.disengagedThisWeek.length === 0 ? "#34d399" : "#fde047" }}>
                     {data.disengagedThisWeek.length}
                   </div>
                 </div>
@@ -291,8 +291,8 @@ export default function WeeklySummary() {
                       n >= 3
                         ? { bg: "rgba(69,10,10,0.5)", border: "rgba(185,28,28,0.6)", text: "#fca5a5", dot: "#ef4444", label: "Critical" }
                         : n === 2
-                        ? { bg: "rgba(67,20,7,0.4)", border: "rgba(194,65,12,0.5)", text: "#fdba74", dot: "#f97316", label: "Alert" }
-                        : { bg: "rgba(66,32,6,0.3)", border: "rgba(161,98,7,0.4)", text: "#fde68a", dot: "#eab308", label: "Warning" };
+                        ? { bg: "rgba(67,10,30,0.4)", border: "rgba(251,113,133,0.5)", text: "#fda4af", dot: "#fb7185", label: "Alert" }
+                        : { bg: "rgba(66,52,6,0.3)", border: "rgba(253,224,71,0.4)", text: "#fef08a", dot: "#fde047", label: "Warning" };
 
                     return (
                       <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -362,24 +362,24 @@ export default function WeeklySummary() {
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                       <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-                        <span style={{ fontSize: "36px", fontWeight: 700, color: data.clientHealth.greenPct >= 70 ? "#10b981" : data.clientHealth.greenPct >= 50 ? "#f59e0b" : "#ef4444" }}>
+                        <span style={{ fontSize: "36px", fontWeight: 700, color: data.clientHealth.greenPct >= 70 ? "#34d399" : data.clientHealth.greenPct >= 50 ? "#fde047" : "#ef4444" }}>
                           {data.clientHealth.greenPct}%
                         </span>
                         <span style={{ fontSize: "13px", color: "#64748b" }}>clients on track</span>
                       </div>
                       <div style={{ height: "10px", borderRadius: "999px", background: "#1e293b", overflow: "hidden", display: "flex" }}>
-                        <div style={{ background: "#10b981", width: `${data.clientHealth.greenPct}%` }} />
-                        <div style={{ background: "#f59e0b", width: `${data.clientHealth.total > 0 ? Math.round(data.clientHealth.yellow / data.clientHealth.total * 100) : 0}%` }} />
+                        <div style={{ background: "#34d399", width: `${data.clientHealth.greenPct}%` }} />
+                        <div style={{ background: "#fde047", width: `${data.clientHealth.total > 0 ? Math.round(data.clientHealth.yellow / data.clientHealth.total * 100) : 0}%` }} />
                         <div style={{ background: "#ef4444", width: `${data.clientHealth.total > 0 ? Math.round(data.clientHealth.red / data.clientHealth.total * 100) : 0}%` }} />
                       </div>
                       <div style={{ display: "flex", gap: "20px", fontSize: "12px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#10b981" }} />
+                          <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#34d399" }} />
                           <span style={{ fontWeight: 600, color: "#e2e8f0" }}>{data.clientHealth.green}</span>
                           <span style={{ color: "#64748b" }}>On track</span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#f59e0b" }} />
+                          <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#fde047" }} />
                           <span style={{ fontWeight: 600, color: "#e2e8f0" }}>{data.clientHealth.yellow}</span>
                           <span style={{ color: "#64748b" }}>At risk</span>
                         </div>
@@ -417,7 +417,7 @@ function StatCard({ label, value, sub, accent, trend, trendLabel, trendPositiveI
     ? (trendPositiveIsGood ? trend > 0 : trend < 0)
     : null;
   const trendNeutral = trend === 0;
-  const trendColor = trendNeutral ? "#64748b" : trendGood ? "#10b981" : "#ef4444";
+  const trendColor = trendNeutral ? "#64748b" : trendGood ? "#34d399" : "#ef4444";
   const trendArrow = trend === null || trend === undefined ? null
     : trend > 0 ? "↑" : trend < 0 ? "↓" : "→";
   return (

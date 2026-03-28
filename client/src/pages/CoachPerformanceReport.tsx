@@ -86,14 +86,14 @@ function formatWeekLabel(weekStart: string): string {
 function engagementColor(pct: number | null | undefined): string {
   if (pct == null) return "text-white/50";
   if (pct >= 90) return "text-emerald-400";
-  if (pct >= 70) return "text-amber-400";
+  if (pct >= 70) return "text-yellow-200";
   return "text-red-400";
 }
 
 function engagementBadgeClass(pct: number | null | undefined): string {
   if (pct == null) return "text-white/50 border-muted-foreground/30 bg-white/5/10";
   if (pct >= 90) return "text-emerald-400 border-emerald-400/30 bg-emerald-400/10";
-  if (pct >= 70) return "text-amber-400 border-amber-400/30 bg-amber-400/10";
+  if (pct >= 70) return "text-yellow-200 border-yellow-200/30 bg-yellow-400/10";
   return "text-red-400 border-red-400/30 bg-red-400/10";
 }
 
@@ -209,10 +209,10 @@ export default function CoachPerformanceReport() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="px-6 pb-6 pt-20 space-y-6 max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold tracking-tight">Coach Activity</h1>
+          <h1 className="text-3xl font-bold tracking-tight" style={{ fontFamily: "'Comfortaa', cursive" }}>Coach Activity</h1>
           <p className="text-sm text-white/50">
             Client check-in volumes per coach — completed vs scheduled with engagement %.
           </p>
@@ -379,7 +379,7 @@ export default function CoachPerformanceReport() {
                                   <Badge variant="outline" className="text-emerald-400 border-emerald-400/30 bg-emerald-400/10">{best}</Badge>
                                 </td>
                                 <td className="text-right px-4 py-3 tabular-nums">
-                                  <Badge variant="outline" className="text-amber-400 border-amber-400/30 bg-amber-400/10">{worst}</Badge>
+                                  <Badge variant="outline" className="text-yellow-200 border-yellow-200/30 bg-yellow-400/10">{worst}</Badge>
                                 </td>
                               </>
                             )}

@@ -199,6 +199,36 @@ export async function registerAuthRoutes(app: Express) {
     });
   });
 
+  // Dev login — auto-login as admin (dev only)
+  if (!ENV.isProduction) {
+    app.get("/api/auth/dev-login", async (req, res) => {
+      const email = (req.query.email as string) || ADMIN_EMAILS[0];
+      const db = await getDb();
+      if (!db) return res.status(500).json({ error: "Database unavailable" });
+
+      let [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      if (!user) {
+        const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
+        const [result] = await db.insert(users).values({
+          email,
+          name: isAdmin ? "Rich" : email.split("@")[0],
+          role: isAdmin ? "admin" : "coach",
+        });
+        [user] = await db.select().from(users).where(eq(users.id, result.insertId)).limit(1);
+      }
+
+      const token = await createToken(user.id);
+      res.cookie(COOKIE_NAME, token, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+        maxAge: COOKIE_MAX_AGE * 1000,
+        path: "/",
+      });
+      res.redirect("/client-checkins");
+    });
+  }
+
   // Google OAuth — redirect to Google consent screen
   app.get("/api/auth/google", (_req, res) => {
     const redirectUri = `${ENV.appUrl}/api/auth/google/callback`;

@@ -148,7 +148,7 @@ function KudosModal({ coach, open, onOpenChange }: KudosModalProps) {
       <DialogContent className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-amber-400" />
+            <Sparkles className="h-4 w-4 text-yellow-300 drop-shadow-[0_0_6px_rgba(250,204,21,0.5)]" />
             Send Kudos to {coach.name}
           </DialogTitle>
           <DialogDescription className="text-white/50">
@@ -167,8 +167,8 @@ function KudosModal({ coach, open, onOpenChange }: KudosModalProps) {
             />
             <p className="text-[10px] text-white/50 text-right">{message.length}/1000</p>
           </div>
-          <div className="rounded-lg bg-amber-500/5 border border-amber-500/20 p-3 text-xs text-amber-300/80 space-y-1">
-            <p className="font-medium text-amber-300">What happens when you send:</p>
+          <div className="rounded-lg bg-yellow-400/5 border border-yellow-400/25 p-3 text-xs text-yellow-300/80 space-y-1 shadow-[0_0_12px_rgba(250,204,21,0.06)]">
+            <p className="font-medium text-yellow-300">What happens when you send:</p>
             <p>• 🔒 Private DM to {coach.name} on Slack</p>
             <p>• 📢 Public shoutout posted to the team channel</p>
             <p>• 📋 Logged in Kudos History on the Dashboard</p>
@@ -227,7 +227,7 @@ function RoleConfirmDialog({ user, open, onOpenChange, onConfirm, isPending }: R
           <Button
             onClick={onConfirm}
             disabled={isPending}
-            className={isPromoting ? "" : "bg-destructive hover:bg-destructive/90 text-destructive-foreground"}
+            className={isPromoting ? "" : "bg-red-500 hover:bg-red-400 text-white shadow-[0_0_12px_rgba(248,113,113,0.3)]"}
           >
             {isPending
               ? "Updating..."
@@ -311,7 +311,7 @@ function SlackConfigPanel({ coach, onSaved }: SlackConfigPanelProps) {
           <Badge className="bg-violet-500/10 text-violet-400 border-violet-500/20 text-[10px] px-1.5 py-0">Active</Badge>
         )}
         {(!coach.slackUserId) && (
-          <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px] px-1.5 py-0">Slack ID needed</Badge>
+          <Badge className="bg-yellow-400/10 text-yellow-300 border-yellow-400/25 text-[10px] px-1.5 py-0 shadow-[0_0_8px_rgba(250,204,21,0.08)]">Slack ID needed</Badge>
         )}
         <span className="ml-auto">{expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}</span>
       </button>
@@ -552,7 +552,7 @@ function ReminderScheduleTab({ coaches, onSave, onToggleLeave, isSaving }: Remin
                               {!coach.slackUserId ? "No Slack ID" : enabled ? "Active" : "Paused"}
                             </Badge>
                             {(coach.leaveStartDate || coach.leaveEndDate) && (
-                              <span className="text-[10px] text-amber-400">
+                              <span className="text-[10px] text-yellow-300">
                                 Leave: {coach.leaveStartDate ?? "?"} to {coach.leaveEndDate ?? "?"}
                               </span>
                             )}
@@ -703,7 +703,7 @@ function ReminderScheduleTab({ coaches, onSave, onToggleLeave, isSaving }: Remin
                                 size="sm"
                                 variant="outline"
                                 className={`h-8 text-xs gap-1.5 bg-transparent ${
-                                  !editState?.enabled ? "border-amber-500/50 text-amber-400 hover:bg-amber-500/10" : "text-white/50 hover:text-white/90"
+                                  !editState?.enabled ? "border-yellow-400/50 text-yellow-300 hover:bg-yellow-400/10 shadow-[0_0_8px_rgba(250,204,21,0.1)]" : "text-white/50 hover:text-white/90"
                                 }`}
                                 onClick={() => onToggleLeave(coach.id, enabled)}
                                 title={enabled ? "Disable all reminders while coach is on leave" : "Re-enable reminders"}
@@ -821,11 +821,11 @@ export default function TeamManagement() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto space-y-6 py-2">
+      <div className="max-w-4xl mx-auto space-y-6 pt-20 pb-2">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white/90">Team Management</h1>
+            <h1 className="text-3xl font-bold text-white/90" style={{ fontFamily: "'Comfortaa', sans-serif" }}>Team Management</h1>
             <p className="text-white/50 text-sm mt-0.5">Add coaches, send kudos, configure Slack reminders, and manage roles</p>
           </div>
           <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
@@ -943,7 +943,7 @@ export default function TeamManagement() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-7 text-xs gap-1.5 bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20 hover:text-amber-200"
+                            className="h-7 text-xs gap-1.5 bg-yellow-400/10 border-yellow-400/30 text-yellow-300 hover:bg-yellow-400/20 hover:text-yellow-200 shadow-[0_0_8px_rgba(250,204,21,0.08)]"
                             onClick={() => setKudosCoach({ id: coach.id, name: coach.name })}
                           >
                             <Sparkles className="h-3 w-3" />
@@ -964,7 +964,7 @@ export default function TeamManagement() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-7 text-xs text-destructive hover:text-destructive bg-transparent border-destructive/30 hover:bg-destructive/10"
+                            className="h-7 text-xs text-red-400 hover:text-red-300 bg-transparent border-red-400/30 hover:bg-red-400/10 shadow-[0_0_8px_rgba(248,113,113,0.08)]"
                             onClick={() => deactivateCoach.mutate({ coachId: coach.id, isActive: 0 })}
                           >
                             Deactivate

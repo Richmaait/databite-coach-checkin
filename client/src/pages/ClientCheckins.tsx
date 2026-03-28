@@ -32,7 +32,7 @@ const DAY_ACCENT_COLORS: Record<DayKey, string> = {
   monday: "#8b5cf6",    // violet
   tuesday: "#0ea5e9",   // sky
   wednesday: "#14b8a6",  // teal
-  thursday: "#f59e0b",   // amber
+  thursday: "#fde047",   // neon yellow
   friday: "#a855f7",     // purple
 };
 
@@ -62,7 +62,7 @@ const DAY_COLORS: Record<
     completedBg: "bg-emerald-500/10 border-emerald-500/20",
     pendingBg: "bg-white/[0.03] border-white/[0.06]",
     pendingHover: "hover:bg-white/[0.08]",
-    subActive: "text-violet-400",
+    subActive: "text-violet-400 drop-shadow-[0_0_6px_rgba(139,92,246,0.6)]",
     subHover: "text-white/20 hover:text-violet-400",
   },
   tuesday: {
@@ -71,7 +71,7 @@ const DAY_COLORS: Record<
     completedBg: "bg-emerald-500/10 border-emerald-500/20",
     pendingBg: "bg-white/[0.03] border-white/[0.06]",
     pendingHover: "hover:bg-white/[0.08]",
-    subActive: "text-sky-400",
+    subActive: "text-sky-400 drop-shadow-[0_0_6px_rgba(14,165,233,0.6)]",
     subHover: "text-white/20 hover:text-sky-400",
   },
   wednesday: {
@@ -80,7 +80,7 @@ const DAY_COLORS: Record<
     completedBg: "bg-emerald-500/10 border-emerald-500/20",
     pendingBg: "bg-white/[0.03] border-white/[0.06]",
     pendingHover: "hover:bg-white/[0.08]",
-    subActive: "text-teal-400",
+    subActive: "text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.6)]",
     subHover: "text-white/20 hover:text-teal-400",
   },
   thursday: {
@@ -89,7 +89,7 @@ const DAY_COLORS: Record<
     completedBg: "bg-emerald-500/10 border-emerald-500/20",
     pendingBg: "bg-white/[0.03] border-white/[0.06]",
     pendingHover: "hover:bg-white/[0.08]",
-    subActive: "text-amber-400",
+    subActive: "text-yellow-300 drop-shadow-[0_0_6px_rgba(253,224,71,0.6)]",
     subHover: "text-white/20 hover:text-amber-400",
   },
   friday: {
@@ -98,7 +98,7 @@ const DAY_COLORS: Record<
     completedBg: "bg-emerald-500/10 border-emerald-500/20",
     pendingBg: "bg-white/[0.03] border-white/[0.06]",
     pendingHover: "hover:bg-white/[0.08]",
-    subActive: "text-purple-400",
+    subActive: "text-pink-400 drop-shadow-[0_0_6px_rgba(244,114,182,0.6)]",
     subHover: "text-white/20 hover:text-purple-400",
   },
 };
@@ -878,34 +878,9 @@ export default function ClientCheckins() {
           )}
         </div>
 
-        {/* ── Bottom Sections: Missing 2+ Weeks & Pause a Client ─────────── */}
+        {/* ── Bottom Sections: Pause a Client & Valid Excuse side by side ── */}
         <div className="max-w-[1440px] mx-auto px-8 mt-8 pb-12">
           <div className="grid grid-cols-2 gap-6">
-
-            {/* Missing 2+ Weeks */}
-            <div className="glass rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-2 h-2 rounded-full bg-red-400 status-dot-red"></div>
-                <h3 className="text-sm font-semibold text-white/80">Clients Missing 2+ Weeks</h3>
-              </div>
-              <div className="space-y-2">
-                {clientsMissing2Plus.length === 0 ? (
-                  <p className="text-xs text-white/30">No clients missing 2+ weeks.</p>
-                ) : (
-                  clientsMissing2Plus.map((s) => (
-                    <div
-                      key={`${s.clientName}-${s.dayOfWeek}`}
-                      className="glass-btn rounded-xl px-3 py-2 flex items-center justify-between"
-                    >
-                      <span className="text-xs font-medium text-red-300/70">{s.clientName}</span>
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
-                        {s.consecutiveMissed} weeks
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
 
             {/* Pause a Client */}
             {effectiveCoachId && (
@@ -969,11 +944,9 @@ export default function ClientCheckins() {
               </div>
             )}
 
-          </div>
-
-          {/* ── Valid Excuse (kept below the 2-column grid) ────────────────── */}
-          {effectiveCoachId && (
-            <div className="glass rounded-2xl p-5 mt-6">
+            {/* Valid Excuse */}
+            {effectiveCoachId && (
+            <div className="glass rounded-2xl p-5">
               <h3 className="text-sm font-semibold text-white/80 mb-2">Valid Excuse</h3>
               <p className="text-xs text-white/30 mb-4">
                 Excused clients are excluded from missed check-in counts (soft). Requires manager approval.
@@ -1088,6 +1061,8 @@ export default function ClientCheckins() {
               )}
             </div>
           )}
+
+          </div>
 
           {/* ── Renewal Alerts (orange banner) ──────────────────────────── */}
           {renewalAlerts.length > 0 && (

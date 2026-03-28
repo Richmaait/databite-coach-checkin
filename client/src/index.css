@@ -167,6 +167,8 @@
   .glow-green { box-shadow: 0 0 8px rgba(52, 211, 153, 0.3); }
   .glow-red { box-shadow: 0 0 8px rgba(248, 113, 113, 0.3); }
   .glow-violet { box-shadow: 0 0 12px rgba(139, 92, 246, 0.2); }
+  .status-dot-green { box-shadow: 0 2px 8px rgba(52, 211, 153, 0.5); }
+  .status-dot-red { box-shadow: 0 2px 8px rgba(248, 113, 113, 0.5); }
 }
 
 /* Scrollbar */

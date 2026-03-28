@@ -3,15 +3,6 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -20,18 +11,8 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-// formatDateAU and formatWeekAU no longer used — using local formatWeekRange instead
-import {
-  CheckCircle2,
-  Circle,
-  AlertTriangle,
-  ShieldAlert,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -53,6 +34,14 @@ const DAY_ACCENT_COLORS: Record<DayKey, string> = {
   wednesday: "#14b8a6",  // teal
   thursday: "#f59e0b",   // amber
   friday: "#a855f7",     // purple
+};
+
+const DAY_GRADIENT_PILLS: Record<DayKey, string> = {
+  monday: "from-violet-400 to-fuchsia-400",
+  tuesday: "from-sky-400 to-cyan-400",
+  wednesday: "from-teal-400 to-emerald-400",
+  thursday: "from-amber-400 to-orange-400",
+  friday: "from-purple-400 to-pink-400",
 };
 
 const DAY_COLORS: Record<
@@ -160,6 +149,14 @@ function getDayDateLabel(weekStart: string, day: DayKey): string {
   const dateStr = addDays(weekStart, dayIndex(day));
   const [, m, d] = dateStr.split("-");
   return `${d}/${m}`;
+}
+
+/** Get short date label like "23 Mar" for a given day. */
+function getDayShortLabel(weekStart: string, day: DayKey): string {
+  const dateStr = addDays(weekStart, dayIndex(day));
+  const d = new Date(dateStr + "T00:00:00");
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${d.getDate()} ${months[d.getMonth()]}`;
 }
 
 /** Format a date label like "Mon, 23 Mar" for a given day. */
@@ -634,297 +631,184 @@ export default function ClientCheckins() {
 
   return (
     <DashboardLayout>
-      <div className="py-4 px-4 space-y-4">
+      <div className="relative z-10">
+
         {/* ── Header ──────────────────────────────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white/90">
-              Client Check-Ins
-            </h1>
-            <p className="text-sm text-white/50 mt-0.5">
-              Browse any coach&apos;s client roster for the week
-            </p>
-          </div>
-          {/* Top-right: Coach selector, Sync button, Date range with arrows */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {isAdmin && coaches && (
-              <Select
-                value={selectedCoachId?.toString() ?? ""}
-                onValueChange={(v) => setSelectedCoachId(parseInt(v))}
-              >
-                <SelectTrigger className="w-44 bg-white/5 border-white/10 text-white/90">
-                  <SelectValue placeholder="Select coach" />
-                </SelectTrigger>
-                <SelectContent>
-                  {coaches.map((c) => (
-                    <SelectItem key={c.id} value={c.id.toString()}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => syncTypeformMutation.mutate()}
-              disabled={syncTypeformMutation.isPending}
-            >
-              {syncTypeformMutation.isPending ? "Syncing..." : "Sync Typeform"}
-            </Button>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={goToPrevWeek}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <button
-                onClick={goToCurrentWeek}
-                className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm font-medium text-white/90 transition-colors whitespace-nowrap"
-              >
-                {formatWeekRange(weekStart)}
-              </button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={goToNextWeek}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+        <div className="max-w-[1440px] mx-auto px-8 pt-8 pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-5">
+              <h1 className="text-lg font-semibold text-white/90 tracking-tight">Client Check-Ins</h1>
+
+              {/* Coach selector glass pill */}
+              {isAdmin && coaches && (
+                <div className="glass rounded-xl px-3 py-1.5 flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[10px] font-bold">
+                    {effectiveCoachName?.charAt(0) ?? "?"}
+                  </div>
+                  <select
+                    className="bg-transparent text-white/80 text-sm font-medium appearance-none cursor-pointer pr-5 outline-none"
+                    value={selectedCoachId?.toString() ?? ""}
+                    onChange={(e) => setSelectedCoachId(parseInt(e.target.value))}
+                  >
+                    {coaches.map((c) => (
+                      <option key={c.id} value={c.id.toString()} className="bg-zinc-900">{c.name}</option>
+                    ))}
+                  </select>
+                  <svg className="w-3.5 h-3.5 text-white/30 -ml-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
+                </div>
+              )}
+
+              {/* Date range glass pill */}
+              <div className="glass rounded-xl px-3 py-1.5 flex items-center gap-2">
+                <svg className="w-4 h-4 text-violet-400/60" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                <button
+                  onClick={goToCurrentWeek}
+                  className="text-sm text-white/70 font-medium hover:text-white/90 transition-colors"
+                >
+                  {formatWeekRange(weekStart)}
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={goToPrevWeek} className="glass rounded-xl px-3 py-1.5 text-sm text-white/50 hover:text-white/80 transition-colors">&larr; Prev</button>
+              <button onClick={goToNextWeek} className="glass rounded-xl px-3 py-1.5 text-sm text-white/50 hover:text-white/80 transition-colors">Next &rarr;</button>
             </div>
           </div>
+
+          {/* ── Stats Row ─────────────────────────────────────────────────── */}
+          {coachStats && (
+            <div className="flex items-center gap-4 mt-5">
+              <div className="glass rounded-2xl px-4 py-2.5 flex items-center gap-2.5">
+                <div className="w-2 h-2 rounded-full bg-violet-400 glow-violet"></div>
+                <div>
+                  <div className="text-[10px] text-white/40 uppercase tracking-wider">Submitted</div>
+                  <div className="text-lg font-bold text-white/90 -mt-0.5">{coachStats.clientSubmitted}</div>
+                </div>
+              </div>
+              <div className="glass rounded-2xl px-4 py-2.5 flex items-center gap-2.5">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 status-dot-green"></div>
+                <div>
+                  <div className="text-[10px] text-white/40 uppercase tracking-wider">Completed</div>
+                  <div className="text-lg font-bold text-white/90 -mt-0.5">{coachStats.completed}</div>
+                </div>
+              </div>
+              <div className="glass rounded-2xl px-4 py-2.5 flex items-center gap-2.5">
+                <div className="w-2 h-2 rounded-full bg-white/30"></div>
+                <div>
+                  <div className="text-[10px] text-white/40 uppercase tracking-wider">Remaining</div>
+                  <div className="text-lg font-bold text-white/90 -mt-0.5">{coachStats.scheduled - coachStats.completed}</div>
+                </div>
+              </div>
+              <div className="glass rounded-2xl px-4 py-2.5 flex items-center gap-2.5">
+                <div className="w-2 h-2 rounded-full bg-red-400 status-dot-red"></div>
+                <div>
+                  <div className="text-[10px] text-white/40 uppercase tracking-wider">Disengaging</div>
+                  <div className="text-lg font-bold text-white/90 -mt-0.5">{disengagingCount}</div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* ── Tabs — full width ──────────────────────────────────────────── */}
-        <Tabs defaultValue="roster" className="w-full">
-          <TabsList className="w-full grid grid-cols-2 bg-white/5 border border-white/10 rounded-xl p-1">
-            <TabsTrigger value="roster" className="data-[state=active]:bg-white/10 data-[state=active]:text-white/90 text-white/50 rounded-lg">Roster</TabsTrigger>
-            <TabsTrigger value="disengagement" className="flex items-center gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white/90 text-white/50 rounded-lg">
-              Disengagement Tracking
-              {disengagingCount > 0 && (
-                <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
-                  {disengagingCount}
-                </span>
-              )}
-            </TabsTrigger>
-          </TabsList>
-
-          {/* ── Roster Tab ──────────────────────────────────────────────── */}
-          <TabsContent value="roster" className="mt-4 space-y-4">
-
-            {/* ── Renewal Alerts (orange banner) ──────────────────────────── */}
-            {renewalAlerts.length > 0 && (
-              <div className="rounded-2xl bg-amber-500/10 backdrop-blur-xl border border-amber-500/20 px-4 py-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-300" />
-                  <span className="text-sm font-semibold text-amber-200">
-                    {renewalAlerts.length} Client Renewal{renewalAlerts.length !== 1 ? "s" : ""} Coming Up
-                  </span>
-                </div>
-                <div className="space-y-1.5">
-                  {renewalAlerts.map((a) => (
-                    <div
-                      key={a.name}
-                      className="flex items-center justify-between py-1.5 px-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-sm"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="font-medium text-amber-200">{a.name}</span>
-                        <span className="text-xs text-white/40">{a.coach}</span>
-                        <span className="text-xs text-white/40 capitalize">{a.day}</span>
-                        <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-amber-500/30 text-amber-300 bg-amber-500/10">
-                          {a.offerType}
-                        </Badge>
-                      </div>
-                      <Badge className={`text-[10px] py-0.5 px-2 ${a.daysLeft <= 7 ? "bg-red-500" : a.daysLeft <= 14 ? "bg-orange-500" : "bg-amber-500"} text-white`}>
-                        in {a.daysLeft} day{a.daysLeft !== 1 ? "s" : ""}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ── Reminder banner (yellow) ──────────────────────────────────── */}
-            <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 px-4 py-2 text-sm text-amber-200">
-              <strong>Reminder:</strong> Please mark check-ins as completed as they are sent out, not at the end of the day.
+        {/* ── Day Columns ─────────────────────────────────────────────────── */}
+        <div className="max-w-[1440px] mx-auto px-8 mt-4">
+          {!effectiveCoachId ? (
+            <div className="glass rounded-2xl p-6 text-center text-white/50 text-sm">
+              Select a coach above to view their roster.
             </div>
+          ) : !roster ? (
+            <div className="glass rounded-2xl p-6 text-center text-white/50 text-sm">
+              Loading roster...
+            </div>
+          ) : (
+            <div className="grid grid-cols-5 gap-4">
+              {DAYS.map((day) => {
+                const clients = (roster as Record<string, string[]>)[day] ?? [];
 
-            {/* ── Stats line ─────────────────────────────────────────────── */}
-            {coachStats && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 text-sm">
-                  <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1">
-                    <span className="h-2 w-2 rounded-full bg-sky-500 inline-block" />
-                    <span className="text-white/70">{coachStats.clientSubmitted} submitted</span>
-                  </span>
-                  <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
-                    <span className="text-white/70">{coachStats.completed} completed</span>
-                  </span>
-                  <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1">
-                    <span className="h-2 w-2 rounded-full bg-gray-400 inline-block" />
-                    <span className="text-white/70">{coachStats.scheduled - coachStats.completed} remaining</span>
-                  </span>
-                  <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1">
-                    <span className="h-2 w-2 rounded-full bg-red-500 inline-block" />
-                    <span className="text-white/70">{disengagingCount} disengaging</span>
-                  </span>
-                </div>
-                {!canEdit && (
-                  <span className="text-xs text-white/30 italic">View only</span>
-                )}
-              </div>
-            )}
-
-            {/* ── Roster grid ──────────────────────────────────────────────── */}
-            {!effectiveCoachId ? (
-              <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
-                <CardContent className="p-6 text-center text-white/50 text-sm">
-                  Select a coach above to view their roster.
-                </CardContent>
-              </Card>
-            ) : !roster ? (
-              <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
-                <CardContent className="p-6 text-center text-white/50 text-sm">
-                  Loading roster...
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-5 gap-3">
-                {DAYS.map((day) => {
-                  const clients = (roster as Record<string, string[]>)[day] ?? [];
-                  const colours = DAY_COLORS[day];
-                  const ds = dayStats[day];
-
-                  return (
-                    <div
-                      key={day}
-                      className="border-l-2 border-l-white/10 pl-0"
-                      style={{ borderLeftColor: DAY_ACCENT_COLORS[day] }}
-                    >
-                      {/* Day header — clean, no box */}
-                      <div className="px-3 py-2 flex items-center justify-between">
-                        <div>
-                          <div className="text-sm font-semibold text-white/90">
-                            {DAY_FULL_NAMES[day]}
-                          </div>
-                          <span className="text-xs text-white/40">
-                            {getDayFullLabel(weekStart, day)}
-                          </span>
-                        </div>
-                        <span className="text-sm font-bold text-white/40">
-                          {ds.completed}/{ds.total}
-                        </span>
+                return (
+                  <div key={day} className="glass rounded-2xl p-4">
+                    {/* Day header */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-1 h-5 rounded-full bg-gradient-to-b ${DAY_GRADIENT_PILLS[day]}`}></div>
+                        <span className="text-sm font-semibold text-white/80">{DAY_FULL_NAMES[day]}</span>
                       </div>
+                      <span className="text-xs text-white/30">{getDayShortLabel(weekStart, day)}</span>
+                    </div>
 
-                      {/* Client list — floating on dark bg */}
-                      <div className="px-1 space-y-1.5 min-h-[120px]">
-                        {clients.length === 0 ? (
-                          <p className="text-xs text-white/30 text-center py-4">
-                            No clients
-                          </p>
-                        ) : (
-                          clients.map((clientName: string) => {
-                            const isCompleted = completedSet.has(
-                              `${clientName}|${day}`,
-                            );
-                            const isClientSub = clientSubmittedSet.has(
-                              `${clientName}|${day}`,
-                            );
-                            const excuseEntry = approvedExcuseMap.get(
-                              `${clientName}|${day}`,
-                            );
-                            const isExcused =
-                              !!excuseEntry && !isCompleted;
-                            const isPaused = pausedSet.has(clientName);
-                            const isMissedStreak = missedSet.has(
-                              `${clientName}|${day}`,
-                            );
-                            const isOverdue = isClientOverdue(
-                              weekStart,
-                              day,
-                              isCompleted || isExcused || isPaused,
-                            );
-                            const showRed =
-                              (isOverdue || isMissedStreak) &&
-                              !isCompleted &&
-                              !isExcused &&
-                              !isPaused;
+                    {/* Client list */}
+                    <div className="space-y-2">
+                      {clients.length === 0 ? (
+                        <p className="text-xs text-white/30 text-center py-4">No clients</p>
+                      ) : (
+                        clients.map((clientName: string) => {
+                          const isCompleted = completedSet.has(`${clientName}|${day}`);
+                          const isClientSub = clientSubmittedSet.has(`${clientName}|${day}`);
+                          const excuseEntry = approvedExcuseMap.get(`${clientName}|${day}`);
+                          const isExcused = !!excuseEntry && !isCompleted;
+                          const isPaused = pausedSet.has(clientName);
+                          const isMissedStreak = missedSet.has(`${clientName}|${day}`);
+                          const isOverdue = isClientOverdue(weekStart, day, isCompleted || isExcused || isPaused);
+                          const showRed = (isOverdue || isMissedStreak) && !isCompleted && !isExcused && !isPaused;
 
-                            return (
-                              <div
-                                key={clientName}
-                                className="flex items-center gap-1"
-                              >
-                                {/* Sub button */}
+                          // Status-based classes
+                          const dotClass = isPaused
+                            ? "bg-white/20"
+                            : isCompleted || isExcused
+                              ? "bg-emerald-400 status-dot-green"
+                              : showRed
+                                ? "bg-red-400 status-dot-red"
+                                : "bg-white/20";
+
+                          const nameClass = isPaused
+                            ? "text-white/50 line-through"
+                            : isCompleted || isExcused
+                              ? "text-white/80"
+                              : showRed
+                                ? "text-red-300/80"
+                                : "text-white/50";
+
+                          const formIconClass = isCompleted || isExcused
+                            ? "text-violet-400/40"
+                            : "text-white/10";
+
+                          const btnStyle = showRed
+                            ? { borderColor: "rgba(248,113,113,0.15)" }
+                            : undefined;
+
+                          return (
+                            <div
+                              key={clientName}
+                              className={`glass-btn w-full rounded-xl px-3 py-2 flex items-center justify-between ${isPaused ? "opacity-40" : ""}`}
+                              style={btnStyle}
+                            >
+                              {/* Left: form icon + status dot + name */}
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                {/* Form icon (sub toggle) */}
                                 <button
                                   onClick={() =>
                                     toggleClientSubmittedMutation.mutate({
                                       clientName,
                                       dayOfWeek: day,
                                       weekStart,
-                                      ...(effectiveCoachId
-                                        ? { coachId: effectiveCoachId }
-                                        : {}),
+                                      ...(effectiveCoachId ? { coachId: effectiveCoachId } : {}),
                                     })
                                   }
-                                  title={
-                                    isClientSub
-                                      ? "Client submitted (click to unmark)"
-                                      : "Mark client as submitted"
-                                  }
-                                  className={`shrink-0 p-1 rounded-md transition-all duration-150 ${
-                                    isClientSub
-                                      ? `${colours.subActive} drop-shadow-[0_0_6px_rgba(139,92,246,0.4)]`
-                                      : colours.subHover
-                                  }`}
+                                  title={isClientSub ? "Client submitted (click to unmark)" : "Mark client as submitted"}
+                                  className="shrink-0"
                                 >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-4 w-4"
-                                    viewBox="0 0 24 24"
-                                    fill={
-                                      isClientSub ? "currentColor" : "none"
-                                    }
-                                    stroke="currentColor"
-                                    strokeWidth={isClientSub ? 1.5 : 2}
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  >
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                    <polyline points="14 2 14 8 20 8" />
-                                    <line
-                                      x1="16"
-                                      y1="13"
-                                      x2="8"
-                                      y2="13"
-                                    />
-                                    <line
-                                      x1="16"
-                                      y1="17"
-                                      x2="8"
-                                      y2="17"
-                                    />
-                                    <polyline points="10 9 9 9 8 9" />
+                                  <svg className={`w-3.5 h-3.5 ${isClientSub ? "text-violet-400/70" : formIconClass}`} fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                                    <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/>
                                   </svg>
                                 </button>
 
-                                {/* Client name button */}
+                                {/* Client name button with status dot */}
                                 <button
                                   onClick={() =>
-                                    canEdit &&
-                                    !isCompleted &&
-                                    !isExcused &&
-                                    !isPaused &&
-                                    handleClientClick(clientName, day)
+                                    canEdit && !isCompleted && !isExcused && !isPaused && handleClientClick(clientName, day)
                                   }
-                                  disabled={
-                                    isCompleted || isExcused || !canEdit || isPaused
-                                  }
+                                  disabled={isCompleted || isExcused || !canEdit || isPaused}
                                   title={
                                     isPaused
                                       ? "Client is paused"
@@ -932,68 +816,37 @@ export default function ClientCheckins() {
                                         ? `Excused — ${excuseEntry?.reason}`
                                         : undefined
                                   }
-                                  className={`
-                                    flex-1 text-left px-2.5 py-2 rounded-xl border text-xs font-medium
-                                    transition-all duration-150 flex items-center gap-2
-                                    ${
-                                      isPaused
-                                        ? "bg-white/[0.02] border-white/[0.04] cursor-default opacity-50"
-                                        : isCompleted
-                                          ? `${colours.completedBg} cursor-default shadow-[0_0_12px_rgba(16,185,129,0.15)]`
-                                          : isExcused
-                                            ? "bg-emerald-500/10 border-emerald-500/20 cursor-default"
-                                            : showRed
-                                              ? "bg-red-500/10 border-red-500/20 hover:bg-red-500/15 cursor-pointer shadow-[0_0_12px_rgba(239,68,68,0.15)]"
-                                              : `${colours.pendingBg} ${colours.pendingHover} cursor-pointer`
-                                    }
-                                  `}
+                                  className="flex items-center gap-2 min-w-0"
                                 >
-                                  {isPaused ? (
-                                    <Circle className="h-3.5 w-3.5 shrink-0 text-white/30" />
-                                  ) : isCompleted ? (
-                                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
-                                  ) : isExcused ? (
-                                    <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
-                                  ) : showRed ? (
-                                    <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-400" />
-                                  ) : (
-                                    <Circle className="h-3.5 w-3.5 shrink-0 text-white/30" />
-                                  )}
-                                  <span
-                                    className={`leading-tight ${
-                                      isPaused
-                                        ? "line-through text-white/30"
-                                        : isExcused
-                                          ? "text-emerald-300"
-                                          : showRed
-                                            ? "text-red-300"
-                                            : "text-white/80"
-                                    }`}
-                                  >
+                                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotClass}`}></div>
+                                  <span className={`text-xs font-medium ${nameClass} truncate flex items-center gap-1`}>
                                     {clientName}
+                                    {isExcused && (
+                                      <svg className="w-3 h-3 text-emerald-400/60 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 1.944A11.954 11.954 0 012.166 5C2.056 5.649 2 6.319 2 7c0 5.225 3.34 9.67 8 11.317C14.66 16.67 18 12.225 18 7c0-.682-.057-1.351-.166-2.001A11.954 11.954 0 0110 1.944zM13.707 8.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
+                                      </svg>
+                                    )}
                                   </span>
                                 </button>
+                              </div>
 
+                              {/* Right: resume/undo buttons */}
+                              <div className="flex items-center gap-1 shrink-0 ml-1">
                                 {/* Resume button for paused clients */}
                                 {isPaused && canEdit && (
                                   <button
                                     onClick={() => resumeClientMutation.mutate({ coachId: effectiveCoachId ?? 0, clientName })}
                                     title="Click to resume"
-                                    className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 border border-amber-500/20 text-amber-300 hover:bg-amber-500/20 transition-colors"
+                                    className="text-[10px] font-medium text-violet-400 hover:text-violet-300 transition-colors"
                                   >
-                                    PAUSED
+                                    Resume
                                   </button>
                                 )}
 
                                 {/* Undo button */}
                                 {isCompleted && canEdit && (
                                   <button
-                                    onClick={() =>
-                                      setUndoPending({
-                                        clientName,
-                                        day,
-                                      })
-                                    }
+                                    onClick={() => setUndoPending({ clientName, day })}
                                     title="Undo check-in"
                                     className="shrink-0 p-1 rounded text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                                   >
@@ -1013,56 +866,63 @@ export default function ClientCheckins() {
                                   </button>
                                 )}
                               </div>
-                            );
-                          })
-                        )}
-                      </div>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
-            {/* ── Clients Missing 2+ Consecutive Weeks ──────────────────── */}
-            {clientsMissing2Plus.length > 0 && (
-              <div className="mt-4">
-                <h3 className="text-sm font-semibold text-white/90 mb-2">
-                  Clients Missing 2+ Consecutive Weeks
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {clientsMissing2Plus.map((s) => (
+        {/* ── Bottom Sections: Missing 2+ Weeks & Pause a Client ─────────── */}
+        <div className="max-w-[1440px] mx-auto px-8 mt-8 pb-12">
+          <div className="grid grid-cols-2 gap-6">
+
+            {/* Missing 2+ Weeks */}
+            <div className="glass rounded-2xl p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-2 h-2 rounded-full bg-red-400 status-dot-red"></div>
+                <h3 className="text-sm font-semibold text-white/80">Clients Missing 2+ Weeks</h3>
+              </div>
+              <div className="space-y-2">
+                {clientsMissing2Plus.length === 0 ? (
+                  <p className="text-xs text-white/30">No clients missing 2+ weeks.</p>
+                ) : (
+                  clientsMissing2Plus.map((s) => (
                     <div
                       key={`${s.clientName}-${s.dayOfWeek}`}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm ${s.consecutiveMissed >= 3 ? "shadow-[0_0_10px_rgba(239,68,68,0.15)]" : "shadow-[0_0_10px_rgba(245,158,11,0.15)]"}`}
+                      className="glass-btn rounded-xl px-3 py-2 flex items-center justify-between"
                     >
-                      <span className="font-medium text-white/80">{s.clientName}</span>
-                      <Badge variant="outline" className="text-[10px] py-0 px-1.5 capitalize border-white/10 text-white/50 bg-transparent">
-                        {s.dayOfWeek}
-                      </Badge>
-                      <Badge className={`text-[10px] py-0 px-1.5 ${s.consecutiveMissed >= 3 ? "bg-red-500/20 text-red-300 border border-red-500/30" : "bg-amber-500/20 text-amber-300 border border-amber-500/30"}`}>
-                        {s.consecutiveMissed}w missed
-                      </Badge>
+                      <span className="text-xs font-medium text-red-300/70">{s.clientName}</span>
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
+                        {s.consecutiveMissed} weeks
+                      </span>
                     </div>
-                  ))}
-                </div>
+                  ))
+                )}
               </div>
-            )}
+            </div>
 
-            {/* ── Pause a Client ──────────────────────────────────────────── */}
+            {/* Pause a Client */}
             {effectiveCoachId && (
-              <div className="mt-6">
-                <h3 className="text-sm font-semibold text-white/90">Pause a Client</h3>
-                <p className="text-xs text-white/50 mb-2">
-                  Paused clients are hidden from engagement metrics
-                </p>
-                <Input
-                  placeholder="Search for a client to pause..."
-                  value={pauseSearch}
-                  onChange={(e) => setPauseSearch(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white/90 placeholder:text-white/30 max-w-md"
-                />
+              <div className="glass rounded-2xl p-5">
+                <h3 className="text-sm font-semibold text-white/80 mb-2">Pause a Client</h3>
+                <p className="text-xs text-white/30 mb-4">Temporarily remove a client from the active roster. They won&apos;t appear in check-in lists until resumed.</p>
+                <div className="flex items-center gap-2 mb-4">
+                  <input
+                    type="text"
+                    placeholder="Search client name..."
+                    value={pauseSearch}
+                    onChange={(e) => setPauseSearch(e.target.value)}
+                    className="flex-1 glass rounded-xl px-3 py-2 text-xs text-white/80 placeholder-white/20 outline-none focus:border-violet-500/30 transition-colors bg-transparent"
+                  />
+                </div>
                 {pauseSearch.trim() && (
-                  <div className="space-y-1 max-h-48 overflow-y-auto mt-2 max-w-md">
+                  <div className="space-y-1 max-h-48 overflow-y-auto mb-4">
                     {allRosterClients
                       .filter((c) => c.name.toLowerCase().includes(pauseSearch.toLowerCase()) && !pausedSet.has(c.name))
                       .slice(0, 8)
@@ -1073,189 +933,232 @@ export default function ClientCheckins() {
                             pauseClientMutation.mutate({ coachId: effectiveCoachId!, clientName: c.name });
                             setPauseSearch("");
                           }}
-                          className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-white/[0.08] text-white/80 transition-colors flex items-center justify-between"
+                          className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-white/[0.08] text-white/80 transition-colors flex items-center justify-between glass-btn"
                         >
                           <span className="font-medium">{c.name}</span>
-                          <span className="text-xs text-white/40 capitalize">{c.day}</span>
+                          <button
+                            className="px-4 py-2 text-xs font-medium rounded-xl bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 border border-violet-500/20 text-violet-300 hover:from-violet-500/30 hover:to-fuchsia-500/30 transition-all"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              pauseClientMutation.mutate({ coachId: effectiveCoachId!, clientName: c.name });
+                              setPauseSearch("");
+                            }}
+                          >
+                            Pause
+                          </button>
                         </button>
                       ))}
                   </div>
                 )}
                 {pausedSet.size > 0 && (
-                  <div className="pt-2 mt-2 border-t border-white/10 max-w-md">
-                    <p className="text-xs text-white/50 mb-2">Currently paused:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {Array.from(pausedSet).map((name) => (
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] text-white/30 uppercase tracking-wider">Currently paused</span>
+                    {Array.from(pausedSet).map((name) => (
+                      <div key={name} className="glass-btn rounded-xl px-3 py-2 flex items-center justify-between">
+                        <span className="text-xs text-white/40">{name}</span>
                         <button
-                          key={name}
                           onClick={() => resumeClientMutation.mutate({ coachId: effectiveCoachId!, clientName: name })}
-                          className="text-xs px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 hover:bg-amber-500/20 transition-colors"
-                          title="Click to resume"
+                          className="text-[10px] font-medium text-violet-400 hover:text-violet-300 transition-colors"
                         >
-                          {name} ✕
+                          Resume
                         </button>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
             )}
 
-            {/* ── Valid Excuse ──────────────────────────────────────────────── */}
-            {effectiveCoachId && (
-              <div className="mt-6">
-                <h3 className="text-sm font-semibold text-white/90">Valid Excuse</h3>
-                <p className="text-xs text-white/50 mb-2">
-                  Excused clients are excluded from missed check-in counts (soft). Requires manager approval.
-                </p>
-                {!excuseSelectedClient ? (
-                  <div className="max-w-md">
-                    <Input
-                      placeholder="Search for a client..."
-                      value={excuseSearch}
-                      onChange={(e) => {
-                        setExcuseSearch(e.target.value);
-                        setExcuseSelectedClient(null);
-                        setExcuseSelectedDay(null);
-                      }}
-                      className="bg-white/5 border-white/10 text-white/90 placeholder:text-white/30"
-                    />
-                    {excuseSearchResults.length > 0 && (
-                      <div className="space-y-1 max-h-48 overflow-y-auto mt-2">
-                        {excuseSearchResults.map((c) => (
-                          <button
-                            key={`${c.name}|${c.day}`}
-                            onClick={() => {
-                              setExcuseSelectedClient(c.name);
-                              setExcuseSelectedDay(c.day);
-                              setExcuseSearch("");
-                            }}
-                            className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-white/[0.08] text-white/80 transition-colors flex items-center justify-between"
-                          >
-                            <span className="font-medium">{c.name}</span>
-                            <span className="text-xs text-white/40 capitalize">{c.day}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-3 max-w-md">
-                    <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-3 py-2">
-                      <div>
-                        <span className="text-sm font-medium text-white/90">{excuseSelectedClient}</span>
-                        <span className="text-xs text-white/40 ml-2 capitalize">{excuseSelectedDay}</span>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setExcuseSelectedClient(null);
-                          setExcuseSelectedDay(null);
-                          setExcuseReason("");
-                        }}
-                        className="text-xs text-white/50 hover:text-white/90"
-                      >
-                        Change
-                      </button>
+          </div>
+
+          {/* ── Valid Excuse (kept below the 2-column grid) ────────────────── */}
+          {effectiveCoachId && (
+            <div className="glass rounded-2xl p-5 mt-6">
+              <h3 className="text-sm font-semibold text-white/80 mb-2">Valid Excuse</h3>
+              <p className="text-xs text-white/30 mb-4">
+                Excused clients are excluded from missed check-in counts (soft). Requires manager approval.
+              </p>
+              {!excuseSelectedClient ? (
+                <div className="max-w-md">
+                  <input
+                    type="text"
+                    placeholder="Search for a client..."
+                    value={excuseSearch}
+                    onChange={(e) => {
+                      setExcuseSearch(e.target.value);
+                      setExcuseSelectedClient(null);
+                      setExcuseSelectedDay(null);
+                    }}
+                    className="w-full glass rounded-xl px-3 py-2 text-xs text-white/80 placeholder-white/20 outline-none focus:border-violet-500/30 transition-colors bg-transparent"
+                  />
+                  {excuseSearchResults.length > 0 && (
+                    <div className="space-y-1 max-h-48 overflow-y-auto mt-2">
+                      {excuseSearchResults.map((c) => (
+                        <button
+                          key={`${c.name}|${c.day}`}
+                          onClick={() => {
+                            setExcuseSelectedClient(c.name);
+                            setExcuseSelectedDay(c.day);
+                            setExcuseSearch("");
+                          }}
+                          className="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-white/[0.08] text-white/80 transition-colors flex items-center justify-between glass-btn"
+                        >
+                          <span className="font-medium">{c.name}</span>
+                          <span className="text-[10px] text-white/40 capitalize">{c.day}</span>
+                        </button>
+                      ))}
                     </div>
-                    <Textarea
-                      placeholder="Reason for valid excuse..."
-                      value={excuseReason}
-                      onChange={(e) => setExcuseReason(e.target.value)}
-                      rows={2}
-                      className="bg-white/5 border-white/10 text-white/90 placeholder:text-white/30"
-                    />
-                    <Button
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3 max-w-md">
+                  <div className="flex items-center justify-between glass rounded-xl px-3 py-2">
+                    <div>
+                      <span className="text-sm font-medium text-white/90">{excuseSelectedClient}</span>
+                      <span className="text-xs text-white/40 ml-2 capitalize">{excuseSelectedDay}</span>
+                    </div>
+                    <button
                       onClick={() => {
-                        if (!excuseSelectedClient || !excuseSelectedDay || !excuseReason.trim()) return;
-                        submitExcuseMutation.mutate({
-                          coachId: effectiveCoachId!,
-                          coachName: effectiveCoachName ?? "",
-                          clientName: excuseSelectedClient,
-                          dayOfWeek: excuseSelectedDay,
-                          weekStart,
-                          reason: excuseReason.trim(),
-                        });
                         setExcuseSelectedClient(null);
                         setExcuseSelectedDay(null);
                         setExcuseReason("");
                       }}
-                      disabled={!excuseReason.trim() || submitExcuseMutation.isPending}
-                      size="sm"
+                      className="text-xs text-white/50 hover:text-white/90"
                     >
-                      {submitExcuseMutation.isPending ? "Submitting..." : "Submit Excuse for Approval"}
-                    </Button>
+                      Change
+                    </button>
                   </div>
-                )}
+                  <Textarea
+                    placeholder="Reason for valid excuse..."
+                    value={excuseReason}
+                    onChange={(e) => setExcuseReason(e.target.value)}
+                    rows={2}
+                    className="bg-white/5 border-white/10 text-white/90 placeholder:text-white/30"
+                  />
+                  <Button
+                    onClick={() => {
+                      if (!excuseSelectedClient || !excuseSelectedDay || !excuseReason.trim()) return;
+                      submitExcuseMutation.mutate({
+                        coachId: effectiveCoachId!,
+                        coachName: effectiveCoachName ?? "",
+                        clientName: excuseSelectedClient,
+                        dayOfWeek: excuseSelectedDay,
+                        weekStart,
+                        reason: excuseReason.trim(),
+                      });
+                      setExcuseSelectedClient(null);
+                      setExcuseSelectedDay(null);
+                      setExcuseReason("");
+                    }}
+                    disabled={!excuseReason.trim() || submitExcuseMutation.isPending}
+                    size="sm"
+                  >
+                    {submitExcuseMutation.isPending ? "Submitting..." : "Submit Excuse for Approval"}
+                  </Button>
+                </div>
+              )}
 
-                {/* THIS WEEK'S EXCUSES */}
-                {localExcused.size > 0 && (
-                  <div className="mt-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-white/50 mb-2">
-                      This Week&apos;s Excuses
-                    </h4>
-                    <div className="space-y-1.5 max-w-lg">
-                      {Array.from(localExcused.entries()).map(([key, val]) => {
-                        const [clientName, dayOfWeek] = key.split("|");
-                        return (
-                          <div
-                            key={key}
-                            className="flex items-center justify-between py-1.5 px-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-sm"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="font-medium text-emerald-300">{clientName}</span>
-                              <span className="text-xs text-white/40 capitalize">{dayOfWeek}</span>
-                              <span className="text-xs text-white/40">{val.reason}</span>
-                            </div>
-                            <Badge className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] py-0 px-1.5">
-                              APPROVED
-                            </Badge>
+              {/* THIS WEEK'S EXCUSES */}
+              {localExcused.size > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-[10px] text-white/30 uppercase tracking-wider mb-2">
+                    This Week&apos;s Excuses
+                  </h4>
+                  <div className="space-y-1.5">
+                    {Array.from(localExcused.entries()).map(([key, val]) => {
+                      const [cName, dayOfWeek] = key.split("|");
+                      return (
+                        <div
+                          key={key}
+                          className="glass-btn rounded-xl px-3 py-2 flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-medium text-emerald-300">{cName}</span>
+                            <span className="text-[10px] text-white/40 capitalize">{dayOfWeek}</span>
+                            <span className="text-[10px] text-white/40">{val.reason}</span>
                           </div>
-                        );
-                      })}
-                    </div>
+                          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            APPROVED
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
-                )}
-              </div>
-            )}
-          </TabsContent>
+                </div>
+              )}
+            </div>
+          )}
 
-          {/* ── Disengagement Tab — 3-column per coach layout ────────────── */}
-          <TabsContent value="disengagement" className="mt-4">
-            <p className="text-xs text-white/50 mb-3">
-              Consecutive missed check-ins per coach — streak resets when marked complete
-            </p>
-            {disengagedByCoach.length > 0 ? (
+          {/* ── Renewal Alerts (orange banner) ──────────────────────────── */}
+          {renewalAlerts.length > 0 && (
+            <div className="glass rounded-2xl p-5 mt-6" style={{ borderColor: "rgba(245,158,11,0.2)" }}>
+              <div className="flex items-center gap-2 mb-4">
+                <AlertTriangle className="h-4 w-4 text-amber-300" />
+                <h3 className="text-sm font-semibold text-amber-200">
+                  {renewalAlerts.length} Client Renewal{renewalAlerts.length !== 1 ? "s" : ""} Coming Up
+                </h3>
+              </div>
+              <div className="space-y-2">
+                {renewalAlerts.map((a) => (
+                  <div
+                    key={a.name}
+                    className="glass-btn rounded-xl px-3 py-2 flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-medium text-amber-200">{a.name}</span>
+                      <span className="text-[10px] text-white/40">{a.coach}</span>
+                      <span className="text-[10px] text-white/40 capitalize">{a.day}</span>
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                        {a.offerType}
+                      </span>
+                    </div>
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${a.daysLeft <= 7 ? "bg-red-500/10 text-red-400 border border-red-500/20" : a.daysLeft <= 14 ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" : "bg-amber-500/10 text-amber-400 border border-amber-500/20"}`}>
+                      in {a.daysLeft} day{a.daysLeft !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Disengagement Tracking ─────────────────────────────────────── */}
+          {disengagedByCoach.length > 0 && (
+            <div className="glass rounded-2xl p-5 mt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-2 h-2 rounded-full bg-red-400 status-dot-red"></div>
+                <h3 className="text-sm font-semibold text-white/80">
+                  Disengagement Tracking
+                  {disengagingCount > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                      {disengagingCount}
+                    </span>
+                  )}
+                </h3>
+              </div>
+              <p className="text-xs text-white/30 mb-4">
+                Consecutive missed check-ins per coach — streak resets when marked complete
+              </p>
               <div
                 className="grid gap-4"
                 style={{ gridTemplateColumns: `repeat(${Math.min(disengagedByCoach.length, 3)}, minmax(0, 1fr))` }}
               >
                 {disengagedByCoach.map((coach) => (
-                  <Card key={coach.coachName} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
+                  <div key={coach.coachName} className="glass rounded-2xl p-4">
                     {/* Coach header */}
-                    <CardHeader className="pb-2 pt-4 px-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white/70">
-                          {coach.coachName.charAt(0)}
-                        </div>
-                        <span className="text-sm font-bold text-white/90">{coach.coachName}</span>
-                        <span className="text-xs text-white/40 ml-auto">{coach.total} flagged</span>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="h-7 w-7 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-xs font-bold">
+                        {coach.coachName.charAt(0)}
                       </div>
-                      <div className="flex items-center gap-2 text-[10px]">
-                        {coach.critical.length > 0 && (
-                          <span className="text-red-400">{coach.critical.length} critical</span>
-                        )}
-                        {coach.alert.length > 0 && (
-                          <span className="text-orange-400">{coach.alert.length} alert</span>
-                        )}
-                        {coach.warning.length > 0 && (
-                          <span className="text-yellow-400">{coach.warning.length} warning</span>
-                        )}
-                        {coach.total === 0 && (
-                          <span className="text-emerald-400">✓ All clear</span>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent className="px-4 pb-4 space-y-3">
+                      <span className="text-sm font-bold text-white/90">{coach.coachName}</span>
+                      <span className="text-xs text-white/40 ml-auto">{coach.total} flagged</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] mb-3">
+                      {coach.critical.length > 0 && <span className="text-red-400">{coach.critical.length} critical</span>}
+                      {coach.alert.length > 0 && <span className="text-orange-400">{coach.alert.length} alert</span>}
+                      {coach.warning.length > 0 && <span className="text-yellow-400">{coach.warning.length} warning</span>}
+                      {coach.total === 0 && <span className="text-emerald-400">All clear</span>}
+                    </div>
+                    <div className="space-y-3">
                       {/* Critical tier */}
                       {coach.critical.length > 0 && (
                         <div className="space-y-1">
@@ -1267,12 +1170,13 @@ export default function ClientCheckins() {
                           {coach.critical.map((d) => (
                             <div
                               key={`${d.clientName}-${d.dayOfWeek}`}
-                              className="flex items-center justify-between py-1.5 px-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-sm shadow-[0_0_10px_rgba(239,68,68,0.1)]"
+                              className="glass-btn rounded-xl px-3 py-2 flex items-center justify-between"
+                              style={{ borderColor: "rgba(248,113,113,0.15)" }}
                             >
-                              <span className="font-medium text-red-300 truncate min-w-0">{d.clientName}</span>
+                              <span className="text-xs font-medium text-red-300 truncate min-w-0">{d.clientName}</span>
                               <div className="flex items-center gap-2 shrink-0 ml-2">
                                 <span className="text-[10px] text-white/40 capitalize">{d.dayOfWeek}</span>
-                                <span className="text-xs font-bold text-red-300">{d.consecutiveMissedWeeks}w</span>
+                                <span className="text-[10px] font-bold text-red-300">{d.consecutiveMissedWeeks}w</span>
                               </div>
                             </div>
                           ))}
@@ -1289,12 +1193,12 @@ export default function ClientCheckins() {
                           {coach.alert.map((d) => (
                             <div
                               key={`${d.clientName}-${d.dayOfWeek}`}
-                              className="flex items-center justify-between py-1.5 px-2.5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-sm shadow-[0_0_10px_rgba(249,115,22,0.1)]"
+                              className="glass-btn rounded-xl px-3 py-2 flex items-center justify-between"
                             >
-                              <span className="font-medium text-orange-300 truncate min-w-0">{d.clientName}</span>
+                              <span className="text-xs font-medium text-orange-300 truncate min-w-0">{d.clientName}</span>
                               <div className="flex items-center gap-2 shrink-0 ml-2">
                                 <span className="text-[10px] text-white/40 capitalize">{d.dayOfWeek}</span>
-                                <span className="text-xs font-bold text-orange-300">{d.consecutiveMissedWeeks}w</span>
+                                <span className="text-[10px] font-bold text-orange-300">{d.consecutiveMissedWeeks}w</span>
                               </div>
                             </div>
                           ))}
@@ -1311,30 +1215,24 @@ export default function ClientCheckins() {
                           {coach.warning.map((d) => (
                             <div
                               key={`${d.clientName}-${d.dayOfWeek}`}
-                              className="flex items-center justify-between py-1.5 px-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-sm shadow-[0_0_10px_rgba(234,179,8,0.1)]"
+                              className="glass-btn rounded-xl px-3 py-2 flex items-center justify-between"
                             >
-                              <span className="font-medium text-yellow-300 truncate min-w-0">{d.clientName}</span>
+                              <span className="text-xs font-medium text-yellow-300 truncate min-w-0">{d.clientName}</span>
                               <div className="flex items-center gap-2 shrink-0 ml-2">
                                 <span className="text-[10px] text-white/40 capitalize">{d.dayOfWeek}</span>
-                                <span className="text-xs font-bold text-yellow-300">{d.consecutiveMissedWeeks}w</span>
+                                <span className="text-[10px] font-bold text-yellow-300">{d.consecutiveMissedWeeks}w</span>
                               </div>
                             </div>
                           ))}
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 ))}
               </div>
-            ) : (
-              <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
-                <CardContent className="p-8 text-center text-white/50 text-sm">
-                  No disengaged clients this week. Great work!
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Confirm Complete Dialog ─────────────────────────────────────────── */}

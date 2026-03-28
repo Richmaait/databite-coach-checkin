@@ -51,6 +51,7 @@ const DAY_COLORS: Record<
   string,
   {
     header: string;
+    headerAccent: string;
     completedBg: string;
     pendingBg: string;
     pendingHover: string;
@@ -59,44 +60,49 @@ const DAY_COLORS: Record<
   }
 > = {
   monday: {
-    header: "bg-violet-600",
-    completedBg: "bg-violet-100 border-violet-300",
-    pendingBg: "bg-white border-violet-200",
-    pendingHover: "hover:bg-violet-50 hover:border-violet-300",
-    subActive: "text-violet-600",
-    subHover: "text-gray-400 hover:text-violet-500",
+    header: "bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl",
+    headerAccent: "bg-gradient-to-r from-violet-500/20 to-transparent",
+    completedBg: "bg-emerald-500/10 border-emerald-500/20",
+    pendingBg: "bg-white/[0.03] border-white/[0.06]",
+    pendingHover: "hover:bg-white/[0.08]",
+    subActive: "text-violet-400",
+    subHover: "text-white/20 hover:text-violet-400",
   },
   tuesday: {
-    header: "bg-sky-600",
-    completedBg: "bg-sky-100 border-sky-300",
-    pendingBg: "bg-white border-sky-200",
-    pendingHover: "hover:bg-sky-50 hover:border-sky-300",
-    subActive: "text-sky-600",
-    subHover: "text-gray-400 hover:text-sky-500",
+    header: "bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl",
+    headerAccent: "bg-gradient-to-r from-sky-500/20 to-transparent",
+    completedBg: "bg-emerald-500/10 border-emerald-500/20",
+    pendingBg: "bg-white/[0.03] border-white/[0.06]",
+    pendingHover: "hover:bg-white/[0.08]",
+    subActive: "text-sky-400",
+    subHover: "text-white/20 hover:text-sky-400",
   },
   wednesday: {
-    header: "bg-teal-600",
-    completedBg: "bg-teal-100 border-teal-300",
-    pendingBg: "bg-white border-teal-200",
-    pendingHover: "hover:bg-teal-50 hover:border-teal-300",
-    subActive: "text-teal-600",
-    subHover: "text-gray-400 hover:text-teal-500",
+    header: "bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl",
+    headerAccent: "bg-gradient-to-r from-teal-500/20 to-transparent",
+    completedBg: "bg-emerald-500/10 border-emerald-500/20",
+    pendingBg: "bg-white/[0.03] border-white/[0.06]",
+    pendingHover: "hover:bg-white/[0.08]",
+    subActive: "text-teal-400",
+    subHover: "text-white/20 hover:text-teal-400",
   },
   thursday: {
-    header: "bg-amber-600",
-    completedBg: "bg-amber-100 border-amber-300",
-    pendingBg: "bg-white border-amber-200",
-    pendingHover: "hover:bg-amber-50 hover:border-amber-300",
-    subActive: "text-amber-600",
-    subHover: "text-gray-400 hover:text-amber-500",
+    header: "bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl",
+    headerAccent: "bg-gradient-to-r from-amber-500/20 to-transparent",
+    completedBg: "bg-emerald-500/10 border-emerald-500/20",
+    pendingBg: "bg-white/[0.03] border-white/[0.06]",
+    pendingHover: "hover:bg-white/[0.08]",
+    subActive: "text-amber-400",
+    subHover: "text-white/20 hover:text-amber-400",
   },
   friday: {
-    header: "bg-purple-600",
-    completedBg: "bg-purple-100 border-purple-300",
-    pendingBg: "bg-white border-purple-200",
-    pendingHover: "hover:bg-purple-50 hover:border-purple-300",
-    subActive: "text-purple-600",
-    subHover: "text-gray-400 hover:text-purple-500",
+    header: "bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl",
+    headerAccent: "bg-gradient-to-r from-purple-500/20 to-transparent",
+    completedBg: "bg-emerald-500/10 border-emerald-500/20",
+    pendingBg: "bg-white/[0.03] border-white/[0.06]",
+    pendingHover: "hover:bg-white/[0.08]",
+    subActive: "text-purple-400",
+    subHover: "text-white/20 hover:text-purple-400",
   },
 };
 
@@ -620,14 +626,14 @@ export default function ClientCheckins() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto py-4 px-4 space-y-4">
+      <div className="py-4 px-4 space-y-4">
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-2xl font-bold tracking-tight text-white/90">
               Client Check-Ins
             </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
+            <p className="text-sm text-white/50 mt-0.5">
               Browse any coach&apos;s client roster for the week
             </p>
           </div>
@@ -638,7 +644,7 @@ export default function ClientCheckins() {
                 value={selectedCoachId?.toString() ?? ""}
                 onValueChange={(v) => setSelectedCoachId(parseInt(v))}
               >
-                <SelectTrigger className="w-44 bg-secondary border-border">
+                <SelectTrigger className="w-44 bg-white/5 border-white/10 text-white/90">
                   <SelectValue placeholder="Select coach" />
                 </SelectTrigger>
                 <SelectContent>
@@ -669,7 +675,7 @@ export default function ClientCheckins() {
               </Button>
               <button
                 onClick={goToCurrentWeek}
-                className="px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-sm font-medium transition-colors whitespace-nowrap"
+                className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-sm font-medium text-white/90 transition-colors whitespace-nowrap"
               >
                 {formatWeekRange(weekStart)}
               </button>
@@ -687,9 +693,9 @@ export default function ClientCheckins() {
 
         {/* ── Tabs — full width ──────────────────────────────────────────── */}
         <Tabs defaultValue="roster" className="w-full">
-          <TabsList className="w-full grid grid-cols-2">
-            <TabsTrigger value="roster">Roster</TabsTrigger>
-            <TabsTrigger value="disengagement" className="flex items-center gap-1.5">
+          <TabsList className="w-full grid grid-cols-2 bg-white/5 border border-white/10 rounded-xl p-1">
+            <TabsTrigger value="roster" className="data-[state=active]:bg-white/10 data-[state=active]:text-white/90 text-white/50 rounded-lg">Roster</TabsTrigger>
+            <TabsTrigger value="disengagement" className="flex items-center gap-1.5 data-[state=active]:bg-white/10 data-[state=active]:text-white/90 text-white/50 rounded-lg">
               Disengagement Tracking
               {disengagingCount > 0 && (
                 <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
@@ -704,10 +710,10 @@ export default function ClientCheckins() {
 
             {/* ── Renewal Alerts (orange banner) ──────────────────────────── */}
             {renewalAlerts.length > 0 && (
-              <div className="rounded-lg bg-orange-50 border border-orange-200 px-4 py-3">
+              <div className="rounded-2xl bg-amber-500/10 backdrop-blur-xl border border-amber-500/20 px-4 py-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="h-4 w-4 text-orange-600" />
-                  <span className="text-sm font-semibold text-orange-800">
+                  <AlertTriangle className="h-4 w-4 text-amber-300" />
+                  <span className="text-sm font-semibold text-amber-200">
                     {renewalAlerts.length} Client Renewal{renewalAlerts.length !== 1 ? "s" : ""} Coming Up
                   </span>
                 </div>
@@ -715,13 +721,13 @@ export default function ClientCheckins() {
                   {renewalAlerts.map((a) => (
                     <div
                       key={a.name}
-                      className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-white border border-orange-200 text-sm"
+                      className="flex items-center justify-between py-1.5 px-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-sm"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="font-medium text-orange-900">{a.name}</span>
-                        <span className="text-xs text-muted-foreground">{a.coach}</span>
-                        <span className="text-xs text-muted-foreground capitalize">{a.day}</span>
-                        <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-orange-300 text-orange-700 bg-orange-50">
+                        <span className="font-medium text-amber-200">{a.name}</span>
+                        <span className="text-xs text-white/40">{a.coach}</span>
+                        <span className="text-xs text-white/40 capitalize">{a.day}</span>
+                        <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-amber-500/30 text-amber-300 bg-amber-500/10">
                           {a.offerType}
                         </Badge>
                       </div>
@@ -735,47 +741,47 @@ export default function ClientCheckins() {
             )}
 
             {/* ── Reminder banner (yellow) ──────────────────────────────────── */}
-            <div className="rounded-lg bg-yellow-50 border border-yellow-200 px-4 py-2 text-sm text-yellow-800">
+            <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 px-4 py-2 text-sm text-amber-200">
               <strong>Reminder:</strong> Please mark check-ins as completed as they are sent out, not at the end of the day.
             </div>
 
             {/* ── Stats line ─────────────────────────────────────────────── */}
             {coachStats && (
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 text-sm">
-                  <span className="flex items-center gap-1.5">
+                <div className="flex items-center gap-3 text-sm">
+                  <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1">
                     <span className="h-2 w-2 rounded-full bg-sky-500 inline-block" />
-                    <span className="text-muted-foreground">{coachStats.clientSubmitted} submitted</span>
+                    <span className="text-white/70">{coachStats.clientSubmitted} submitted</span>
                   </span>
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1">
                     <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
-                    <span className="text-muted-foreground">{coachStats.completed} completed</span>
+                    <span className="text-white/70">{coachStats.completed} completed</span>
                   </span>
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1">
                     <span className="h-2 w-2 rounded-full bg-gray-400 inline-block" />
-                    <span className="text-muted-foreground">{coachStats.scheduled - coachStats.completed} remaining</span>
+                    <span className="text-white/70">{coachStats.scheduled - coachStats.completed} remaining</span>
                   </span>
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1">
                     <span className="h-2 w-2 rounded-full bg-red-500 inline-block" />
-                    <span className="text-muted-foreground">{disengagingCount} disengaging</span>
+                    <span className="text-white/70">{disengagingCount} disengaging</span>
                   </span>
                 </div>
                 {!canEdit && (
-                  <span className="text-xs text-muted-foreground italic">View only</span>
+                  <span className="text-xs text-white/30 italic">View only</span>
                 )}
               </div>
             )}
 
             {/* ── Roster grid ──────────────────────────────────────────────── */}
             {!effectiveCoachId ? (
-              <Card>
-                <CardContent className="p-6 text-center text-muted-foreground text-sm">
+              <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
+                <CardContent className="p-6 text-center text-white/50 text-sm">
                   Select a coach above to view their roster.
                 </CardContent>
               </Card>
             ) : !roster ? (
-              <Card>
-                <CardContent className="p-6 text-center text-muted-foreground text-sm">
+              <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
+                <CardContent className="p-6 text-center text-white/50 text-sm">
                   Loading roster...
                 </CardContent>
               </Card>
@@ -789,31 +795,29 @@ export default function ClientCheckins() {
                   return (
                     <div
                       key={day}
-                      className="rounded-xl overflow-hidden border border-border"
+                      className={`${colours.header} overflow-hidden`}
                     >
-                      {/* Day header */}
-                      <div
-                        className={`${colours.header} text-white px-3 py-2.5`}
-                      >
+                      {/* Day header accent bar + content */}
+                      <div className={`${colours.headerAccent} px-3 py-2.5`}>
                         <div className="flex items-center justify-between">
                           <div>
-                            <div className="text-sm font-semibold">
+                            <div className="text-sm font-semibold text-white/90">
                               {DAY_FULL_NAMES[day]}
                             </div>
-                            <span className="text-xs opacity-70">
+                            <span className="text-xs text-white/40">
                               {getDayFullLabel(weekStart, day)}
                             </span>
                           </div>
-                          <span className="text-sm font-bold opacity-90">
+                          <span className="text-sm font-bold text-white/40">
                             {ds.completed}/{ds.total}
                           </span>
                         </div>
                       </div>
 
                       {/* Client list */}
-                      <div className="p-2 space-y-1.5 bg-gray-50 min-h-[120px]">
+                      <div className="p-2 space-y-1.5 bg-transparent min-h-[120px]">
                         {clients.length === 0 ? (
-                          <p className="text-xs text-muted-foreground text-center py-4">
+                          <p className="text-xs text-white/30 text-center py-4">
                             No clients
                           </p>
                         ) : (
@@ -868,7 +872,7 @@ export default function ClientCheckins() {
                                   }
                                   className={`shrink-0 p-1 rounded-md transition-all duration-150 ${
                                     isClientSub
-                                      ? `${colours.subActive} opacity-40`
+                                      ? `${colours.subActive} drop-shadow-[0_0_6px_rgba(139,92,246,0.4)]`
                                       : colours.subHover
                                   }`}
                                 >
@@ -922,41 +926,41 @@ export default function ClientCheckins() {
                                         : undefined
                                   }
                                   className={`
-                                    flex-1 text-left px-2.5 py-2 rounded-lg border text-xs font-medium
+                                    flex-1 text-left px-2.5 py-2 rounded-xl border text-xs font-medium
                                     transition-all duration-150 flex items-center gap-2
                                     ${
                                       isPaused
-                                        ? "bg-gray-100 border-gray-200 cursor-default opacity-60"
+                                        ? "bg-white/[0.02] border-white/[0.04] cursor-default opacity-50"
                                         : isCompleted
-                                          ? `${colours.completedBg} cursor-default opacity-80`
+                                          ? `${colours.completedBg} cursor-default shadow-[0_0_12px_rgba(16,185,129,0.15)]`
                                           : isExcused
-                                            ? "bg-emerald-50 border-emerald-300 cursor-default opacity-80"
+                                            ? "bg-emerald-500/10 border-emerald-500/20 cursor-default"
                                             : showRed
-                                              ? "bg-red-50 border-red-300 hover:bg-red-100 hover:border-red-400 cursor-pointer"
+                                              ? "bg-red-500/10 border-red-500/20 hover:bg-red-500/15 cursor-pointer shadow-[0_0_12px_rgba(239,68,68,0.15)]"
                                               : `${colours.pendingBg} ${colours.pendingHover} cursor-pointer`
                                     }
                                   `}
                                 >
                                   {isPaused ? (
-                                    <Circle className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                                    <Circle className="h-3.5 w-3.5 shrink-0 text-white/30" />
                                   ) : isCompleted ? (
-                                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
                                   ) : isExcused ? (
-                                    <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                                    <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
                                   ) : showRed ? (
-                                    <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-500" />
+                                    <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-400" />
                                   ) : (
-                                    <Circle className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+                                    <Circle className="h-3.5 w-3.5 shrink-0 text-white/30" />
                                   )}
                                   <span
                                     className={`leading-tight ${
                                       isPaused
-                                        ? "line-through text-gray-400"
+                                        ? "line-through text-white/30"
                                         : isExcused
-                                          ? "text-emerald-700"
+                                          ? "text-emerald-300"
                                           : showRed
-                                            ? "text-red-700"
-                                            : "text-gray-800"
+                                            ? "text-red-300"
+                                            : "text-white/80"
                                     }`}
                                   >
                                     {clientName}
@@ -968,7 +972,7 @@ export default function ClientCheckins() {
                                   <button
                                     onClick={() => resumeClientMutation.mutate({ coachId: effectiveCoachId ?? 0, clientName })}
                                     title="Click to resume"
-                                    className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+                                    className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 border border-amber-500/20 text-amber-300 hover:bg-amber-500/20 transition-colors"
                                   >
                                     PAUSED
                                   </button>
@@ -984,7 +988,7 @@ export default function ClientCheckins() {
                                       })
                                     }
                                     title="Undo check-in"
-                                    className="shrink-0 p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                    className="shrink-0 p-1 rounded text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                                   >
                                     <svg
                                       xmlns="http://www.w3.org/2000/svg"
@@ -1015,20 +1019,20 @@ export default function ClientCheckins() {
             {/* ── Clients Missing 2+ Consecutive Weeks ──────────────────── */}
             {clientsMissing2Plus.length > 0 && (
               <div className="mt-4">
-                <h3 className="text-sm font-semibold text-foreground mb-2">
+                <h3 className="text-sm font-semibold text-white/90 mb-2">
                   Clients Missing 2+ Consecutive Weeks
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {clientsMissing2Plus.map((s) => (
                     <div
                       key={`${s.clientName}-${s.dayOfWeek}`}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-sm"
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm ${s.consecutiveMissed >= 3 ? "shadow-[0_0_10px_rgba(239,68,68,0.15)]" : "shadow-[0_0_10px_rgba(245,158,11,0.15)]"}`}
                     >
-                      <span className="font-medium text-gray-800">{s.clientName}</span>
-                      <Badge variant="outline" className="text-[10px] py-0 px-1.5 capitalize border-gray-300">
+                      <span className="font-medium text-white/80">{s.clientName}</span>
+                      <Badge variant="outline" className="text-[10px] py-0 px-1.5 capitalize border-white/10 text-white/50 bg-transparent">
                         {s.dayOfWeek}
                       </Badge>
-                      <Badge className={`text-[10px] py-0 px-1.5 ${s.consecutiveMissed >= 3 ? "bg-red-500" : "bg-orange-500"} text-white`}>
+                      <Badge className={`text-[10px] py-0 px-1.5 ${s.consecutiveMissed >= 3 ? "bg-red-500/20 text-red-300 border border-red-500/30" : "bg-amber-500/20 text-amber-300 border border-amber-500/30"}`}>
                         {s.consecutiveMissed}w missed
                       </Badge>
                     </div>
@@ -1040,15 +1044,15 @@ export default function ClientCheckins() {
             {/* ── Pause a Client ──────────────────────────────────────────── */}
             {effectiveCoachId && (
               <div className="mt-6">
-                <h3 className="text-sm font-semibold text-foreground">Pause a Client</h3>
-                <p className="text-xs text-muted-foreground mb-2">
+                <h3 className="text-sm font-semibold text-white/90">Pause a Client</h3>
+                <p className="text-xs text-white/50 mb-2">
                   Paused clients are hidden from engagement metrics
                 </p>
                 <Input
                   placeholder="Search for a client to pause..."
                   value={pauseSearch}
                   onChange={(e) => setPauseSearch(e.target.value)}
-                  className="bg-secondary border-border max-w-md"
+                  className="bg-white/5 border-white/10 text-white/90 placeholder:text-white/30 max-w-md"
                 />
                 {pauseSearch.trim() && (
                   <div className="space-y-1 max-h-48 overflow-y-auto mt-2 max-w-md">
@@ -1062,23 +1066,23 @@ export default function ClientCheckins() {
                             pauseClientMutation.mutate({ coachId: effectiveCoachId!, clientName: c.name });
                             setPauseSearch("");
                           }}
-                          className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-amber-50 hover:text-amber-800 transition-colors flex items-center justify-between"
+                          className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-white/[0.08] text-white/80 transition-colors flex items-center justify-between"
                         >
                           <span className="font-medium">{c.name}</span>
-                          <span className="text-xs text-muted-foreground capitalize">{c.day}</span>
+                          <span className="text-xs text-white/40 capitalize">{c.day}</span>
                         </button>
                       ))}
                   </div>
                 )}
                 {pausedSet.size > 0 && (
-                  <div className="pt-2 mt-2 border-t border-border max-w-md">
-                    <p className="text-xs text-muted-foreground mb-2">Currently paused:</p>
+                  <div className="pt-2 mt-2 border-t border-white/10 max-w-md">
+                    <p className="text-xs text-white/50 mb-2">Currently paused:</p>
                     <div className="flex flex-wrap gap-2">
                       {Array.from(pausedSet).map((name) => (
                         <button
                           key={name}
                           onClick={() => resumeClientMutation.mutate({ coachId: effectiveCoachId!, clientName: name })}
-                          className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+                          className="text-xs px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 hover:bg-amber-500/20 transition-colors"
                           title="Click to resume"
                         >
                           {name} ✕
@@ -1093,8 +1097,8 @@ export default function ClientCheckins() {
             {/* ── Valid Excuse ──────────────────────────────────────────────── */}
             {effectiveCoachId && (
               <div className="mt-6">
-                <h3 className="text-sm font-semibold text-foreground">Valid Excuse</h3>
-                <p className="text-xs text-muted-foreground mb-2">
+                <h3 className="text-sm font-semibold text-white/90">Valid Excuse</h3>
+                <p className="text-xs text-white/50 mb-2">
                   Excused clients are excluded from missed check-in counts (soft). Requires manager approval.
                 </p>
                 {!excuseSelectedClient ? (
@@ -1107,7 +1111,7 @@ export default function ClientCheckins() {
                         setExcuseSelectedClient(null);
                         setExcuseSelectedDay(null);
                       }}
-                      className="bg-secondary border-border"
+                      className="bg-white/5 border-white/10 text-white/90 placeholder:text-white/30"
                     />
                     {excuseSearchResults.length > 0 && (
                       <div className="space-y-1 max-h-48 overflow-y-auto mt-2">
@@ -1119,10 +1123,10 @@ export default function ClientCheckins() {
                               setExcuseSelectedDay(c.day);
                               setExcuseSearch("");
                             }}
-                            className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-accent transition-colors flex items-center justify-between"
+                            className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-white/[0.08] text-white/80 transition-colors flex items-center justify-between"
                           >
                             <span className="font-medium">{c.name}</span>
-                            <span className="text-xs text-muted-foreground capitalize">{c.day}</span>
+                            <span className="text-xs text-white/40 capitalize">{c.day}</span>
                           </button>
                         ))}
                       </div>
@@ -1130,10 +1134,10 @@ export default function ClientCheckins() {
                   </div>
                 ) : (
                   <div className="space-y-3 max-w-md">
-                    <div className="flex items-center justify-between bg-secondary rounded-lg px-3 py-2">
+                    <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-3 py-2">
                       <div>
-                        <span className="text-sm font-medium">{excuseSelectedClient}</span>
-                        <span className="text-xs text-muted-foreground ml-2 capitalize">{excuseSelectedDay}</span>
+                        <span className="text-sm font-medium text-white/90">{excuseSelectedClient}</span>
+                        <span className="text-xs text-white/40 ml-2 capitalize">{excuseSelectedDay}</span>
                       </div>
                       <button
                         onClick={() => {
@@ -1141,7 +1145,7 @@ export default function ClientCheckins() {
                           setExcuseSelectedDay(null);
                           setExcuseReason("");
                         }}
-                        className="text-xs text-muted-foreground hover:text-foreground"
+                        className="text-xs text-white/50 hover:text-white/90"
                       >
                         Change
                       </button>
@@ -1151,7 +1155,7 @@ export default function ClientCheckins() {
                       value={excuseReason}
                       onChange={(e) => setExcuseReason(e.target.value)}
                       rows={2}
-                      className="bg-secondary border-border"
+                      className="bg-white/5 border-white/10 text-white/90 placeholder:text-white/30"
                     />
                     <Button
                       onClick={() => {
@@ -1179,7 +1183,7 @@ export default function ClientCheckins() {
                 {/* THIS WEEK'S EXCUSES */}
                 {localExcused.size > 0 && (
                   <div className="mt-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-white/50 mb-2">
                       This Week&apos;s Excuses
                     </h4>
                     <div className="space-y-1.5 max-w-lg">
@@ -1188,14 +1192,14 @@ export default function ClientCheckins() {
                         return (
                           <div
                             key={key}
-                            className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-emerald-50 border border-emerald-200 text-sm"
+                            className="flex items-center justify-between py-1.5 px-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-sm"
                           >
                             <div className="flex items-center gap-3">
-                              <span className="font-medium text-emerald-900">{clientName}</span>
-                              <span className="text-xs text-muted-foreground capitalize">{dayOfWeek}</span>
-                              <span className="text-xs text-muted-foreground">{val.reason}</span>
+                              <span className="font-medium text-emerald-300">{clientName}</span>
+                              <span className="text-xs text-white/40 capitalize">{dayOfWeek}</span>
+                              <span className="text-xs text-white/40">{val.reason}</span>
                             </div>
-                            <Badge className="bg-emerald-500 text-white text-[10px] py-0 px-1.5">
+                            <Badge className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] py-0 px-1.5">
                               APPROVED
                             </Badge>
                           </div>
@@ -1210,7 +1214,7 @@ export default function ClientCheckins() {
 
           {/* ── Disengagement Tab — 3-column per coach layout ────────────── */}
           <TabsContent value="disengagement" className="mt-4">
-            <p className="text-xs text-muted-foreground mb-3">
+            <p className="text-xs text-white/50 mb-3">
               Consecutive missed check-ins per coach — streak resets when marked complete
             </p>
             {disengagedByCoach.length > 0 ? (
@@ -1219,15 +1223,15 @@ export default function ClientCheckins() {
                 style={{ gridTemplateColumns: `repeat(${Math.min(disengagedByCoach.length, 3)}, minmax(0, 1fr))` }}
               >
                 {disengagedByCoach.map((coach) => (
-                  <Card key={coach.coachName} className="border-border">
+                  <Card key={coach.coachName} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
                     {/* Coach header */}
                     <CardHeader className="pb-2 pt-4 px-4">
                       <div className="flex items-center gap-2 mb-1">
-                        <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+                        <div className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white/70">
                           {coach.coachName.charAt(0)}
                         </div>
-                        <span className="text-sm font-bold">{coach.coachName}</span>
-                        <span className="text-xs text-muted-foreground ml-auto">{coach.total} flagged</span>
+                        <span className="text-sm font-bold text-white/90">{coach.coachName}</span>
+                        <span className="text-xs text-white/40 ml-auto">{coach.total} flagged</span>
                       </div>
                       <div className="flex items-center gap-2 text-[10px]">
                         {coach.critical.length > 0 && (
@@ -1256,11 +1260,11 @@ export default function ClientCheckins() {
                           {coach.critical.map((d) => (
                             <div
                               key={`${d.clientName}-${d.dayOfWeek}`}
-                              className="flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-red-950/50 border border-red-700/60 text-sm"
+                              className="flex items-center justify-between py-1.5 px-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-sm shadow-[0_0_10px_rgba(239,68,68,0.1)]"
                             >
                               <span className="font-medium text-red-300 truncate min-w-0">{d.clientName}</span>
                               <div className="flex items-center gap-2 shrink-0 ml-2">
-                                <span className="text-[10px] text-muted-foreground capitalize">{d.dayOfWeek}</span>
+                                <span className="text-[10px] text-white/40 capitalize">{d.dayOfWeek}</span>
                                 <span className="text-xs font-bold text-red-300">{d.consecutiveMissedWeeks}w</span>
                               </div>
                             </div>
@@ -1278,11 +1282,11 @@ export default function ClientCheckins() {
                           {coach.alert.map((d) => (
                             <div
                               key={`${d.clientName}-${d.dayOfWeek}`}
-                              className="flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-orange-950/40 border border-orange-700/50 text-sm"
+                              className="flex items-center justify-between py-1.5 px-2.5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-sm shadow-[0_0_10px_rgba(249,115,22,0.1)]"
                             >
                               <span className="font-medium text-orange-300 truncate min-w-0">{d.clientName}</span>
                               <div className="flex items-center gap-2 shrink-0 ml-2">
-                                <span className="text-[10px] text-muted-foreground capitalize">{d.dayOfWeek}</span>
+                                <span className="text-[10px] text-white/40 capitalize">{d.dayOfWeek}</span>
                                 <span className="text-xs font-bold text-orange-300">{d.consecutiveMissedWeeks}w</span>
                               </div>
                             </div>
@@ -1300,11 +1304,11 @@ export default function ClientCheckins() {
                           {coach.warning.map((d) => (
                             <div
                               key={`${d.clientName}-${d.dayOfWeek}`}
-                              className="flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-yellow-950/30 border border-yellow-700/40 text-sm"
+                              className="flex items-center justify-between py-1.5 px-2.5 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-sm shadow-[0_0_10px_rgba(234,179,8,0.1)]"
                             >
                               <span className="font-medium text-yellow-300 truncate min-w-0">{d.clientName}</span>
                               <div className="flex items-center gap-2 shrink-0 ml-2">
-                                <span className="text-[10px] text-muted-foreground capitalize">{d.dayOfWeek}</span>
+                                <span className="text-[10px] text-white/40 capitalize">{d.dayOfWeek}</span>
                                 <span className="text-xs font-bold text-yellow-300">{d.consecutiveMissedWeeks}w</span>
                               </div>
                             </div>
@@ -1316,8 +1320,8 @@ export default function ClientCheckins() {
                 ))}
               </div>
             ) : (
-              <Card>
-                <CardContent className="p-8 text-center text-muted-foreground text-sm">
+              <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
+                <CardContent className="p-8 text-center text-white/50 text-sm">
                   No disengaged clients this week. Great work!
                 </CardContent>
               </Card>

@@ -84,12 +84,12 @@ function ClientRow({ client }: { client: ClientEntry }) {
     <div className="flex items-start gap-3 py-2">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-zinc-200">{client.clientName}</span>
+          <span className="text-sm font-medium text-white/80">{client.clientName}</span>
           <RatingBadge rating={client.rating} />
           {client.consecutiveMissed > 0 && <DisengagementBadge streak={client.consecutiveMissed} />}
         </div>
         {client.notes && (
-          <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{client.notes}</p>
+          <p className="text-xs text-white/50 mt-1 leading-relaxed">{client.notes}</p>
         )}
       </div>
     </div>
@@ -106,11 +106,11 @@ function CoachCard({ section }: { section: CoachSection }) {
   const engColor = engPct >= 80 ? "text-emerald-400" : engPct >= 60 ? "text-amber-400" : "text-red-400";
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
       {/* Coach header */}
-      <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between flex-wrap gap-3">
-        <h3 className="text-base font-bold text-zinc-100">{section.coachName}</h3>
-        <div className="flex items-center gap-4 text-xs text-zinc-400">
+      <div className="px-5 py-4 border-b border-white/[0.08] flex items-center justify-between flex-wrap gap-3">
+        <h3 className="text-base font-bold text-white/90">{section.coachName}</h3>
+        <div className="flex items-center gap-4 text-xs text-white/50">
           {/* Traffic light counts */}
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5">
@@ -128,10 +128,10 @@ function CoachCard({ section }: { section: CoachSection }) {
           </div>
           {/* Engagement */}
           {section.engagement.scheduled > 0 && (
-            <span className="flex items-center gap-1 border-l border-zinc-700 pl-4">
-              <span className="text-zinc-500">Engagement:</span>
+            <span className="flex items-center gap-1 border-l border-white/10 pl-4">
+              <span className="text-white/30">Engagement:</span>
               <span className={`font-bold ${engColor}`}>{engPct.toFixed(1)}%</span>
-              <span className="text-zinc-600">({section.engagement.completed}/{section.engagement.scheduled})</span>
+              <span className="text-white/20">({section.engagement.completed}/{section.engagement.scheduled})</span>
             </span>
           )}
         </div>
@@ -167,7 +167,7 @@ function CoachCard({ section }: { section: CoachSection }) {
           </div>
         )}
         {section.total === 0 && (
-          <div className="px-5 py-4 text-sm text-zinc-500 italic">No ratings recorded for this coach.</div>
+          <div className="px-5 py-4 text-sm text-white/30 italic">No ratings recorded for this coach.</div>
         )}
       </div>
     </div>
@@ -185,28 +185,28 @@ function BusinessSummary({ snapshot }: { snapshot: Snapshot }) {
     sum + c.clients.filter(cl => cl.consecutiveMissed > 0).length, 0);
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-      <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400 mb-4">Business-Wide Summary</h2>
+    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+      <h2 className="text-sm font-semibold uppercase tracking-wider text-white/50 mb-4">Business-Wide Summary</h2>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="text-center">
           <div className={`text-3xl font-bold ${onTrackColor}`}>{onTrackPct.toFixed(1)}%</div>
-          <div className="text-xs text-zinc-500 mt-1">On Track</div>
+          <div className="text-xs text-white/30 mt-1">On Track</div>
         </div>
         <div className="text-center">
           <div className="text-3xl font-bold text-emerald-400">{business.green}</div>
-          <div className="text-xs text-zinc-500 mt-1">Green</div>
+          <div className="text-xs text-white/30 mt-1">Green</div>
         </div>
         <div className="text-center">
           <div className="text-3xl font-bold text-amber-400">{business.yellow}</div>
-          <div className="text-xs text-zinc-500 mt-1">Neutral</div>
+          <div className="text-xs text-white/30 mt-1">Neutral</div>
         </div>
         <div className="text-center">
           <div className="text-3xl font-bold text-red-400">{business.red}</div>
-          <div className="text-xs text-zinc-500 mt-1">Off Track</div>
+          <div className="text-xs text-white/30 mt-1">Off Track</div>
         </div>
       </div>
       {/* Progress bar */}
-      <div className="mt-5 relative h-3 rounded-full bg-zinc-700 overflow-hidden">
+      <div className="mt-5 relative h-3 rounded-full bg-white/10 overflow-hidden">
         <div
           className="h-full rounded-full bg-emerald-500 transition-all"
           style={{ width: `${Math.min(onTrackPct, 100)}%` }}
@@ -214,7 +214,7 @@ function BusinessSummary({ snapshot }: { snapshot: Snapshot }) {
         {/* 70% target line */}
         <div className="absolute top-0 bottom-0 w-0.5 bg-white/40" style={{ left: "70%" }} />
       </div>
-      <div className="flex justify-between text-xs text-zinc-500 mt-1">
+      <div className="flex justify-between text-xs text-white/30 mt-1">
         <span>{business.total} clients rated</span>
         <span>Target: 70% On Track</span>
       </div>
@@ -249,13 +249,13 @@ function ComparisonPanel({
   const RATING_ARROW: Record<string, { icon: string; color: string; bg: string }> = {
     improved: { icon: "↑", color: "text-emerald-300", bg: "bg-emerald-500/10 border-emerald-500/30" },
     declined:  { icon: "↓", color: "text-red-300",     bg: "bg-red-500/10 border-red-500/30"         },
-    unchanged: { icon: "→", color: "text-zinc-400",    bg: "bg-zinc-800/50 border-zinc-700/50"       },
+    unchanged: { icon: "→", color: "text-white/50",    bg: "bg-white/5/50 border-white/10/50"       },
   };
 
   // Helper: diff value with colour
   const Diff = ({ curr, prev, suffix = "", higherIsBetter = true }: { curr: number; prev: number; suffix?: string; higherIsBetter?: boolean }) => {
     const delta = curr - prev;
-    if (Math.abs(delta) < 0.05) return <span className="text-zinc-500 text-xs">—</span>;
+    if (Math.abs(delta) < 0.05) return <span className="text-white/30 text-xs">—</span>;
     const positive = higherIsBetter ? delta > 0 : delta < 0;
     const color = positive ? "text-emerald-400" : "text-red-400";
     return (
@@ -266,16 +266,16 @@ function ComparisonPanel({
   };
 
   return (
-    <div className="bg-zinc-900 border border-zinc-700 rounded-2xl overflow-hidden no-print">
+    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden no-print">
       {/* Panel header */}
-      <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
+      <div className="px-5 py-4 border-b border-white/[0.08] flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-bold text-zinc-100">Sweep Comparison</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">Side-by-side vs. previous saved report</p>
+          <h2 className="text-sm font-bold text-white/90">Sweep Comparison</h2>
+          <p className="text-xs text-white/30 mt-0.5">Side-by-side vs. previous saved report</p>
         </div>
         <button
           onClick={onClose}
-          className="text-zinc-500 hover:text-zinc-300 transition-colors p-1 rounded-lg hover:bg-zinc-800"
+          className="text-white/30 hover:text-white/70 transition-colors p-1 rounded-lg hover:bg-white/5"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -286,7 +286,7 @@ function ComparisonPanel({
       {isLoading && (
         <div className="flex items-center justify-center py-10 gap-3">
           <div className="h-5 w-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm text-zinc-400">Loading comparison…</span>
+          <span className="text-sm text-white/50">Loading comparison…</span>
         </div>
       )}
 
@@ -298,33 +298,33 @@ function ComparisonPanel({
         <div className="p-5 space-y-6">
           {/* Side-by-side metrics */}
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">Business Metrics</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-white/30 mb-3">Business Metrics</h3>
             <div className="grid grid-cols-3 gap-2 text-xs">
               {/* Header row */}
-              <div className="text-zinc-500 font-medium"></div>
+              <div className="text-white/30 font-medium"></div>
               <div className="text-center">
-                <div className="text-zinc-400 font-semibold truncate" title={data.previous.title}>Previous</div>
-                <div className="text-zinc-600 text-[10px] mt-0.5">
+                <div className="text-white/50 font-semibold truncate" title={data.previous.title}>Previous</div>
+                <div className="text-white/20 text-[10px] mt-0.5">
                   {new Date(data.previous.createdAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", timeZone: "Australia/Melbourne" })}
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-zinc-100 font-semibold truncate" title={data.current.title}>Current</div>
-                <div className="text-zinc-500 text-[10px] mt-0.5">
+                <div className="text-white/90 font-semibold truncate" title={data.current.title}>Current</div>
+                <div className="text-white/30 text-[10px] mt-0.5">
                   {new Date(data.current.createdAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", timeZone: "Australia/Melbourne" })}
                 </div>
               </div>
 
               {/* On Track % */}
-              <div className="text-zinc-400 flex items-center gap-1.5 py-2 border-t border-zinc-800">
+              <div className="text-white/50 flex items-center gap-1.5 py-2 border-t border-white/[0.08]">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" /> On Track %
               </div>
-              <div className="text-center py-2 border-t border-zinc-800">
+              <div className="text-center py-2 border-t border-white/[0.08]">
                 <span className={`font-bold ${data.previous.business.greenPct >= 70 ? "text-emerald-400" : data.previous.business.greenPct >= 50 ? "text-amber-400" : "text-red-400"}`}>
                   {data.previous.business.greenPct.toFixed(1)}%
                 </span>
               </div>
-              <div className="text-center py-2 border-t border-zinc-800 flex flex-col items-center gap-0.5">
+              <div className="text-center py-2 border-t border-white/[0.08] flex flex-col items-center gap-0.5">
                 <span className={`font-bold ${data.current.business.greenPct >= 70 ? "text-emerald-400" : data.current.business.greenPct >= 50 ? "text-amber-400" : "text-red-400"}`}>
                   {data.current.business.greenPct.toFixed(1)}%
                 </span>
@@ -332,45 +332,45 @@ function ComparisonPanel({
               </div>
 
               {/* Green */}
-              <div className="text-zinc-400 flex items-center gap-1.5 py-2 border-t border-zinc-800">
+              <div className="text-white/50 flex items-center gap-1.5 py-2 border-t border-white/[0.08]">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" /> Green
               </div>
-              <div className="text-center py-2 border-t border-zinc-800 text-emerald-400 font-bold">{data.previous.business.green}</div>
-              <div className="text-center py-2 border-t border-zinc-800 flex flex-col items-center gap-0.5">
+              <div className="text-center py-2 border-t border-white/[0.08] text-emerald-400 font-bold">{data.previous.business.green}</div>
+              <div className="text-center py-2 border-t border-white/[0.08] flex flex-col items-center gap-0.5">
                 <span className="text-emerald-400 font-bold">{data.current.business.green}</span>
                 <Diff curr={data.current.business.green} prev={data.previous.business.green} />
               </div>
 
               {/* Neutral */}
-              <div className="text-zinc-400 flex items-center gap-1.5 py-2 border-t border-zinc-800">
+              <div className="text-white/50 flex items-center gap-1.5 py-2 border-t border-white/[0.08]">
                 <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" /> Neutral
               </div>
-              <div className="text-center py-2 border-t border-zinc-800 text-amber-400 font-bold">{data.previous.business.yellow}</div>
-              <div className="text-center py-2 border-t border-zinc-800 flex flex-col items-center gap-0.5">
+              <div className="text-center py-2 border-t border-white/[0.08] text-amber-400 font-bold">{data.previous.business.yellow}</div>
+              <div className="text-center py-2 border-t border-white/[0.08] flex flex-col items-center gap-0.5">
                 <span className="text-amber-400 font-bold">{data.current.business.yellow}</span>
                 <Diff curr={data.current.business.yellow} prev={data.previous.business.yellow} higherIsBetter={false} />
               </div>
 
               {/* Off Track */}
-              <div className="text-zinc-400 flex items-center gap-1.5 py-2 border-t border-zinc-800">
+              <div className="text-white/50 flex items-center gap-1.5 py-2 border-t border-white/[0.08]">
                 <span className="h-2 w-2 rounded-full bg-red-500 shrink-0" /> Off Track
               </div>
-              <div className="text-center py-2 border-t border-zinc-800 text-red-400 font-bold">{data.previous.business.red}</div>
-              <div className="text-center py-2 border-t border-zinc-800 flex flex-col items-center gap-0.5">
+              <div className="text-center py-2 border-t border-white/[0.08] text-red-400 font-bold">{data.previous.business.red}</div>
+              <div className="text-center py-2 border-t border-white/[0.08] flex flex-col items-center gap-0.5">
                 <span className="text-red-400 font-bold">{data.current.business.red}</span>
                 <Diff curr={data.current.business.red} prev={data.previous.business.red} higherIsBetter={false} />
               </div>
 
               {/* Engagement */}
-              <div className="text-zinc-400 flex items-center gap-1.5 py-2 border-t border-zinc-800">
+              <div className="text-white/50 flex items-center gap-1.5 py-2 border-t border-white/[0.08]">
                 <span className="h-2 w-2 rounded-full bg-blue-400 shrink-0" /> Engagement
               </div>
-              <div className="text-center py-2 border-t border-zinc-800">
+              <div className="text-center py-2 border-t border-white/[0.08]">
                 <span className={`font-bold ${data.previous.engagementPct >= 80 ? "text-emerald-400" : data.previous.engagementPct >= 60 ? "text-amber-400" : "text-red-400"}`}>
                   {data.previous.engagementPct.toFixed(1)}%
                 </span>
               </div>
-              <div className="text-center py-2 border-t border-zinc-800 flex flex-col items-center gap-0.5">
+              <div className="text-center py-2 border-t border-white/[0.08] flex flex-col items-center gap-0.5">
                 <span className={`font-bold ${data.current.engagementPct >= 80 ? "text-emerald-400" : data.current.engagementPct >= 60 ? "text-amber-400" : "text-red-400"}`}>
                   {data.current.engagementPct.toFixed(1)}%
                 </span>
@@ -382,7 +382,7 @@ function ComparisonPanel({
           {/* Status Changes */}
           {data.changes.length > 0 && (
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-white/30 mb-3">
                 Status Changes ({data.changes.length})
               </h3>
               <div className="space-y-1.5">
@@ -395,12 +395,12 @@ function ComparisonPanel({
                     >
                       <span className={`text-base font-bold w-4 text-center shrink-0 ${cfg.color}`}>{cfg.icon}</span>
                       <div className="flex-1 min-w-0">
-                        <span className="font-semibold text-zinc-200">{change.clientName}</span>
-                        <span className="text-zinc-500 ml-1.5">({change.coachName})</span>
+                        <span className="font-semibold text-white/80">{change.clientName}</span>
+                        <span className="text-white/30 ml-1.5">({change.coachName})</span>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <RatingBadge rating={change.from} />
-                        <svg className="h-3 w-3 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <svg className="h-3 w-3 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                         </svg>
                         <RatingBadge rating={change.to} />
@@ -413,7 +413,7 @@ function ComparisonPanel({
           )}
 
           {data.changes.length === 0 && (
-            <div className="text-sm text-zinc-500 italic text-center py-4">
+            <div className="text-sm text-white/30 italic text-center py-4">
               No status changes between these two reports.
             </div>
           )}
@@ -423,12 +423,12 @@ function ComparisonPanel({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {data.newClients.length > 0 && (
                 <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">New Clients ({data.newClients.length})</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-white/30 mb-2">New Clients ({data.newClients.length})</h3>
                   <div className="space-y-1">
                     {data.newClients.map((c, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50">
-                        <span className="text-zinc-300 font-medium">{c.clientName}</span>
-                        <span className="text-zinc-500">({c.coachName})</span>
+                      <div key={i} className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-white/5/50 border border-white/10/50">
+                        <span className="text-white/70 font-medium">{c.clientName}</span>
+                        <span className="text-white/30">({c.coachName})</span>
                         <RatingBadge rating={c.rating} />
                       </div>
                     ))}
@@ -437,12 +437,12 @@ function ComparisonPanel({
               )}
               {data.removedClients.length > 0 && (
                 <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">No Longer Listed ({data.removedClients.length})</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-white/30 mb-2">No Longer Listed ({data.removedClients.length})</h3>
                   <div className="space-y-1">
                     {data.removedClients.map((c, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50">
-                        <span className="text-zinc-400 font-medium line-through">{c.clientName}</span>
-                        <span className="text-zinc-500">({c.coachName})</span>
+                      <div key={i} className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-white/5/50 border border-white/10/50">
+                        <span className="text-white/50 font-medium line-through">{c.clientName}</span>
+                        <span className="text-white/30">({c.coachName})</span>
                       </div>
                     ))}
                   </div>
@@ -517,10 +517,10 @@ export default function SweepReportPage() {
 
   if (!reportId || isNaN(reportId)) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-zinc-400 text-lg">Invalid report ID.</p>
-          <button onClick={() => setLocation("/client-progress")} className="mt-4 text-sm text-emerald-400 hover:underline">
+          <p className="text-white/50 text-lg">Invalid report ID.</p>
+          <button onClick={() => setLocation("/client-progress")} className="mt-4 text-sm text-violet-400 hover:underline">
             ← Back to Client Progress
           </button>
         </div>
@@ -530,10 +530,10 @@ export default function SweepReportPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-zinc-400 text-sm">Loading report…</p>
+          <p className="text-white/50 text-sm">Loading report…</p>
         </div>
       </div>
     );
@@ -541,10 +541,10 @@ export default function SweepReportPage() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-zinc-400 text-lg">Report not found.</p>
-          <button onClick={() => setLocation("/client-progress")} className="mt-4 text-sm text-emerald-400 hover:underline">
+          <p className="text-white/50 text-lg">Report not found.</p>
+          <button onClick={() => setLocation("/client-progress")} className="mt-4 text-sm text-violet-400 hover:underline">
             ← Back to Client Progress
           </button>
         </div>
@@ -555,18 +555,18 @@ export default function SweepReportPage() {
   const { snapshot } = data;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-white/90">
       {/* Print styles */}
       <style>{`
         @media print {
           .no-print { display: none !important; }
           body { background: white !important; color: black !important; }
-          .bg-zinc-950 { background: white !important; }
-          .bg-zinc-900 { background: #f9fafb !important; border-color: #e5e7eb !important; }
-          .bg-zinc-800 { background: #f3f4f6 !important; }
-          .text-zinc-100, .text-zinc-200, .text-zinc-300 { color: #111827 !important; }
-          .text-zinc-400, .text-zinc-500 { color: #6b7280 !important; }
-          .border-zinc-800, .border-zinc-700 { border-color: #e5e7eb !important; }
+          .bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 { background: white !important; }
+          .bg-white/[0.03] { background: #f9fafb !important; border-color: #e5e7eb !important; }
+          .bg-white/5 { background: #f3f4f6 !important; }
+          .text-white/90, .text-white/80, .text-white/70 { color: #111827 !important; }
+          .text-white/50, .text-white/30 { color: #6b7280 !important; }
+          .border-white/[0.08], .border-white/10 { border-color: #e5e7eb !important; }
         }
       `}</style>
 
@@ -576,7 +576,7 @@ export default function SweepReportPage() {
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <h1 className="text-2xl font-bold text-zinc-100">{data.title}</h1>
+                <h1 className="text-2xl font-bold text-white/90">{data.title}</h1>
                 {data.scopeType === "coach" && data.scopeCoachName && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-300 border border-blue-500/30">
                     <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -586,12 +586,12 @@ export default function SweepReportPage() {
                   </span>
                 )}
                 {(!data.scopeType || data.scopeType === "all") && (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-zinc-700/60 text-zinc-400 border border-zinc-600/40">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/10/60 text-white/50 border border-zinc-600/40">
                     All Coaches
                   </span>
                 )}
               </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-zinc-400">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-white/50">
                 {data.weekStart && (
                   <span>Week of {formatDateAU(data.weekStart)}</span>
                 )}
@@ -607,7 +607,7 @@ export default function SweepReportPage() {
                 <button
                   onClick={() => saveMutation.mutate({ id: reportId })}
                   disabled={saveMutation.isPending}
-                  className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-emerald-700 border border-emerald-600 text-emerald-100 hover:bg-emerald-600 transition-colors font-semibold"
+                  className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white transition-colors font-semibold"
                 >
                   {saveMutation.isPending ? (
                     <><span className="h-3.5 w-3.5 border-2 border-emerald-300/40 border-t-emerald-100 rounded-full animate-spin" /> Saving…</>
@@ -622,7 +622,7 @@ export default function SweepReportPage() {
                 </button>
               )}
               {(data.isSaved || saved) && (
-                <span className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-emerald-400">
+                <span className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-emerald-400">
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                   </svg>
@@ -636,7 +636,7 @@ export default function SweepReportPage() {
                   className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border transition-colors font-medium ${
                     showComparison
                       ? "bg-violet-600 border-violet-500 text-white"
-                      : "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700"
+                      : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10"
                   }`}
                 >
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -648,7 +648,7 @@ export default function SweepReportPage() {
               <button
                 id="copy-link-btn"
                 onClick={handleCopyLink}
-                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-300 hover:bg-zinc-700 transition-colors"
+                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 transition-colors"
               >
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
@@ -657,7 +657,7 @@ export default function SweepReportPage() {
               </button>
               <button
                 onClick={handlePrint}
-                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 transition-colors font-medium"
+                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white transition-colors font-medium"
               >
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.056 48.056 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z" />
@@ -666,7 +666,7 @@ export default function SweepReportPage() {
               </button>
               <button
                 onClick={() => setLocation("/client-progress")}
-                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-400 hover:bg-zinc-700 transition-colors no-print"
+                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/50 hover:bg-white/10 transition-colors no-print"
               >
                 ← Back
               </button>
@@ -692,19 +692,19 @@ export default function SweepReportPage() {
 
         {/* Per-coach sections */}
         <div className="flex flex-col gap-5">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-white/50">
             Per-Coach Breakdown
           </h2>
           {snapshot.coaches.map(section => (
             <CoachCard key={section.coachId} section={section} />
           ))}
           {snapshot.coaches.length === 0 && (
-            <p className="text-sm text-zinc-500 italic">No coach data available in this report.</p>
+            <p className="text-sm text-white/30 italic">No coach data available in this report.</p>
           )}
         </div>
 
         {/* Footer */}
-        <div className="mt-10 pt-6 border-t border-zinc-800 text-xs text-zinc-600 flex justify-between flex-wrap gap-2">
+        <div className="mt-10 pt-6 border-t border-white/[0.08] text-xs text-white/20 flex justify-between flex-wrap gap-2">
           <span>Databite Coach — Post-Sweep Report</span>
           <span>Generated {formatDateTimeAU(snapshot.generatedAt)}</span>
         </div>

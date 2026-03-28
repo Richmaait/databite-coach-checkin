@@ -56,10 +56,13 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
-      <div className="w-full max-w-sm space-y-6 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-emerald-900/30 border border-emerald-800/50">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 relative">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-violet-500/10 blur-[100px] rounded-full" />
+      </div>
+      <div className="w-full max-w-sm space-y-6 text-center bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 relative z-10">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-violet-500/10 border border-violet-500/20">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" />
             <path d="m9 12 2 2 4-4" />
           </svg>
@@ -67,7 +70,7 @@ export default function Login() {
 
         <div>
           <h1 className="text-2xl font-bold text-white">Coach Check-In</h1>
-          <p className="mt-2 text-sm text-gray-400">
+          <p className="mt-2 text-sm text-white/50">
             Sign in to continue
           </p>
         </div>
@@ -94,27 +97,27 @@ export default function Login() {
           {!showEmailLogin && (
             <button
               onClick={() => setShowEmailLogin(true)}
-              className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+              className="text-sm text-white/30 hover:text-white/60 transition-colors"
             >
               Or sign in with email instead
             </button>
           )}
 
           {showEmailLogin && (
-            <form onSubmit={handleLogin} className="space-y-4 pt-2 border-t border-gray-800">
+            <form onSubmit={handleLogin} className="space-y-4 pt-2 border-t border-white/10">
               <Input
                 type="email"
                 placeholder="you@databite.com.au"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
+                className="bg-white/5 border border-white/10 text-white/80 placeholder:text-white/30 rounded-xl"
               />
 
               <Button
                 type="submit"
                 disabled={loading || !email}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+                className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white rounded-xl"
               >
                 {loading ? "Signing in..." : "Sign in with email"}
               </Button>

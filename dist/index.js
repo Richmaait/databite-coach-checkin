@@ -50,13 +50,14 @@ __export(schema_exports, {
   coaches: () => coaches,
   excusedClients: () => excusedClients,
   kudos: () => kudos,
+  pausedClients: () => pausedClients,
   rosterClientStarts: () => rosterClientStarts,
   rosterWeeklySnapshots: () => rosterWeeklySnapshots,
   slackReminderLog: () => slackReminderLog,
   sweepReports: () => sweepReports,
   users: () => users
 });
-import { mysqlTable, int, varchar, text, timestamp, mysqlEnum, uniqueIndex, json, tinyint } from "drizzle-orm/mysql-core";
+import { mysqlTable, int, varchar, text, timestamp, datetime, mysqlEnum, uniqueIndex, json, tinyint } from "drizzle-orm/mysql-core";
 var users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 256 }),
@@ -207,6 +208,14 @@ var slackReminderLog = mysqlTable("slack_reminder_log", {
 }, (t2) => ({
   uqReminderSlot: uniqueIndex("uq_reminder_slot").on(t2.coachId, t2.reminderDate, t2.reminderIndex)
 }));
+var pausedClients = mysqlTable("paused_clients", {
+  id: int("id").primaryKey().autoincrement(),
+  coachId: int("coachId").notNull(),
+  clientName: varchar("clientName", { length: 255 }).notNull(),
+  pausedByUserId: int("pausedByUserId"),
+  pausedAt: datetime("pausedAt"),
+  resumedAt: datetime("resumedAt")
+});
 
 // server/db.ts
 var db = null;
@@ -1630,18 +1639,8 @@ var clientCheckinsRouter = t.router({
       const completions = await db2.select().from(clientCheckIns).where(
         and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, weekStart))
       );
-      let completed = completions.filter((c) => c.completedAt != null).length;
+      const completed = completions.filter((c) => c.completedAt != null).length;
       const clientSubmittedCount = completions.filter((c) => c.clientSubmitted === 1).length;
-      if (completed === 0) {
-        const [snapshot] = await db2.select().from(rosterWeeklySnapshots).where(
-          and2(eq4(rosterWeeklySnapshots.coachId, coach.id), eq4(rosterWeeklySnapshots.weekStart, weekStart))
-        ).limit(1);
-        if (snapshot?.snapshotJson) {
-          const snap = typeof snapshot.snapshotJson === "string" ? JSON.parse(snapshot.snapshotJson) : snapshot.snapshotJson;
-          completed = snap.completed ?? 0;
-          if (snap.scheduled) scheduled = snap.scheduled;
-        }
-      }
       const excuses = await db2.select().from(excusedClients).where(
         and2(
           eq4(excusedClients.coachId, coach.id),
@@ -1778,6 +1777,8 @@ var clientCheckinsRouter = t.router({
       const roster = await fetchRosterForCoach(coach.name);
       const completions = await db2.select().from(clientCheckIns).where(and2(eq4(clientCheckIns.coachId, coach.id)));
       const approvedExcuses = await db2.select().from(excusedClients).where(and2(eq4(excusedClients.coachId, coach.id), eq4(excusedClients.status, "approved")));
+      const paused = await db2.select().from(pausedClients).where(and2(eq4(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
+      const pausedSet = new Set(paused.map((p) => p.clientName));
       const starts = await db2.select().from(rosterClientStarts).where(eq4(rosterClientStarts.coachId, coach.id));
       const completionSet = new Set(
         completions.filter((c) => c.completedAt != null).map((c) => `${c.clientName}|${c.dayOfWeek}|${c.weekStart}`)
@@ -1791,6 +1792,7 @@ var clientCheckinsRouter = t.router({
       for (const day of DAYS) {
         const clients = roster[day] ?? [];
         for (const clientName of clients) {
+          if (pausedSet.has(clientName)) continue;
           const clientStart = startMap.get(`${clientName}|${day}`) ?? epochWeek;
           let missed = 0;
           let lastCompleted = null;
@@ -2343,9 +2345,31 @@ var clientCheckinsRouter = t.router({
     const roster = await fetchRosterForCoach(coach.name);
     return roster;
   }),
-  /** Get active pauses for a coach (placeholder — no paused column exists yet). */
-  getActivePauses: protectedProcedure.input(z.object({ coachId: z.number() })).query(async () => {
-    return [];
+  /** Get active pauses for a coach. */
+  getActivePauses: protectedProcedure.input(z.object({ coachId: z.number() })).query(async ({ input }) => {
+    const db2 = await requireDb();
+    const rows = await db2.select().from(pausedClients).where(and2(eq4(pausedClients.coachId, input.coachId), isNull(pausedClients.resumedAt)));
+    return rows.map((r) => r.clientName);
+  }),
+  /** Pause a client — excludes from disengagement tracking. */
+  pauseClient: protectedProcedure.input(z.object({ coachId: z.number(), clientName: z.string() })).mutation(async ({ input, ctx }) => {
+    const db2 = await requireDb();
+    const [existing] = await db2.select().from(pausedClients).where(and2(eq4(pausedClients.coachId, input.coachId), eq4(pausedClients.clientName, input.clientName), isNull(pausedClients.resumedAt))).limit(1);
+    if (existing) {
+      throw new TRPCError({ code: "CONFLICT", message: "Client is already paused" });
+    }
+    await db2.insert(pausedClients).values({
+      coachId: input.coachId,
+      clientName: input.clientName,
+      pausedByUserId: ctx.user.id
+    });
+    return { ok: true };
+  }),
+  /** Resume a paused client. */
+  resumeClient: protectedProcedure.input(z.object({ coachId: z.number(), clientName: z.string() })).mutation(async ({ input }) => {
+    const db2 = await requireDb();
+    await db2.update(pausedClients).set({ resumedAt: sql`NOW()` }).where(and2(eq4(pausedClients.coachId, input.coachId), eq4(pausedClients.clientName, input.clientName), isNull(pausedClients.resumedAt)));
+    return { ok: true };
   }),
   /** Get excuses for a given week, optionally filtered by coach. */
   getExcusesForWeek: protectedProcedure.input(z.object({ weekStart: z.string(), coachId: z.number().optional() })).query(async ({ input }) => {
@@ -2984,7 +3008,7 @@ ${input.message}`;
     return { id: result.insertId };
   }),
   /** Recent kudos. */
-  list: adminProcedure.query(async () => {
+  history: adminProcedure.query(async () => {
     const db2 = await requireDb();
     return db2.select({
       id: kudos.id,
@@ -3030,10 +3054,11 @@ var __dirname = path.dirname(__filename);
 async function setupVite(app) {
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createServer2 } = await import("vite");
+    const projectRoot = path.resolve(__dirname, "../..");
     const vite = await createServer2({
+      configFile: path.resolve(projectRoot, "vite.config.ts"),
       server: { middlewareMode: true },
-      appType: "spa",
-      root: path.resolve(__dirname, "../../client")
+      appType: "spa"
     });
     app.use(vite.middlewares);
   }

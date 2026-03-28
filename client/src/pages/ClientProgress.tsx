@@ -36,7 +36,7 @@ function formatRelativeTime(date: Date): string {
 function KpiBar({ pct, target }: { pct: number; target: number }) {
   const met = pct >= target;
   return (
-    <div className="relative h-3 w-full rounded-full bg-zinc-700 overflow-hidden">
+    <div className="relative h-3 w-full rounded-full bg-white/10 overflow-hidden">
       <div
         className={`h-full rounded-full transition-all duration-500 ${met ? "bg-emerald-500" : "bg-amber-400"}`}
         style={{ width: `${Math.min(pct, 100)}%` }}
@@ -86,7 +86,7 @@ function RatingPicker({
   return (
     <div
       ref={ref}
-      className="absolute z-50 top-full left-0 mt-1 bg-zinc-800 border border-zinc-700 rounded-xl shadow-2xl p-3 flex flex-col gap-2 min-w-[220px]"
+      className="absolute z-50 top-full left-0 mt-1 bg-white/5 border border-white/10 rounded-xl shadow-2xl p-3 flex flex-col gap-2 min-w-[220px]"
     >
       {/* Rating options */}
       <div className="flex flex-col gap-1">
@@ -95,7 +95,7 @@ function RatingPicker({
             key={r}
             onClick={() => setPendingRating(r)}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all
-              ${pendingRating === r ? `${RATING_STYLES[r].bg} ${RATING_STYLES[r].text}` : "text-zinc-300 hover:bg-zinc-700"}`}
+              ${pendingRating === r ? `${RATING_STYLES[r].bg} ${RATING_STYLES[r].text}` : "text-white/70 hover:bg-white/[0.08]"}`}
           >
             <span className={`h-3 w-3 rounded-full ${RATING_STYLES[r].bg}`} />
             {RATING_STYLES[r].label}
@@ -104,14 +104,14 @@ function RatingPicker({
       </div>
 
       {/* Notes field */}
-      <div className="border-t border-zinc-700 pt-2">
+      <div className="border-t border-white/10 pt-2">
         <textarea
           value={notes}
           onChange={e => setNotes(e.target.value)}
           placeholder="Add a note (optional)…"
           maxLength={500}
           rows={2}
-          className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-200 placeholder-zinc-500 resize-none focus:outline-none focus:border-zinc-500"
+          className="w-full bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2 text-xs text-white/80 placeholder-zinc-500 resize-none focus:outline-none focus:border-zinc-500"
         />
       </div>
 
@@ -127,7 +127,7 @@ function RatingPicker({
         {current && (
           <button
             onClick={() => { onClear(); onClose(); }}
-            className="text-xs px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:bg-zinc-700 transition-colors"
+            className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/50 hover:bg-white/[0.08] transition-colors"
           >
             Clear
           </button>
@@ -165,7 +165,7 @@ function ClientButton({
           transition-all duration-150 flex flex-col gap-0.5
           ${style
             ? `${style.bg} ${style.border} ${style.text}`
-            : "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:border-zinc-600"
+            : "bg-white/5 border-white/10 text-white/70 hover:bg-white/[0.08] hover:border-zinc-600"
           }
         `}
       >
@@ -177,12 +177,12 @@ function ClientButton({
           )}
         </div>
         {notes && (
-          <span className={`text-xs ${style ? "opacity-75" : "text-zinc-400"} pl-4 leading-snug line-clamp-1`}>
+          <span className={`text-xs ${style ? "opacity-75" : "text-white/50"} pl-4 leading-snug line-clamp-1`}>
             {notes}
           </span>
         )}
         {updatedAt && (
-          <span className={`text-xs ${style ? "opacity-60" : "text-zinc-500"} pl-4`}>
+          <span className={`text-xs ${style ? "opacity-60" : "text-white/30"} pl-4`}>
             {formatRelativeTime(updatedAt)}
           </span>
         )}
@@ -261,7 +261,7 @@ function CoachRosterCard({
   };
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex flex-col gap-4">
+    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -271,7 +271,7 @@ function CoachRosterCard({
               <button
                 onClick={() => onMoveCoach(coachId, "up")}
                 disabled={isFirst}
-                className="h-4 w-4 flex items-center justify-center text-zinc-600 hover:text-zinc-300 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                className="h-4 w-4 flex items-center justify-center text-white/20 hover:text-white/70 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
                 title="Move up"
               >
                 <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -281,7 +281,7 @@ function CoachRosterCard({
               <button
                 onClick={() => onMoveCoach(coachId, "down")}
                 disabled={isLast}
-                className="h-4 w-4 flex items-center justify-center text-zinc-600 hover:text-zinc-300 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                className="h-4 w-4 flex items-center justify-center text-white/20 hover:text-white/70 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
                 title="Move down"
               >
                 <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -295,7 +295,7 @@ function CoachRosterCard({
             className={`text-base font-semibold transition-colors text-left ${
               isFocused
                 ? "text-emerald-300"
-                : "text-zinc-100 hover:text-emerald-300"
+                : "text-white/90 hover:text-emerald-300"
             }`}
             title="Click to focus on this coach only"
           >
@@ -303,7 +303,7 @@ function CoachRosterCard({
           </button>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-3 text-xs text-zinc-400">
+          <div className="flex items-center gap-3 text-xs text-white/50">
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
               <span className="text-emerald-400 font-medium">{green}{rated > 0 ? ` · ${greenPct.toFixed(0)}%` : ""}</span>
@@ -323,7 +323,7 @@ function CoachRosterCard({
               className={`text-xs px-2.5 py-1 rounded-lg border transition-all ${
                 confirmReset
                   ? "bg-red-500/20 border-red-500/50 text-red-400 font-semibold"
-                  : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-zinc-300"
+                  : "bg-white/5 border-white/10 text-white/50 hover:border-zinc-600 hover:text-white/70"
               }`}
             >
               {confirmReset ? "Confirm reset?" : "Reset all"}
@@ -339,11 +339,11 @@ function CoachRosterCard({
       {isLoading ? (
         <div className="grid grid-cols-2 gap-2">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-10 rounded-lg bg-zinc-800 animate-pulse" />
+            <div key={i} className="h-10 rounded-lg bg-white/5 animate-pulse" />
           ))}
         </div>
       ) : clients.length === 0 ? (
-        <p className="text-sm text-zinc-500 italic">No clients on roster</p>
+        <p className="text-sm text-white/30 italic">No clients on roster</p>
       ) : (() => {
         const ratingFiltered = filterRating === "all"
           ? clients
@@ -363,7 +363,7 @@ function CoachRosterCard({
             })
           : [...afterSearch].sort((a, b) => a.localeCompare(b));
         return filtered.length === 0 ? (
-          <p className="text-sm text-zinc-500 italic">No clients match this filter</p>
+          <p className="text-sm text-white/30 italic">No clients match this filter</p>
         ) : (
           <div className="grid grid-cols-2 gap-2">
             {filtered.map(name => (
@@ -442,7 +442,7 @@ function ClientTenureTable() {
   }
 
   const SortIcon = ({ k }: { k: TenureSortKey }) => (
-    <span className="ml-1 text-zinc-500">
+    <span className="ml-1 text-white/30">
       {sortKey === k ? (sortDir === "asc" ? "↑" : "↓") : "↕"}
     </span>
   );
@@ -455,9 +455,9 @@ function ClientTenureTable() {
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">New Clients This Week</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-white/50">New Clients This Week</h2>
           {trackingSince && (
-            <p className="text-xs text-zinc-600 mt-0.5">Tracking since {trackingSince}</p>
+            <p className="text-xs text-white/20 mt-0.5">Tracking since {trackingSince}</p>
           )}
         </div>
         <input
@@ -465,12 +465,12 @@ function ClientTenureTable() {
           placeholder="Search client or coach…"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="text-sm bg-zinc-800 border border-zinc-700 rounded-md px-3 py-1.5 text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 w-52"
+          className="text-sm bg-white/5 border border-white/10 rounded-md px-3 py-1.5 text-white/80 placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-emerald-500 w-52"
         />
       </div>
-      <div className="rounded-xl border border-zinc-800 overflow-hidden">
+      <div className="rounded-xl border border-white/[0.08] overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-zinc-800/60">
+          <thead className="bg-white/5/60">
             <tr>
               {([
                 ["clientName", "Client"],
@@ -482,7 +482,7 @@ function ClientTenureTable() {
                 <th
                   key={k}
                   onClick={() => handleSort(k)}
-                  className="px-4 py-2.5 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider cursor-pointer hover:text-zinc-200 select-none"
+                  className="px-4 py-2.5 text-left text-xs font-semibold text-white/50 uppercase tracking-wider cursor-pointer hover:text-white/80 select-none"
                 >
                   {label}<SortIcon k={k} />
                 </th>
@@ -491,9 +491,9 @@ function ClientTenureTable() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-zinc-500 text-sm">Loading…</td></tr>
+              <tr><td colSpan={5} className="px-4 py-6 text-center text-white/30 text-sm">Loading…</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-zinc-500 text-sm italic">No new clients added in the last 7 days.</td></tr>
+              <tr><td colSpan={5} className="px-4 py-6 text-center text-white/30 text-sm italic">No new clients added in the last 7 days.</td></tr>
             ) : rows.map((r, i) => {
               const sinceDate = new Date(r.firstWeekStart + "T00:00:00");
               const sinceLabel = sinceDate.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" });
@@ -501,23 +501,23 @@ function ClientTenureTable() {
                 ? "text-emerald-400"
                 : r.weeksOnRoster >= 4
                   ? "text-amber-400"
-                  : "text-zinc-400";
+                  : "text-white/50";
               return (
-                <tr key={i} className="border-t border-zinc-800 hover:bg-zinc-800/40 transition-colors">
-                  <td className="px-4 py-2.5 text-zinc-200 font-medium">{r.clientName}</td>
-                  <td className="px-4 py-2.5 text-zinc-400">{r.coachName}</td>
-                  <td className="px-4 py-2.5 text-zinc-400">{DAY_LABELS[r.dayOfWeek] ?? r.dayOfWeek}</td>
+                <tr key={i} className="border-t border-white/[0.08] hover:bg-white/5/40 transition-colors">
+                  <td className="px-4 py-2.5 text-white/80 font-medium">{r.clientName}</td>
+                  <td className="px-4 py-2.5 text-white/50">{r.coachName}</td>
+                  <td className="px-4 py-2.5 text-white/50">{DAY_LABELS[r.dayOfWeek] ?? r.dayOfWeek}</td>
                   <td className={`px-4 py-2.5 font-semibold tabular-nums ${tenureColor}`}>
                     {r.weeksOnRoster} {r.weeksOnRoster === 1 ? "week" : "weeks"}
                   </td>
-                  <td className="px-4 py-2.5 text-zinc-500 text-xs">{sinceLabel}</td>
+                  <td className="px-4 py-2.5 text-white/30 text-xs">{sinceLabel}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-zinc-600 italic">Shows clients added to the roster in the last 7 days. Tracking began {trackingSince ?? "from first roster sync"}.</p>
+      <p className="text-xs text-white/20 italic">Shows clients added to the roster in the last 7 days. Tracking began {trackingSince ?? "from first roster sync"}.</p>
     </div>
   );
 }
@@ -724,8 +724,8 @@ export default function ClientProgress() {
         {/* Page header */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-100">Client Progress</h1>
-            <p className="text-sm text-zinc-400 mt-1">
+            <h1 className="text-2xl font-bold text-white/90">Client Progress</h1>
+            <p className="text-sm text-white/50 mt-1">
               Click a client to assign a rating and add a note.
             </p>
           </div>
@@ -733,7 +733,7 @@ export default function ClientProgress() {
             <button
               onClick={openTitleDialog}
               disabled={createSweepReportMutation.isPending}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white text-sm font-semibold transition-colors shadow-lg shadow-emerald-900/30"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 disabled:opacity-60 text-white text-sm font-semibold transition-colors shadow-lg"
             >
               {createSweepReportMutation.isPending ? (
                 <>
@@ -756,16 +756,16 @@ export default function ClientProgress() {
         {isAdmin && kpiData && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-white/50">
                 KPI Summary — Target: {kpiData.target}% On Track
               </h2>
             </div>
 
             {/* Business-wide card */}
             {kpiData.overall && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-zinc-200">Business Wide</span>
+                <span className="text-sm font-semibold text-white/80">Business Wide</span>
                 <span className={`text-2xl font-bold ${kpiData.overall.greenPct >= kpiData.target ? "text-emerald-400" : "text-amber-400"}`}>
                   {kpiData.overall.greenPct.toFixed(1)}%
                 </span>
@@ -787,7 +787,7 @@ export default function ClientProgress() {
                   <span className="text-red-400 font-medium">{kpiData.overall.red} Off Track</span>
                   {kpiData.overall.total > 0 && <span className="text-red-400/70">· {((kpiData.overall.red / kpiData.overall.total) * 100).toFixed(0)}%</span>}
                 </span>
-                <span className="text-zinc-500 ml-auto">{kpiData.overall.total} rated</span>
+                <span className="text-white/30 ml-auto">{kpiData.overall.total} rated</span>
               </div>
             </div>
             )}
@@ -798,11 +798,11 @@ export default function ClientProgress() {
                 <button
                   key={c.coachId}
                   onClick={() => setFocusedCoachId(c.coachId)}
-                  className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-left hover:border-emerald-500/40 hover:bg-zinc-800/60 transition-all group"
+                  className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-4 text-left hover:border-emerald-500/40 hover:bg-white/5/60 transition-all group"
                   title={`Click to focus on ${c.coachName}'s clients`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-zinc-200 group-hover:text-emerald-300 transition-colors">{c.coachName}</span>
+                    <span className="text-sm font-medium text-white/80 group-hover:text-emerald-300 transition-colors">{c.coachName}</span>
                     <span className={`text-lg font-bold ${c.greenPct >= kpiData.target ? "text-emerald-400" : "text-amber-400"}`}>
                       {c.greenPct.toFixed(1)}%
                     </span>
@@ -812,7 +812,7 @@ export default function ClientProgress() {
                     <span className="flex items-center gap-1 text-emerald-400/80"><span className="h-2 w-2 rounded-full bg-emerald-500" />{c.green}{c.total > 0 ? ` · ${((c.green / c.total) * 100).toFixed(0)}%` : ""}</span>
                     <span className="flex items-center gap-1 text-amber-400/80"><span className="h-2 w-2 rounded-full bg-amber-400" />{c.yellow}{c.total > 0 ? ` · ${((c.yellow / c.total) * 100).toFixed(0)}%` : ""}</span>
                     <span className="flex items-center gap-1 text-red-400/80"><span className="h-2 w-2 rounded-full bg-red-500" />{c.red}{c.total > 0 ? ` · ${((c.red / c.total) * 100).toFixed(0)}%` : ""}</span>
-                    {c.total === 0 && <span className="text-zinc-600 italic">No ratings yet</span>}
+                    {c.total === 0 && <span className="text-white/20 italic">No ratings yet</span>}
                   </div>
                 </button>
               ))}
@@ -823,18 +823,18 @@ export default function ClientProgress() {
         {/* Search + Filter row */}
         <div className="flex flex-col gap-3">
         <div className="relative">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
           <input
             type="text"
             placeholder="Search clients…"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm bg-zinc-900 border border-zinc-700 rounded-xl text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+            className="w-full pl-9 pr-4 py-2 text-sm bg-white/[0.03] border border-white/10 rounded-xl text-white/80 placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70 transition-colors"
             >
               ✕
             </button>
@@ -843,29 +843,29 @@ export default function ClientProgress() {
         {/* Sort + Filter row */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Sort toggle */}
-          <div className="flex items-center rounded-lg border border-zinc-700 overflow-hidden mr-2">
+          <div className="flex items-center rounded-lg border border-white/10 overflow-hidden mr-2">
             <button
               onClick={() => setClientSort("alpha")}
               className={`px-3 py-1.5 text-xs font-medium transition-colors ${
                 clientSort === "alpha"
-                  ? "bg-zinc-700 text-zinc-100"
-                  : "bg-transparent text-zinc-500 hover:text-zinc-300"
+                  ? "bg-white/10 text-white/90"
+                  : "bg-transparent text-white/30 hover:text-white/70"
               }`}
             >
               A–Z
             </button>
             <button
               onClick={() => setClientSort("status")}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors border-l border-zinc-700 ${
+              className={`px-3 py-1.5 text-xs font-medium transition-colors border-l border-white/10 ${
                 clientSort === "status"
-                  ? "bg-zinc-700 text-zinc-100"
-                  : "bg-transparent text-zinc-500 hover:text-zinc-300"
+                  ? "bg-white/10 text-white/90"
+                  : "bg-transparent text-white/30 hover:text-white/70"
               }`}
             >
               By Status
             </button>
           </div>
-          <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider mr-1">Filter:</span>
+          <span className="text-xs font-medium text-white/30 uppercase tracking-wider mr-1">Filter:</span>
           {FILTER_OPTIONS.map(opt => (
             <button
               key={opt.value}
@@ -878,8 +878,8 @@ export default function ClientProgress() {
                     ? "bg-amber-400/20 border-amber-400/50 text-amber-300"
                     : opt.value === "green"
                     ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300"
-                    : "bg-zinc-700 border-zinc-600 text-zinc-200"
-                  : "bg-transparent border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-zinc-300"
+                    : "bg-white/10 border-zinc-600 text-white/80"
+                  : "bg-transparent border-white/10 text-white/50 hover:border-zinc-600 hover:text-white/70"
               }`}
             >
               {opt.dot && <span className={`h-2 w-2 rounded-full ${opt.dot}`} />}
@@ -887,7 +887,7 @@ export default function ClientProgress() {
             </button>
           ))}
           {filterRating !== "all" && filterMatchCount !== null && (
-            <span className="text-xs text-zinc-500 ml-1">{filterMatchCount} client{filterMatchCount !== 1 ? "s" : ""}</span>
+            <span className="text-xs text-white/30 ml-1">{filterMatchCount} client{filterMatchCount !== 1 ? "s" : ""}</span>
           )}
         </div>
         </div>
@@ -913,7 +913,7 @@ export default function ClientProgress() {
         {/* Rosters */}
         <div className="flex flex-col gap-5">
           {visibleCoaches.length === 0 ? (
-            <p className="text-sm text-zinc-500 italic">No coach profile linked to your account.</p>
+            <p className="text-sm text-white/30 italic">No coach profile linked to your account.</p>
           ) : (
             visibleCoaches.map((coach, idx) => (
               <CoachRosterCard
@@ -940,18 +940,18 @@ export default function ClientProgress() {
         {/* Past Sweep Reports (admin only) */}
         {isAdmin && pastReports && pastReports.length > 0 && (
           <div className="flex flex-col gap-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">Past Sweep Reports</h2>
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-white/50">Past Sweep Reports</h2>
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
               {pastReports.map((report, i) => (
                 <button
                   key={report.id}
                   onClick={() => setLocation(`/sweep-report/${report.id}`)}
-                  className={`w-full flex items-center justify-between px-5 py-3.5 text-left hover:bg-zinc-800/60 transition-colors ${
-                    i > 0 ? "border-t border-zinc-800" : ""
+                  className={`w-full flex items-center justify-between px-5 py-3.5 text-left hover:bg-white/5/60 transition-colors ${
+                    i > 0 ? "border-t border-white/[0.08]" : ""
                   }`}
                 >
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium text-zinc-200">{report.title ?? `Report #${report.id}`}</span>
+                    <span className="text-sm font-medium text-white/80">{report.title ?? `Report #${report.id}`}</span>
                     {report.scopeType === "coach" && report.scopeCoachName && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/15 text-blue-300 border border-blue-500/30">
                         1-on-1: {report.scopeCoachName}
@@ -961,17 +961,17 @@ export default function ClientProgress() {
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Saved</span>
                     )}
                     {report.weekStart && (
-                      <span className="text-xs text-zinc-500">Week of {new Date(report.weekStart).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}</span>
+                      <span className="text-xs text-white/30">Week of {new Date(report.weekStart).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-3">
                     {report.createdByName && (
-                      <span className="text-xs text-zinc-500">{report.createdByName}</span>
+                      <span className="text-xs text-white/30">{report.createdByName}</span>
                     )}
-                    <span className="text-xs text-zinc-600">
+                    <span className="text-xs text-white/20">
                       {new Date(report.createdAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", timeZone: "Australia/Melbourne" })}
                     </span>
-                    <svg className="h-4 w-4 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="h-4 w-4 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                     </svg>
                   </div>
@@ -988,22 +988,22 @@ export default function ClientProgress() {
       {/* Title Dialog for generating sweep report */}
       {showTitleDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-5">
+          <div className="bg-white/[0.03] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-5">
             <div>
-              <h2 className="text-lg font-bold text-zinc-100">Generate Post-Sweep Report</h2>
-              <p className="text-sm text-zinc-400 mt-1">Choose a scope and give this report a name.</p>
+              <h2 className="text-lg font-bold text-white/90">Generate Post-Sweep Report</h2>
+              <p className="text-sm text-white/50 mt-1">Choose a scope and give this report a name.</p>
             </div>
 
             {/* Coach scope selector */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Report Scope</label>
+              <label className="text-xs font-medium text-white/50 uppercase tracking-wider">Report Scope</label>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => handleDialogCoachChange(null)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
                     selectedCoachId === null
                       ? "bg-emerald-600 border-emerald-500 text-white"
-                      : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500"
+                      : "bg-white/5 border-white/10 text-white/50 hover:text-white/80 hover:border-zinc-500"
                   }`}
                 >
                   All Coaches
@@ -1015,7 +1015,7 @@ export default function ClientProgress() {
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
                       selectedCoachId === coach.id
                         ? "bg-blue-600 border-blue-500 text-white"
-                        : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500"
+                        : "bg-white/5 border-white/10 text-white/50 hover:text-white/80 hover:border-zinc-500"
                     }`}
                   >
                     {coach.name}
@@ -1028,7 +1028,7 @@ export default function ClientProgress() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Report Title</label>
+              <label className="text-xs font-medium text-white/50 uppercase tracking-wider">Report Title</label>
               <input
                 type="text"
                 value={reportTitle}
@@ -1039,7 +1039,7 @@ export default function ClientProgress() {
                   }
                   if (e.key === "Escape") setShowTitleDialog(false);
                 }}
-                className="bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white/90 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 placeholder="Post-Sweep Report — 21 Mar 2026"
                 autoFocus
               />
@@ -1047,7 +1047,7 @@ export default function ClientProgress() {
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowTitleDialog(false)}
-                className="px-4 py-2 rounded-xl border border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-600 text-sm transition-colors"
+                className="px-4 py-2 rounded-xl border border-white/10 text-white/50 hover:text-white/80 hover:border-zinc-600 text-sm transition-colors"
               >
                 Cancel
               </button>

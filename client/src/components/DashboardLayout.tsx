@@ -37,20 +37,21 @@ export default function DashboardLayout({
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
-          <div className="flex flex-col items-center gap-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-center">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
+        <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl relative">
+          <div className="absolute -inset-20 bg-violet-500/10 blur-[80px] rounded-full pointer-events-none" />
+          <div className="flex flex-col items-center gap-6 relative z-10">
+            <h1 className="text-2xl font-semibold tracking-tight text-center text-white/90">
               Sign in to continue
             </h1>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
+            <p className="text-sm text-white/50 text-center max-w-sm">
               Access to this dashboard requires authentication. Continue to launch the login flow.
             </p>
           </div>
           <Button
             onClick={() => { window.location.href = getLoginUrl(); }}
             size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all"
+            className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white rounded-xl shadow-lg hover:shadow-xl transition-all relative z-10"
           >
             Sign in
           </Button>
@@ -79,18 +80,23 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   }, [user, location, setLocation]);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
+      {/* Ambient glow blobs */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-violet-500/[0.05] blur-[120px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-fuchsia-500/[0.05] blur-[120px]" />
+      </div>
       {/* Sidebar */}
       <div
-        className="relative flex-shrink-0 flex flex-col border-r border-border bg-sidebar transition-all duration-200 ease-in-out z-50"
+        className="relative flex-shrink-0 flex flex-col border-r border-white/[0.08] bg-white/[0.03] backdrop-blur-xl transition-all duration-200 ease-in-out z-50"
         style={{ width: hovered ? 220 : 52 }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
         {/* Logo / header area */}
-        <div className="h-12 flex items-center px-3 border-b border-border overflow-hidden">
+        <div className="h-12 flex items-center px-3 border-b border-white/[0.08] overflow-hidden">
           <span
-            className="font-semibold text-sm text-sidebar-foreground whitespace-nowrap transition-opacity duration-150"
+            className="font-semibold text-sm text-white/70 whitespace-nowrap transition-opacity duration-150"
             style={{ opacity: hovered ? 1 : 0, pointerEvents: "none" }}
           >
             Navigation
@@ -107,14 +113,14 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 onClick={() => setLocation(item.path)}
                 title={!hovered ? item.label : undefined}
                 className={`
-                  flex items-center gap-3 w-full px-3 py-2.5 text-sm font-normal transition-colors
+                  flex items-center gap-3 w-full px-3 py-2.5 text-sm font-normal transition-colors rounded-lg mx-0
                   ${isActive
-                    ? "text-primary bg-primary/10"
-                    : "text-sidebar-foreground hover:bg-accent hover:text-accent-foreground"
+                    ? "text-white bg-white/10"
+                    : "text-white/50 hover:bg-white/[0.06] hover:text-white/80"
                   }
                 `}
               >
-                <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : ""}`} />
+                <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-white" : "text-white/50"}`} />
                 <span
                   className="whitespace-nowrap overflow-hidden transition-all duration-150"
                   style={{
@@ -131,15 +137,15 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Footer / user */}
-        <div className="p-2 border-t border-border overflow-hidden">
+        <div className="p-2 border-t border-white/[0.08] overflow-hidden">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-white/[0.06] transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 title={!hovered ? (user?.name ?? "Account") : undefined}
               >
-                <Avatar className="h-8 w-8 border shrink-0">
-                  <AvatarFallback className="text-xs font-medium">
+                <Avatar className="h-8 w-8 border border-white/10 shrink-0">
+                  <AvatarFallback className="text-xs font-medium bg-white/10 text-white/70">
                     {user?.name?.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
@@ -147,16 +153,16 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   className="flex-1 min-w-0 overflow-hidden transition-all duration-150"
                   style={{ opacity: hovered ? 1 : 0, maxWidth: hovered ? 160 : 0 }}
                 >
-                  <p className="text-sm font-medium truncate leading-none whitespace-nowrap">
+                  <p className="text-sm font-medium truncate leading-none whitespace-nowrap text-white/80">
                     {user?.name || "-"}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate mt-1 whitespace-nowrap">
+                  <p className="text-xs text-white/30 truncate mt-1 whitespace-nowrap">
                     {user?.email || "-"}
                   </p>
                 </div>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-48 bg-zinc-900/95 backdrop-blur-xl border border-white/10">
               <DropdownMenuItem
                 onClick={logout}
                 className="cursor-pointer text-destructive focus:text-destructive"
@@ -170,7 +176,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Main content */}
-      <main className="flex-1 min-w-0 overflow-auto">
+      <main className="flex-1 min-w-0 overflow-auto relative z-10">
         {children}
       </main>
     </div>

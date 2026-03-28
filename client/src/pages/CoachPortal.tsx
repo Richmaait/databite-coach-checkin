@@ -159,11 +159,11 @@ export default function CoachPortal() {
     return (
       <DashboardLayout>
         <div className="max-w-lg mx-auto py-16 text-center">
-          <div className="h-16 w-16 rounded-2xl bg-muted border border-border flex items-center justify-center mx-auto mb-4">
-            <Users className="h-8 w-8 text-muted-foreground" />
+          <div className="h-16 w-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
+            <Users className="h-8 w-8 text-white/50" />
           </div>
-          <h2 className="text-xl font-semibold text-foreground mb-2">No Coach Profile Linked</h2>
-          <p className="text-muted-foreground text-sm">
+          <h2 className="text-xl font-semibold text-white/90 mb-2">No Coach Profile Linked</h2>
+          <p className="text-white/50 text-sm">
             Your account hasn't been linked to a coach profile. Please ask your manager to link your account in Team Management.
           </p>
         </div>
@@ -181,8 +181,8 @@ export default function CoachPortal() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Daily Check-Ins</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">
+            <h1 className="text-2xl font-bold tracking-tight text-white/90">Daily Check-Ins</h1>
+            <p className="text-white/50 text-sm mt-0.5">
               {new Date().toLocaleDateString("en-AU", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
             </p>
           </div>
@@ -191,7 +191,7 @@ export default function CoachPortal() {
               value={selectedCoachId?.toString() ?? ""}
               onValueChange={(v) => setSelectedCoachId(parseInt(v))}
             >
-              <SelectTrigger className="w-44 bg-secondary border-border">
+              <SelectTrigger className="w-44 bg-white/5 border-white/10">
                 <SelectValue placeholder="Select coach" />
               </SelectTrigger>
               <SelectContent>
@@ -204,8 +204,8 @@ export default function CoachPortal() {
         </div>
 
         {!effectiveCoachId && isAdmin && (
-          <Card className="bg-card border-border">
-            <CardContent className="p-6 text-center text-muted-foreground text-sm">
+          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
+            <CardContent className="p-6 text-center text-white/50 text-sm">
               Select a coach above to view or submit their check-ins.
             </CardContent>
           </Card>
@@ -214,7 +214,7 @@ export default function CoachPortal() {
         {effectiveCoachId && (
           <>
             {/* ── 1. Morning Review ── */}
-            <Card className="bg-card border-border">
+            <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
@@ -225,7 +225,7 @@ export default function CoachPortal() {
                     <CardDescription className="text-xs">Complete before starting new work day</CardDescription>
                   </div>
                   {morningRecord && (
-                    <Badge className="ml-auto bg-primary/10 text-primary border-primary/20 text-xs">
+                    <Badge className="ml-auto bg-violet-500/10 text-violet-400 border-violet-500/20 text-xs">
                       <CheckCircle2 className="h-3 w-3 mr-1" /> Submitted
                     </Badge>
                   )}
@@ -237,25 +237,25 @@ export default function CoachPortal() {
 
                     {morningRecord.moodScore && (
                       <div className="flex items-center gap-2 px-1">
-                        <span className="text-sm text-muted-foreground">How you felt</span>
+                        <span className="text-sm text-white/50">How you felt</span>
                         <span className="text-xl">{["😔","😕","😐","🙂","🤩"][morningRecord.moodScore - 1]}</span>
-                        <span className="text-xs text-muted-foreground">{["Not good","Below average","Okay","Good","Amazing"][morningRecord.moodScore - 1]}</span>
+                        <span className="text-xs text-white/50">{["Not good","Below average","Okay","Good","Amazing"][morningRecord.moodScore - 1]}</span>
                       </div>
                     )}
                     {morningRecord.actionPlan && (
                       <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">Action plan</p>
-                        <p className="text-sm text-foreground bg-muted rounded-lg px-3 py-2 whitespace-pre-wrap">{morningRecord.actionPlan}</p>
+                        <p className="text-xs font-medium text-white/50">Action plan</p>
+                        <p className="text-sm text-white/90 bg-white/5 rounded-lg px-3 py-2 whitespace-pre-wrap">{morningRecord.actionPlan}</p>
                       </div>
                     )}
                     {morningRecord.workingHours && (
                       <div className="flex items-center gap-2 px-1">
-                        <span className="text-sm text-muted-foreground">Working hours</span>
-                        <span className="text-sm font-semibold text-foreground">{morningRecord.workingHours}</span>
+                        <span className="text-sm text-white/50">Working hours</span>
+                        <span className="text-sm font-semibold text-white/90">{morningRecord.workingHours}</span>
                       </div>
                     )}
                     {morningRecord.notes && (
-                      <p className="text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2">{morningRecord.notes}</p>
+                      <p className="text-xs text-white/50 bg-white/5 rounded-lg px-3 py-2">{morningRecord.notes}</p>
                     )}
                     <Button
                       variant="outline"
@@ -287,7 +287,7 @@ export default function CoachPortal() {
                   <div className="space-y-4">
                     {/* Mood picker — first question */}
                     <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">How are you feeling today?</Label>
+                      <Label className="text-xs text-white/50">How are you feeling today?</Label>
                       <div className="flex gap-2">
                         {[
                           { score: 1, emoji: "😔", label: "Not good" },
@@ -303,12 +303,12 @@ export default function CoachPortal() {
                             title={label}
                             className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-xl border transition-all duration-150 ${
                               moodScore === score
-                                ? "border-primary bg-primary/10 scale-105"
-                                : "border-border bg-secondary hover:border-primary/40 hover:bg-secondary/80"
+                                ? "border-violet-500 bg-violet-500/10 scale-105"
+                                : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
                             }`}
                           >
                             <span className="text-2xl leading-none">{emoji}</span>
-                            <span className="text-[10px] text-muted-foreground leading-tight text-center">{label}</span>
+                            <span className="text-[10px] text-white/50 leading-tight text-center">{label}</span>
                           </button>
                         ))}
                       </div>
@@ -320,22 +320,22 @@ export default function CoachPortal() {
 
                     {/* Action plan + hours */}
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">What is your action plan for today?</Label>
+                      <Label className="text-xs text-white/50">What is your action plan for today?</Label>
                       <Textarea
                         placeholder="e.g. Morning check-ins, follow-up with disengaged clients, team meeting at 2pm..."
                         value={actionPlan}
                         onChange={e => setActionPlan(e.target.value)}
-                        className="bg-input border-border resize-none text-sm"
+                        className="bg-white/5 border-white/10 resize-none text-sm"
                         rows={3}
                       />
                     </div>
                     {/* Working hours time-block selector */}
                     <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">Working hours today</Label>
+                      <Label className="text-xs text-white/50">Working hours today</Label>
                       {/* Block 1 */}
                       <div className="flex items-center gap-2">
                         <Select value={block1Start} onValueChange={setBlock1Start}>
-                          <SelectTrigger className="bg-input border-border text-sm flex-1">
+                          <SelectTrigger className="bg-white/5 border-white/10 text-sm flex-1">
                             <SelectValue placeholder="Start time" />
                           </SelectTrigger>
                           <SelectContent>
@@ -344,9 +344,9 @@ export default function CoachPortal() {
                             ))}
                           </SelectContent>
                         </Select>
-                        <span className="text-xs text-muted-foreground shrink-0">to</span>
+                        <span className="text-xs text-white/50 shrink-0">to</span>
                         <Select value={block1End} onValueChange={setBlock1End}>
-                          <SelectTrigger className="bg-input border-border text-sm flex-1">
+                          <SelectTrigger className="bg-white/5 border-white/10 text-sm flex-1">
                             <SelectValue placeholder="End time" />
                           </SelectTrigger>
                           <SelectContent>
@@ -360,7 +360,7 @@ export default function CoachPortal() {
                       {hasSplitDay && (
                         <div className="flex items-center gap-2">
                           <Select value={block2Start} onValueChange={setBlock2Start}>
-                            <SelectTrigger className="bg-input border-border text-sm flex-1">
+                            <SelectTrigger className="bg-white/5 border-white/10 text-sm flex-1">
                               <SelectValue placeholder="Start time" />
                             </SelectTrigger>
                             <SelectContent>
@@ -369,9 +369,9 @@ export default function CoachPortal() {
                               ))}
                             </SelectContent>
                           </Select>
-                          <span className="text-xs text-muted-foreground shrink-0">to</span>
+                          <span className="text-xs text-white/50 shrink-0">to</span>
                           <Select value={block2End} onValueChange={setBlock2End}>
-                            <SelectTrigger className="bg-input border-border text-sm flex-1">
+                            <SelectTrigger className="bg-white/5 border-white/10 text-sm flex-1">
                               <SelectValue placeholder="End time" />
                             </SelectTrigger>
                             <SelectContent>
@@ -399,12 +399,12 @@ export default function CoachPortal() {
                       ))}
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Notes (optional, however please ensure you include any deviation from your regular working hours)</Label>
+                      <Label className="text-xs text-white/50">Notes (optional, however please ensure you include any deviation from your regular working hours)</Label>
                       <Textarea
                         placeholder="Any context or observations..."
                         value={morningNotes}
                         onChange={e => setMorningNotes(e.target.value)}
-                        className="bg-input border-border resize-none text-sm"
+                        className="bg-white/5 border-white/10 resize-none text-sm"
                         rows={2}
                       />
                     </div>
@@ -441,7 +441,7 @@ export default function CoachPortal() {
             </Card>
 
             {/* ── 2. Follow-Up Outreach ── */}
-            <Card className="bg-card border-border">
+            <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
@@ -452,7 +452,7 @@ export default function CoachPortal() {
                     <CardDescription className="text-xs">Between 10:30–11:00am (after check-in cut-off)</CardDescription>
                   </div>
                   {followupRecord && (
-                    <Badge className="ml-auto bg-primary/10 text-primary border-primary/20 text-xs">
+                    <Badge className="ml-auto bg-violet-500/10 text-violet-400 border-violet-500/20 text-xs">
                       <CheckCircle2 className="h-3 w-3 mr-1" /> Submitted
                     </Badge>
                   )}
@@ -461,12 +461,12 @@ export default function CoachPortal() {
               <CardContent className="space-y-4">
                 {followupRecord && !editingFollowup ? (
                   <div className="space-y-2">
-                    <div className="rounded-xl bg-secondary p-4 flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Messages sent to missed check-ins</span>
-                      <span className="text-2xl font-bold text-foreground">{followupRecord.followupMessagesSent}</span>
+                    <div className="rounded-xl bg-white/5 border border-white/10 p-4 flex items-center justify-between">
+                      <span className="text-sm text-white/50">Messages sent to missed check-ins</span>
+                      <span className="text-2xl font-bold text-white/90">{followupRecord.followupMessagesSent}</span>
                     </div>
                     {followupRecord.notes && (
-                      <p className="text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2">{followupRecord.notes}</p>
+                      <p className="text-xs text-white/50 bg-white/5 rounded-lg px-3 py-2">{followupRecord.notes}</p>
                     )}
                     <Button
                       variant="outline"
@@ -484,24 +484,24 @@ export default function CoachPortal() {
                 ) : (
                   <div className="space-y-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Follow-up messages sent today</Label>
+                      <Label className="text-xs text-white/50">Follow-up messages sent today</Label>
                       <Input
                         type="number"
                         min="0"
                         placeholder="e.g. 5"
                         value={followupCount}
                         onChange={e => setFollowupCount(e.target.value)}
-                        className="bg-input border-border"
+                        className="bg-white/5 border-white/10"
                       />
-                      <p className="text-xs text-muted-foreground">Number of clients contacted who missed their scheduled check-in</p>
+                      <p className="text-xs text-white/50">Number of clients contacted who missed their scheduled check-in</p>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Notes (optional)</Label>
+                      <Label className="text-xs text-white/50">Notes (optional)</Label>
                       <Textarea
                         placeholder="Any context or observations..."
                         value={followupNotes}
                         onChange={e => setFollowupNotes(e.target.value)}
-                        className="bg-input border-border resize-none text-sm"
+                        className="bg-white/5 border-white/10 resize-none text-sm"
                         rows={2}
                       />
                     </div>
@@ -528,7 +528,7 @@ export default function CoachPortal() {
             </Card>
 
             {/* ── 3. Disengagement Outreach ── */}
-            <Card className="bg-card border-border">
+            <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
@@ -539,7 +539,7 @@ export default function CoachPortal() {
                     <CardDescription className="text-xs">Clients not logging weight/nutrition for 3+ days</CardDescription>
                   </div>
                   {disengagementRecord && (
-                    <Badge className="ml-auto bg-primary/10 text-primary border-primary/20 text-xs">
+                    <Badge className="ml-auto bg-violet-500/10 text-violet-400 border-violet-500/20 text-xs">
                       <CheckCircle2 className="h-3 w-3 mr-1" /> Submitted
                     </Badge>
                   )}
@@ -548,12 +548,12 @@ export default function CoachPortal() {
               <CardContent className="space-y-4">
                 {disengagementRecord && !editingDisengagement ? (
                   <div className="space-y-2">
-                    <div className="rounded-xl bg-secondary p-4 flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Disengagement messages sent</span>
-                      <span className="text-2xl font-bold text-foreground">{disengagementRecord.disengagementMessagesSent}</span>
+                    <div className="rounded-xl bg-white/5 border border-white/10 p-4 flex items-center justify-between">
+                      <span className="text-sm text-white/50">Disengagement messages sent</span>
+                      <span className="text-2xl font-bold text-white/90">{disengagementRecord.disengagementMessagesSent}</span>
                     </div>
                     {disengagementRecord.notes && (
-                      <p className="text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2">{disengagementRecord.notes}</p>
+                      <p className="text-xs text-white/50 bg-white/5 rounded-lg px-3 py-2">{disengagementRecord.notes}</p>
                     )}
                     <Button
                       variant="outline"
@@ -571,24 +571,24 @@ export default function CoachPortal() {
                 ) : (
                   <div className="space-y-4">
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Disengagement messages sent today</Label>
+                      <Label className="text-xs text-white/50">Disengagement messages sent today</Label>
                       <Input
                         type="number"
                         min="0"
                         placeholder="e.g. 3"
                         value={disengagementCount}
                         onChange={e => setDisengagementCount(e.target.value)}
-                        className="bg-input border-border"
+                        className="bg-white/5 border-white/10"
                       />
-                      <p className="text-xs text-muted-foreground">Number of clients reached out to who haven't logged data for 3+ days</p>
+                      <p className="text-xs text-white/50">Number of clients reached out to who haven't logged data for 3+ days</p>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Notes (optional)</Label>
+                      <Label className="text-xs text-white/50">Notes (optional)</Label>
                       <Textarea
                         placeholder="Any context or observations..."
                         value={disengagementNotes}
                         onChange={e => setDisengagementNotes(e.target.value)}
-                        className="bg-input border-border resize-none text-sm"
+                        className="bg-white/5 border-white/10 resize-none text-sm"
                         rows={2}
                       />
                     </div>
@@ -616,7 +616,7 @@ export default function CoachPortal() {
 
             {/* Daily summary */}
             {todayRecords && todayRecords.length > 0 && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+              <div className="flex items-center gap-2 text-xs text-white/50 px-1">
                 <Clock className="h-3.5 w-3.5" />
                 <span>{todayRecords.length} of 3 check-ins submitted today for {coachName}</span>
               </div>

@@ -84,14 +84,14 @@ function formatWeekLabel(weekStart: string): string {
 }
 
 function engagementColor(pct: number | null | undefined): string {
-  if (pct == null) return "text-muted-foreground";
+  if (pct == null) return "text-white/50";
   if (pct >= 90) return "text-emerald-400";
   if (pct >= 70) return "text-amber-400";
   return "text-red-400";
 }
 
 function engagementBadgeClass(pct: number | null | undefined): string {
-  if (pct == null) return "text-muted-foreground border-muted-foreground/30 bg-muted/10";
+  if (pct == null) return "text-white/50 border-muted-foreground/30 bg-white/5/10";
   if (pct >= 90) return "text-emerald-400 border-emerald-400/30 bg-emerald-400/10";
   if (pct >= 70) return "text-amber-400 border-amber-400/30 bg-amber-400/10";
   return "text-red-400 border-red-400/30 bg-red-400/10";
@@ -213,7 +213,7 @@ export default function CoachPerformanceReport() {
         {/* Header */}
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-bold tracking-tight">Coach Activity</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-white/50">
             Client check-in volumes per coach — completed vs scheduled with engagement %.
           </p>
         </div>
@@ -236,17 +236,17 @@ export default function CoachPerformanceReport() {
 
           {preset === "custom" && (
             <div className="flex items-center gap-2 text-sm">
-              <label className="text-muted-foreground">From</label>
+              <label className="text-white/50">From</label>
               <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
-                className="border border-border rounded px-2 py-1 bg-background text-foreground text-sm" />
-              <label className="text-muted-foreground">To</label>
+                className="border border-white/[0.08] rounded px-2 py-1 bg-white/5 text-white/90 text-sm" />
+              <label className="text-white/50">To</label>
               <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
-                className="border border-border rounded px-2 py-1 bg-background text-foreground text-sm" />
+                className="border border-white/[0.08] rounded px-2 py-1 bg-white/5 text-white/90 text-sm" />
             </div>
           )}
 
           {!isLoading && (
-            <span className="text-xs text-muted-foreground ml-auto">
+            <span className="text-xs text-white/50 ml-auto">
               {isOneWeek
                 ? `Week of ${formatWeekLabel(startDate)}`
                 : `${weekCount} week${weekCount !== 1 ? "s" : ""} · ${formatWeekLabel(startDate)} – ${formatWeekLabel(endDate)}`}
@@ -255,9 +255,9 @@ export default function CoachPerformanceReport() {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">Loading…</div>
+          <div className="flex items-center justify-center h-48 text-white/50 text-sm">Loading…</div>
         ) : coaches.length === 0 ? (
-          <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
+          <div className="flex items-center justify-center h-48 text-white/50 text-sm">
             No check-in data found for this period.
           </div>
         ) : (
@@ -273,15 +273,15 @@ export default function CoachPerformanceReport() {
                 { icon: <Calendar className="w-3.5 h-3.5" />, label: isOneWeek ? "Week Total" : "Daily Avg", value: isOneWeek ? grandTotalCompleted : teamDailyAvg, sub: isOneWeek ? "this week" : "completions/day", color: "" },
                 { icon: <Users className="w-3.5 h-3.5" />, label: "Coaches", value: coaches.length, sub: isOneWeek ? "active" : `${weekCount} weeks`, color: "" },
               ].map(card => (
-                <Card key={card.label}>
+                <Card key={card.label} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
                   <CardHeader className="pb-1 pt-4 px-4">
-                    <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                    <CardTitle className="text-xs font-medium text-white/50 uppercase tracking-wide flex items-center gap-1">
                       {card.icon} {card.label}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="px-4 pb-4">
                     <p className={`text-3xl font-bold ${card.color}`}>{card.value}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{card.sub}</p>
+                    <p className="text-xs text-white/50 mt-0.5">{card.sub}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -290,7 +290,7 @@ export default function CoachPerformanceReport() {
 
             {/* Engagement trend (weekly view only) */}
             {!isOneWeek && weeklyData && (
-              <Card>
+              <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-semibold">Engagement % Trend — Week by Week</CardTitle>
                 </CardHeader>
@@ -326,7 +326,7 @@ export default function CoachPerformanceReport() {
             )}
 
             {/* Per-coach summary table */}
-            <Card>
+            <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-semibold">Per-Coach Summary</CardTitle>
               </CardHeader>
@@ -334,15 +334,15 @@ export default function CoachPerformanceReport() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Coach</th>
-                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">Completed</th>
-                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">Scheduled</th>
-                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">Engagement</th>
-                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">{isOneWeek ? "Daily Avg" : "Weekly Avg"}</th>
-                        {!isOneWeek && <th className="text-right px-4 py-3 font-medium text-muted-foreground">Daily Avg</th>}
-                        {!isOneWeek && <th className="text-right px-4 py-3 font-medium text-muted-foreground">Best Week</th>}
-                        {!isOneWeek && <th className="text-right px-4 py-3 font-medium text-muted-foreground">Worst Week</th>}
+                      <tr className="border-b border-white/[0.08]">
+                        <th className="text-left px-4 py-3 font-medium text-white/50">Coach</th>
+                        <th className="text-right px-4 py-3 font-medium text-white/50">Completed</th>
+                        <th className="text-right px-4 py-3 font-medium text-white/50">Scheduled</th>
+                        <th className="text-right px-4 py-3 font-medium text-white/50">Engagement</th>
+                        <th className="text-right px-4 py-3 font-medium text-white/50">{isOneWeek ? "Daily Avg" : "Weekly Avg"}</th>
+                        {!isOneWeek && <th className="text-right px-4 py-3 font-medium text-white/50">Daily Avg</th>}
+                        {!isOneWeek && <th className="text-right px-4 py-3 font-medium text-white/50">Best Week</th>}
+                        {!isOneWeek && <th className="text-right px-4 py-3 font-medium text-white/50">Worst Week</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -352,7 +352,7 @@ export default function CoachPerformanceReport() {
                         const best = weekValues.length > 0 ? Math.max(...weekValues) : 0;
                         const worst = weekValues.length > 0 ? Math.min(...weekValues) : 0;
                         return (
-                          <tr key={coach.coachId} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                          <tr key={coach.coachId} className="border-b border-white/[0.08]/50 hover:bg-white/5/30 transition-colors">
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2">
                                 <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
@@ -361,7 +361,7 @@ export default function CoachPerformanceReport() {
                               </div>
                             </td>
                             <td className="text-right px-4 py-3 font-semibold tabular-nums">{coach.totalCompleted}</td>
-                            <td className="text-right px-4 py-3 tabular-nums text-muted-foreground">
+                            <td className="text-right px-4 py-3 tabular-nums text-white/50">
                               {coach.totalScheduled > 0 ? coach.totalScheduled : "—"}
                             </td>
                             <td className="text-right px-4 py-3 tabular-nums">
@@ -369,7 +369,7 @@ export default function CoachPerformanceReport() {
                                 <Badge variant="outline" className={engagementBadgeClass(coach.overallEngagementPct)}>
                                   {coach.overallEngagementPct}%
                                 </Badge>
-                              ) : <span className="text-muted-foreground">—</span>}
+                              ) : <span className="text-white/50">—</span>}
                             </td>
                             <td className="text-right px-4 py-3 tabular-nums">{coach.weeklyAvg}</td>
                             {!isOneWeek && weeklyCoach && (
@@ -388,10 +388,10 @@ export default function CoachPerformanceReport() {
                       })}
                     </tbody>
                     <tfoot>
-                      <tr className="bg-muted/20">
+                      <tr className="bg-white/5/20">
                         <td className="px-4 py-3 font-semibold">Team Total</td>
                         <td className="text-right px-4 py-3 font-bold tabular-nums">{grandTotalCompleted}</td>
-                        <td className="text-right px-4 py-3 font-semibold tabular-nums text-muted-foreground">
+                        <td className="text-right px-4 py-3 font-semibold tabular-nums text-white/50">
                           {grandTotalScheduled > 0 ? grandTotalScheduled : "—"}
                         </td>
                         <td className="text-right px-4 py-3 font-semibold tabular-nums">
@@ -412,26 +412,26 @@ export default function CoachPerformanceReport() {
 
             {/* 1-week: daily breakdown table — cleaner layout with Done/Sched combined */}
             {isOneWeek && dailyData && (
-              <Card>
+              <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-semibold">Daily Breakdown — Week of {formatWeekLabel(startDate)}</CardTitle>
-                  <p className="text-xs text-muted-foreground mt-0.5">Scheduled / Done per coach · dimmed rows = not yet due</p>
+                  <p className="text-xs text-white/50 mt-0.5">Scheduled / Done per coach · dimmed rows = not yet due</p>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-border">
-                          <th className="text-left px-4 py-3 font-medium text-muted-foreground w-16">Day</th>
+                        <tr className="border-b border-white/[0.08]">
+                          <th className="text-left px-4 py-3 font-medium text-white/50 w-16">Day</th>
                           {(dailyData?.coaches ?? []).map((coach, i) => (
                             <th key={coach.coachId} className="text-center px-3 py-3 font-medium" colSpan={2}
                               style={{ color: COACH_COLORS[i % COACH_COLORS.length] }}>
                               {coach.coachName}
                             </th>
                           ))}
-                          <th className="text-center px-3 py-3 font-medium text-muted-foreground" colSpan={2}>Team</th>
+                          <th className="text-center px-3 py-3 font-medium text-white/50" colSpan={2}>Team</th>
                         </tr>
-                        <tr className="border-b border-border/50 bg-muted/10 text-xs text-muted-foreground">
+                        <tr className="border-b border-white/[0.08]/50 bg-white/5/10 text-xs text-white/50">
                           <th />
                           {(dailyData?.coaches ?? []).map(coach => (
                             <React.Fragment key={coach.coachId}>
@@ -450,7 +450,7 @@ export default function CoachPerformanceReport() {
                           const rowEng = rowSched > 0 ? Math.round((rowComp / rowSched) * 1000) / 10 : null;
                           const hasData = rowSched > 0 || rowComp > 0;
                           return (
-                            <tr key={day} className={`border-b border-border/50 transition-colors ${hasData ? "hover:bg-muted/30" : "opacity-40"}`}>
+                            <tr key={day} className={`border-b border-white/[0.08]/50 transition-colors ${hasData ? "hover:bg-white/5/30" : "opacity-40"}`}>
                               <td className="px-4 py-3 font-medium">{DAY_LABELS[day]}</td>
                               {(dailyData?.coaches ?? []).map(coach => {
                                 const comp = coach.completedByDay[day] ?? null;
@@ -461,38 +461,38 @@ export default function CoachPerformanceReport() {
                                   <React.Fragment key={coach.coachId}>
                                     <td className="text-center px-3 py-3 tabular-nums">
                                       {noData
-                                        ? <span className="text-muted-foreground/30">—</span>
-                                        : <span className="font-medium">{sched ?? 0}<span className="text-muted-foreground font-normal">/{comp ?? 0}</span></span>
+                                        ? <span className="text-white/50/30">—</span>
+                                        : <span className="font-medium">{sched ?? 0}<span className="text-white/50 font-normal">/{comp ?? 0}</span></span>
                                       }
                                     </td>
                                     <td className="text-center px-3 py-3 tabular-nums">
                                       {eng != null
                                         ? <span className={engagementColor(eng)}>{eng}%</span>
-                                        : <span className="text-muted-foreground/30">—</span>}
+                                        : <span className="text-white/50/30">—</span>}
                                     </td>
                                   </React.Fragment>
                                 );
                               })}
                               <td className="text-center px-3 py-3 font-semibold tabular-nums">
                                 {rowSched > 0
-                                  ? <span>{rowSched}<span className="text-muted-foreground font-normal">/{rowComp}</span></span>
-                                  : <span className="text-muted-foreground/30">—</span>}
+                                  ? <span>{rowSched}<span className="text-white/50 font-normal">/{rowComp}</span></span>
+                                  : <span className="text-white/50/30">—</span>}
                               </td>
                               <td className="text-center px-3 py-3 tabular-nums">
-                                {rowEng != null ? <span className={engagementColor(rowEng)}>{rowEng}%</span> : <span className="text-muted-foreground/30">—</span>}
+                                {rowEng != null ? <span className={engagementColor(rowEng)}>{rowEng}%</span> : <span className="text-white/50/30">—</span>}
                               </td>
                             </tr>
                           );
                         })}
                       </tbody>
                       <tfoot>
-                        <tr className="bg-muted/20 font-semibold border-t border-border">
+                        <tr className="bg-white/5/20 font-semibold border-t border-white/[0.08]">
                           <td className="px-4 py-3">Total</td>
                           {(dailyData?.coaches ?? []).map(coach => (
                             <React.Fragment key={coach.coachId}>
                               <td className="text-center px-3 py-3 tabular-nums">
                                 {coach.totalScheduled > 0
-                                  ? <span>{coach.totalScheduled}<span className="text-muted-foreground font-normal">/{coach.totalCompleted}</span></span>
+                                  ? <span>{coach.totalScheduled}<span className="text-white/50 font-normal">/{coach.totalCompleted}</span></span>
                                   : coach.totalCompleted}
                               </td>
                               <td className="text-center px-3 py-3 tabular-nums">
@@ -504,7 +504,7 @@ export default function CoachPerformanceReport() {
                           ))}
                           <td className="text-center px-3 py-3 tabular-nums">
                             {grandTotalScheduled > 0
-                              ? <span>{grandTotalCompleted}<span className="text-muted-foreground font-normal">/{grandTotalScheduled}</span></span>
+                              ? <span>{grandTotalCompleted}<span className="text-white/50 font-normal">/{grandTotalScheduled}</span></span>
                               : grandTotalCompleted}
                           </td>
                           <td className="text-center px-3 py-3 tabular-nums">
@@ -520,7 +520,7 @@ export default function CoachPerformanceReport() {
 
             {/* Multi-week: week-by-week detail table */}
             {!isOneWeek && weeklyData && (
-              <Card>
+              <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-semibold">Week-by-Week Detail</CardTitle>
                 </CardHeader>
@@ -528,27 +528,27 @@ export default function CoachPerformanceReport() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-border">
-                          <th className="text-left px-4 py-3 font-medium text-muted-foreground sticky left-0 bg-card z-10 min-w-[90px]">Week of</th>
+                        <tr className="border-b border-white/[0.08]">
+                          <th className="text-left px-4 py-3 font-medium text-white/50 sticky left-0 bg-zinc-900/95 backdrop-blur-xl z-10 min-w-[90px]">Week of</th>
                           {(weeklyData?.coaches ?? []).map((coach, i) => (
                             <th key={coach.coachId} className="text-right px-4 py-3 font-medium" colSpan={3}
                               style={{ color: COACH_COLORS[i % COACH_COLORS.length] }}>
                               {coach.coachName}
                             </th>
                           ))}
-                          <th className="text-right px-4 py-3 font-medium text-muted-foreground" colSpan={2}>Team</th>
+                          <th className="text-right px-4 py-3 font-medium text-white/50" colSpan={2}>Team</th>
                         </tr>
-                        <tr className="border-b border-border/50 bg-muted/10">
-                          <th className="sticky left-0 bg-muted/10 z-10" />
+                        <tr className="border-b border-white/[0.08]/50 bg-white/5/10">
+                          <th className="sticky left-0 bg-white/5/10 z-10" />
                           {(weeklyData?.coaches ?? []).map(coach => (
                             <React.Fragment key={coach.coachId}>
-                              <th className="text-right px-2 py-1.5 text-xs font-normal text-muted-foreground">Done</th>
-                              <th className="text-right px-2 py-1.5 text-xs font-normal text-muted-foreground">Sched</th>
-                              <th className="text-right px-2 py-1.5 text-xs font-normal text-muted-foreground">Eng%</th>
+                              <th className="text-right px-2 py-1.5 text-xs font-normal text-white/50">Done</th>
+                              <th className="text-right px-2 py-1.5 text-xs font-normal text-white/50">Sched</th>
+                              <th className="text-right px-2 py-1.5 text-xs font-normal text-white/50">Eng%</th>
                             </React.Fragment>
                           ))}
-                          <th className="text-right px-2 py-1.5 text-xs font-normal text-muted-foreground">Done</th>
-                          <th className="text-right px-2 py-1.5 text-xs font-normal text-muted-foreground">Eng%</th>
+                          <th className="text-right px-2 py-1.5 text-xs font-normal text-white/50">Done</th>
+                          <th className="text-right px-2 py-1.5 text-xs font-normal text-white/50">Eng%</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -557,8 +557,8 @@ export default function CoachPerformanceReport() {
                           const rowSched = (weeklyData?.coaches ?? []).reduce((s, c) => s + (c.scheduledByWeek[week] ?? 0), 0);
                           const rowEng = rowSched > 0 ? Math.round((rowComp / rowSched) * 1000) / 10 : null;
                           return (
-                            <tr key={week} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                              <td className="px-4 py-2.5 font-medium sticky left-0 bg-card z-10">{formatWeekLabel(week)}</td>
+                            <tr key={week} className="border-b border-white/[0.08]/50 hover:bg-white/5/30 transition-colors">
+                              <td className="px-4 py-2.5 font-medium sticky left-0 bg-zinc-900/95 backdrop-blur-xl z-10">{formatWeekLabel(week)}</td>
                               {(weeklyData?.coaches ?? []).map(coach => {
                                 const comp = coach.completedByWeek[week];
                                 const sched = coach.scheduledByWeek[week];
@@ -566,13 +566,13 @@ export default function CoachPerformanceReport() {
                                 return (
                                   <React.Fragment key={coach.coachId}>
                                     <td className="text-right px-2 py-2.5 tabular-nums">
-                                      {comp != null ? <span className="font-medium">{comp}</span> : <span className="text-muted-foreground/40">—</span>}
+                                      {comp != null ? <span className="font-medium">{comp}</span> : <span className="text-white/50/40">—</span>}
                                     </td>
-                                    <td className="text-right px-2 py-2.5 tabular-nums text-muted-foreground">
-                                      {sched != null ? sched : <span className="text-muted-foreground/30">—</span>}
+                                    <td className="text-right px-2 py-2.5 tabular-nums text-white/50">
+                                      {sched != null ? sched : <span className="text-white/50/30">—</span>}
                                     </td>
                                     <td className="text-right px-2 py-2.5 tabular-nums">
-                                      {eng != null ? <span className={engagementColor(eng)}>{eng}%</span> : <span className="text-muted-foreground/30">—</span>}
+                                      {eng != null ? <span className={engagementColor(eng)}>{eng}%</span> : <span className="text-white/50/30">—</span>}
                                     </td>
                                   </React.Fragment>
                                 );
@@ -586,12 +586,12 @@ export default function CoachPerformanceReport() {
                         })}
                       </tbody>
                       <tfoot>
-                        <tr className="bg-muted/20 font-semibold border-t border-border">
-                          <td className="px-4 py-3 sticky left-0 bg-muted/20 z-10">Totals</td>
+                        <tr className="bg-white/5/20 font-semibold border-t border-white/[0.08]">
+                          <td className="px-4 py-3 sticky left-0 bg-white/5/20 z-10">Totals</td>
                           {(weeklyData?.coaches ?? []).map(coach => (
                             <React.Fragment key={coach.coachId}>
                               <td className="text-right px-2 py-3 tabular-nums">{coach.totalCompleted}</td>
-                              <td className="text-right px-2 py-3 tabular-nums text-muted-foreground">
+                              <td className="text-right px-2 py-3 tabular-nums text-white/50">
                                 {coach.totalScheduled > 0 ? coach.totalScheduled : "—"}
                               </td>
                               <td className="text-right px-2 py-3 tabular-nums">
@@ -606,8 +606,8 @@ export default function CoachPerformanceReport() {
                             {teamEngagementPct != null ? <span className={engagementColor(teamEngagementPct)}>{teamEngagementPct}%</span> : "—"}
                           </td>
                         </tr>
-                        <tr className="text-muted-foreground text-xs border-b border-border/50">
-                          <td className="px-4 py-2 sticky left-0 bg-card z-10">Weekly avg</td>
+                        <tr className="text-white/50 text-xs border-b border-white/[0.08]/50">
+                          <td className="px-4 py-2 sticky left-0 bg-zinc-900/95 backdrop-blur-xl z-10">Weekly avg</td>
                           {(weeklyData?.coaches ?? []).map(coach => (
                             <React.Fragment key={coach.coachId}>
                               <td className="text-right px-2 py-2 tabular-nums">{coach.weeklyAvg}</td>
@@ -627,22 +627,22 @@ export default function CoachPerformanceReport() {
 
             {/* Actual vs Stated Hours */}
             {hoursData && hoursData.length > 0 && (
-              <Card>
+              <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-semibold">Actual vs Stated Hours</CardTitle>
-                  <p className="text-xs text-muted-foreground mt-0.5">Stated = morning check-in · Actual = first to last client completion</p>
+                  <p className="text-xs text-white/50 mt-0.5">Stated = morning check-in · Actual = first to last client completion</p>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-border">
-                          <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Date</th>
-                          <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Coach</th>
-                          <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Stated Hours</th>
-                          <th className="text-center px-4 py-2.5 font-medium text-muted-foreground">First Completion</th>
-                          <th className="text-center px-4 py-2.5 font-medium text-muted-foreground">Last Completion</th>
-                          <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Actual Span</th>
+                        <tr className="border-b border-white/[0.08]">
+                          <th className="text-left px-4 py-2.5 font-medium text-white/50">Date</th>
+                          <th className="text-left px-4 py-2.5 font-medium text-white/50">Coach</th>
+                          <th className="text-left px-4 py-2.5 font-medium text-white/50">Stated Hours</th>
+                          <th className="text-center px-4 py-2.5 font-medium text-white/50">First Completion</th>
+                          <th className="text-center px-4 py-2.5 font-medium text-white/50">Last Completion</th>
+                          <th className="text-right px-4 py-2.5 font-medium text-white/50">Actual Span</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -650,20 +650,20 @@ export default function CoachPerformanceReport() {
                           const d = new Date(row.recordDate + "T00:00:00");
                           const dateLabel = d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" });
                           return (
-                            <tr key={i} className="border-b border-border/50 hover:bg-muted/10">
-                              <td className="px-4 py-3 text-muted-foreground">{dateLabel}</td>
+                            <tr key={i} className="border-b border-white/[0.08]/50 hover:bg-white/5/10">
+                              <td className="px-4 py-3 text-white/50">{dateLabel}</td>
                               <td className="px-4 py-3 font-medium">{row.coachName}</td>
-                              <td className="px-4 py-3 text-muted-foreground">{row.statedHours ?? <span className="text-muted-foreground/30">—</span>}</td>
+                              <td className="px-4 py-3 text-white/50">{row.statedHours ?? <span className="text-white/50/30">—</span>}</td>
                               <td className="text-center px-4 py-3 tabular-nums">
-                                {row.firstCompletion ?? <span className="text-muted-foreground/30">—</span>}
+                                {row.firstCompletion ?? <span className="text-white/50/30">—</span>}
                               </td>
                               <td className="text-center px-4 py-3 tabular-nums">
-                                {row.lastCompletion ?? <span className="text-muted-foreground/30">—</span>}
+                                {row.lastCompletion ?? <span className="text-white/50/30">—</span>}
                               </td>
                               <td className="text-right px-4 py-3 tabular-nums font-semibold">
                                 {row.actualHours != null
                                   ? <span>{row.actualHours}h</span>
-                                  : <span className="text-muted-foreground/30">—</span>}
+                                  : <span className="text-white/50/30">—</span>}
                               </td>
                             </tr>
                           );
@@ -677,22 +677,22 @@ export default function CoachPerformanceReport() {
 
             {/* Coach activity log (morning/followup submissions) */}
             {activityRecords && activityRecords.length > 0 && (
-              <Card>
+              <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-semibold">Coach Submission Log</CardTitle>
-                  <p className="text-xs text-muted-foreground mt-0.5">Morning check-ins and follow-up submissions in this period</p>
+                  <p className="text-xs text-white/50 mt-0.5">Morning check-ins and follow-up submissions in this period</p>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto max-h-72 overflow-y-auto">
                     <table className="w-full text-sm">
-                      <thead className="sticky top-0 bg-card z-10">
-                        <tr className="border-b border-border">
-                          <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Date</th>
-                          <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Coach</th>
-                          <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Type</th>
-                          <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Scheduled</th>
-                          <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Completed</th>
-                          <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Eng%</th>
+                      <thead className="sticky top-0 bg-zinc-900/95 backdrop-blur-xl z-10">
+                        <tr className="border-b border-white/[0.08]">
+                          <th className="text-left px-4 py-2.5 font-medium text-white/50">Date</th>
+                          <th className="text-left px-4 py-2.5 font-medium text-white/50">Coach</th>
+                          <th className="text-left px-4 py-2.5 font-medium text-white/50">Type</th>
+                          <th className="text-right px-4 py-2.5 font-medium text-white/50">Scheduled</th>
+                          <th className="text-right px-4 py-2.5 font-medium text-white/50">Completed</th>
+                          <th className="text-right px-4 py-2.5 font-medium text-white/50">Eng%</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -700,8 +700,8 @@ export default function CoachPerformanceReport() {
                           const coach = allCoaches?.find(c => c.id === r.coachId);
                           const coachIdx = allCoaches ? allCoaches.findIndex(c => c.id === r.coachId) : 0;
                           return (
-                            <tr key={r.id} className="border-b border-border/40 hover:bg-muted/20 transition-colors">
-                              <td className="px-4 py-2 tabular-nums text-muted-foreground text-xs">
+                            <tr key={r.id} className="border-b border-white/[0.08]/40 hover:bg-white/5/20 transition-colors">
+                              <td className="px-4 py-2 tabular-nums text-white/50 text-xs">
                                 {new Date(r.recordDate).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })}
                               </td>
                               <td className="px-4 py-2">

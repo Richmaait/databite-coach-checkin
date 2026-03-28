@@ -93,16 +93,16 @@ function computeStatus(
     key: "no_hours",
     label: "No stated hours",
     detail: "No morning check-in submitted",
-    color: "text-muted-foreground",
-    bgColor: "bg-muted/40",
+    color: "text-white/50",
+    bgColor: "bg-white/5/40",
     icon: <MinusCircle className="w-4 h-4" />,
   };
   const noActivity: StatusInfo = {
     key: "no_activity",
     label: "No activity",
     detail: "No client check-ins recorded",
-    color: "text-muted-foreground",
-    bgColor: "bg-muted/40",
+    color: "text-white/50",
+    bgColor: "bg-white/5/40",
     icon: <MinusCircle className="w-4 h-4" />,
   };
 
@@ -279,7 +279,7 @@ export default function ActivityReport() {
   if (!isAdmin) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64 text-muted-foreground">
+        <div className="flex items-center justify-center h-64 text-white/50">
           Access restricted to managers only.
         </div>
       </DashboardLayout>
@@ -292,10 +292,10 @@ export default function ActivityReport() {
         {/* Header */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Activity Report</h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <h1 className="text-2xl font-bold text-white/90">Activity Report</h1>
+            <p className="text-sm text-white/50 mt-1">
               Compare actual check-in timestamps against each coach's declared working hours.
-              <span className="ml-2 text-xs bg-destructive/20 text-destructive px-2 py-0.5 rounded font-medium">
+              <span className="ml-2 text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded font-medium">
                 Manager only — not visible to coaches
               </span>
             </p>
@@ -320,18 +320,18 @@ export default function ActivityReport() {
             { key: "under", label: "Came in under", color: "text-red-400", bg: "bg-red-500/10" },
             { key: "over", label: "Ran over / early", color: "text-orange-400", bg: "bg-orange-500/10" },
             { key: "early", label: "Started early", color: "text-blue-400", bg: "bg-blue-500/10" },
-            { key: "no_hours", label: "No stated hours", color: "text-muted-foreground", bg: "bg-muted/40" },
-            { key: "no_activity", label: "No activity", color: "text-muted-foreground", bg: "bg-muted/40" },
+            { key: "no_hours", label: "No stated hours", color: "text-white/50", bg: "bg-white/5/40" },
+            { key: "no_activity", label: "No activity", color: "text-white/50", bg: "bg-white/5/40" },
           ].map(s => (
             <button
               key={s.key}
               onClick={() => setFilterStatus(filterStatus === s.key ? "all" : s.key)}
               className={`rounded-xl p-3 text-left transition-all border ${
-                filterStatus === s.key ? "border-primary ring-1 ring-primary" : "border-transparent"
+                filterStatus === s.key ? "border-violet-500 ring-1 ring-violet-500" : "border-transparent"
               } ${s.bg}`}
             >
               <div className={`text-2xl font-bold ${s.color}`}>{summary[s.key as StatusKey]}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">{s.label}</div>
+              <div className="text-xs text-white/50 mt-0.5">{s.label}</div>
             </button>
           ))}
         </div>
@@ -350,7 +350,7 @@ export default function ActivityReport() {
           {filterStatus !== "all" && (
             <button
               onClick={() => setFilterStatus("all")}
-              className="text-xs text-muted-foreground underline self-center"
+              className="text-xs text-white/50 underline self-center"
             >
               Clear filter
             </button>
@@ -358,18 +358,18 @@ export default function ActivityReport() {
         </div>
 
         {/* Table */}
-        <Card className="bg-card border-border overflow-hidden">
-          <CardHeader className="pb-3 border-b border-border">
-            <CardTitle className="text-base font-semibold text-foreground">
+        <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+          <CardHeader className="pb-3 border-b border-white/[0.08]">
+            <CardTitle className="text-base font-semibold text-white/90">
               {filteredRows.length} day{filteredRows.length !== 1 ? "s" : ""} shown
               {filterCoach !== "all" && ` · ${filterCoach}`}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {isLoading ? (
-              <div className="p-8 text-center text-muted-foreground text-sm">Loading...</div>
+              <div className="p-8 text-center text-white/50 text-sm">Loading...</div>
             ) : filteredRows.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground text-sm">No data for this period.</div>
+              <div className="p-8 text-center text-white/50 text-sm">No data for this period.</div>
             ) : (
               <div className="divide-y divide-border">
                 {filteredRows.map(row => {
@@ -383,42 +383,42 @@ export default function ActivityReport() {
                     <div key={rowKey}>
                       {/* Main row */}
                       <button
-                        className="w-full text-left px-5 py-4 hover:bg-muted/30 transition-colors"
+                        className="w-full text-left px-5 py-4 hover:bg-white/5/30 transition-colors"
                         onClick={() => toggleRow(rowKey)}
                       >
                         <div className="grid grid-cols-[1fr_auto] gap-4 items-center">
                           <div className="grid grid-cols-[120px_140px_1fr_1fr_1fr_auto] gap-4 items-center min-w-0">
                             {/* Date */}
-                            <span className="text-sm font-medium text-foreground">{fmtDate(row.date)}</span>
+                            <span className="text-sm font-medium text-white/90">{fmtDate(row.date)}</span>
 
                             {/* Coach */}
-                            <span className="text-sm text-muted-foreground truncate">{row.coachName}</span>
+                            <span className="text-sm text-white/50 truncate">{row.coachName}</span>
 
                             {/* Stated hours */}
                             <div className="text-sm">
                               {row.workingHours ? (
-                                <span className="text-foreground font-mono">{row.workingHours}</span>
+                                <span className="text-white/90 font-mono">{row.workingHours}</span>
                               ) : (
-                                <span className="text-muted-foreground italic">Not stated</span>
+                                <span className="text-white/50 italic">Not stated</span>
                               )}
                             </div>
 
                             {/* First / Last check-in */}
                             <div className="text-sm">
                               {row.firstCheckIn ? (
-                                <span className="font-mono text-foreground">
+                                <span className="font-mono text-white/90">
                                   {fmtTime(row.firstCheckIn)}
                                   {row.firstCheckIn !== row.lastCheckIn && (
-                                    <span className="text-muted-foreground"> → {fmtTime(row.lastCheckIn!)}</span>
+                                    <span className="text-white/50"> → {fmtTime(row.lastCheckIn!)}</span>
                                   )}
                                 </span>
                               ) : (
-                                <span className="text-muted-foreground italic">No activity</span>
+                                <span className="text-white/50 italic">No activity</span>
                               )}
                             </div>
 
                             {/* Duration */}
-                            <div className="text-sm text-muted-foreground font-mono">
+                            <div className="text-sm text-white/50 font-mono">
                               {fmtDuration(row.durationMins)}
                               {row.checkInCount > 0 && (
                                 <span className="ml-1 text-xs">({row.checkInCount} check-ins)</span>
@@ -433,7 +433,7 @@ export default function ActivityReport() {
                           </div>
 
                           {/* Expand toggle */}
-                          <div className="text-muted-foreground">
+                          <div className="text-white/50">
                             {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                           </div>
                         </div>
@@ -443,7 +443,7 @@ export default function ActivityReport() {
                           <div className={`mt-1.5 text-xs ml-0 ${row.status.color} opacity-80`}>
                             {row.status.detail}
                             {statedStart !== null && statedEnd !== null && (
-                              <span className="text-muted-foreground ml-2">
+                              <span className="text-white/50 ml-2">
                                 (stated: {fmtMins(statedStart)} – {fmtMins(statedEnd)})
                               </span>
                             )}
@@ -453,12 +453,12 @@ export default function ActivityReport() {
 
                       {/* Expanded detail */}
                       {expanded && (
-                        <div className="px-5 pb-4 bg-muted/20 border-t border-border/50 space-y-3">
+                        <div className="px-5 pb-4 bg-white/5/20 border-t border-white/[0.08]/50 space-y-3">
                           {/* Action plan */}
                           {row.actionPlan && (
                             <div>
-                              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Action Plan</div>
-                              <div className="text-sm text-foreground bg-card rounded-lg p-3 border border-border">
+                              <div className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-1">Action Plan</div>
+                              <div className="text-sm text-white/90 bg-white/5 rounded-lg p-3 border border-white/[0.08]">
                                 {row.actionPlan}
                               </div>
                             </div>
@@ -467,8 +467,8 @@ export default function ActivityReport() {
                           {/* Notes */}
                           {row.morningNotes && (
                             <div>
-                              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Morning Notes</div>
-                              <div className="text-sm text-foreground bg-card rounded-lg p-3 border border-border">
+                              <div className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-1">Morning Notes</div>
+                              <div className="text-sm text-white/90 bg-white/5 rounded-lg p-3 border border-white/[0.08]">
                                 {row.morningNotes}
                               </div>
                             </div>
@@ -477,7 +477,7 @@ export default function ActivityReport() {
                           {/* All timestamps */}
                           {row.allTimestamps.length > 0 && (
                             <div>
-                              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                              <div className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-2">
                                 All Check-In Times ({row.allTimestamps.length})
                               </div>
                               <div className="flex flex-wrap gap-2">
@@ -491,7 +491,7 @@ export default function ActivityReport() {
                                       className={`text-xs font-mono px-2 py-1 rounded ${
                                         outsideWindow
                                           ? "bg-orange-500/20 text-orange-300"
-                                          : "bg-muted text-muted-foreground"
+                                          : "bg-white/5 text-white/50"
                                       }`}
                                     >
                                       {fmtTime(ts)}
@@ -500,7 +500,7 @@ export default function ActivityReport() {
                                 })}
                               </div>
                               {statedStart !== null && statedEnd !== null && (
-                                <div className="mt-2 text-xs text-muted-foreground">
+                                <div className="mt-2 text-xs text-white/50">
                                   Stated window: <span className="font-mono">{fmtMins(statedStart)} – {fmtMins(statedEnd)}</span>
                                   <span className="ml-2 text-orange-400">Orange = outside window</span>
                                 </div>
@@ -510,7 +510,7 @@ export default function ActivityReport() {
 
                           {/* Mood */}
                           {row.moodScore && (
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-xs text-white/50">
                               Mood: {["", "😞 Not good", "😕 Below average", "😐 Okay", "🙂 Good", "😄 Amazing"][row.moodScore]}
                             </div>
                           )}

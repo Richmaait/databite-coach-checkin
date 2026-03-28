@@ -69,33 +69,33 @@ function EditCoachModal({ coach, open, onOpenChange, onSaved }: EditCoachModalPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border sm:max-w-sm">
+      <DialogContent className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Pencil className="h-4 w-4 text-primary" />
+            <Pencil className="h-4 w-4 text-violet-400" />
             Edit Coach Profile
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
+          <DialogDescription className="text-white/50">
             Update the name and email for this coach profile.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Full Name *</Label>
+            <Label className="text-xs text-white/50">Full Name *</Label>
             <Input
               value={name}
               onChange={e => setName(e.target.value)}
-              className="bg-input border-border"
+              className="bg-white/5 border-white/[0.08]"
               placeholder="e.g. Steve Johnson"
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Email</Label>
+            <Label className="text-xs text-white/50">Email</Label>
             <Input
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="bg-input border-border"
+              className="bg-white/5 border-white/[0.08]"
               placeholder="e.g. steve@example.com"
             />
           </div>
@@ -145,27 +145,27 @@ function KudosModal({ coach, open, onOpenChange }: KudosModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border sm:max-w-md">
+      <DialogContent className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-amber-400" />
             Send Kudos to {coach.name}
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
+          <DialogDescription className="text-white/50">
             Your message will be sent as a private Slack DM to {coach.name} and posted to the shared team channel.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Your message</Label>
+            <Label className="text-xs text-white/50">Your message</Label>
             <Textarea
               placeholder={`e.g. "Great work this week, ${coach.name}! Your engagement numbers have been outstanding."`}
               value={message}
               onChange={e => setMessage(e.target.value)}
-              className="bg-input border-border resize-none min-h-[100px] text-sm"
+              className="bg-white/5 border-white/[0.08] resize-none min-h-[100px] text-sm"
               maxLength={1000}
             />
-            <p className="text-[10px] text-muted-foreground text-right">{message.length}/1000</p>
+            <p className="text-[10px] text-white/50 text-right">{message.length}/1000</p>
           </div>
           <div className="rounded-lg bg-amber-500/5 border border-amber-500/20 p-3 text-xs text-amber-300/80 space-y-1">
             <p className="font-medium text-amber-300">What happens when you send:</p>
@@ -181,7 +181,7 @@ function KudosModal({ coach, open, onOpenChange }: KudosModalProps) {
           <Button
             onClick={handleSend}
             disabled={!message.trim() || sendKudos.isPending}
-            className="gap-2 bg-amber-500 hover:bg-amber-400 text-black font-semibold"
+            className="gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-semibold rounded-xl"
           >
             <Sparkles className="h-3.5 w-3.5" />
             {sendKudos.isPending ? "Sending..." : "Send Kudos"}
@@ -209,13 +209,13 @@ function RoleConfirmDialog({ user, open, onOpenChange, onConfirm, isPending }: R
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border sm:max-w-sm">
+      <DialogContent className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Shield className="h-4 w-4 text-primary" />
+            <Shield className="h-4 w-4 text-violet-400" />
             {isPromoting ? "Promote to Manager?" : "Demote to Coach?"}
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
+          <DialogDescription className="text-white/50">
             {isPromoting
               ? `This will give ${displayName} full manager access — they will be able to view all dashboards, send kudos, manage team settings, and see all coach data.`
               : `This will remove ${displayName}'s manager access. They will only be able to submit their own check-ins.`
@@ -295,20 +295,20 @@ function SlackConfigPanel({ coach, onSaved }: SlackConfigPanelProps) {
   const reminderLabels = ["🌅 Morning Review", "📨 Follow-Up Outreach", "🔍 Disengagement Outreach"];
 
   return (
-    <div className="mt-3 border-t border-border/40 pt-3">
+    <div className="mt-3 border-t border-white/[0.08]/40 pt-3">
       <button
         type="button"
-        className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
+        className="flex items-center gap-2 text-xs text-white/50 hover:text-white/90 transition-colors w-full"
         onClick={() => setExpanded(v => !v)}
       >
         {enabled && coach.slackUserId ? (
-          <Bell className="h-3.5 w-3.5 text-primary" />
+          <Bell className="h-3.5 w-3.5 text-violet-400" />
         ) : (
-          <BellOff className="h-3.5 w-3.5 text-muted-foreground" />
+          <BellOff className="h-3.5 w-3.5 text-white/50" />
         )}
         <span className="font-medium">Slack Reminders</span>
         {enabled && coach.slackUserId && (
-          <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] px-1.5 py-0">Active</Badge>
+          <Badge className="bg-violet-500/10 text-violet-400 border-violet-500/20 text-[10px] px-1.5 py-0">Active</Badge>
         )}
         {(!coach.slackUserId) && (
           <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px] px-1.5 py-0">Slack ID needed</Badge>
@@ -319,25 +319,25 @@ function SlackConfigPanel({ coach, onSaved }: SlackConfigPanelProps) {
       {expanded && (
         <div className="mt-3 space-y-4">
           <div className="flex items-center justify-between">
-            <Label className="text-xs text-muted-foreground">Enable reminders</Label>
+            <Label className="text-xs text-white/50">Enable reminders</Label>
             <Switch checked={enabled} onCheckedChange={setEnabled} />
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Slack User ID</Label>
+            <Label className="text-xs text-white/50">Slack User ID</Label>
             <Input
               placeholder="e.g. U0AG3CHPXGB"
               value={slackId}
               onChange={e => setSlackId(e.target.value)}
-              className="bg-input border-border text-xs h-8 font-mono"
+              className="bg-white/5 border-white/[0.08] text-xs h-8 font-mono"
             />
-            <p className="text-[10px] text-muted-foreground">Find this in Slack: click their profile → ⋯ → Copy member ID</p>
+            <p className="text-[10px] text-white/50">Find this in Slack: click their profile → ⋯ → Copy member ID</p>
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Timezone</Label>
+            <Label className="text-xs text-white/50">Timezone</Label>
             <Select value={timezone} onValueChange={setTimezone}>
-              <SelectTrigger className="bg-input border-border text-xs h-8">
+              <SelectTrigger className="bg-white/5 border-white/[0.08] text-xs h-8">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -351,7 +351,7 @@ function SlackConfigPanel({ coach, onSaved }: SlackConfigPanelProps) {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Working days</Label>
+            <Label className="text-xs text-white/50">Working days</Label>
             <div className="flex gap-1.5">
               {DAY_LABELS.map((label, i) => (
                 <button
@@ -360,8 +360,8 @@ function SlackConfigPanel({ coach, onSaved }: SlackConfigPanelProps) {
                   onClick={() => toggleDay(i)}
                   className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
                     workdays.includes(i)
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-secondary text-muted-foreground border-border hover:border-primary/40"
+                      ? "bg-violet-500 text-violet-400-foreground border-violet-500"
+                      : "bg-white/5 text-white/50 border-white/[0.08] hover:border-violet-500/40"
                   }`}
                 >
                   {label}
@@ -371,15 +371,15 @@ function SlackConfigPanel({ coach, onSaved }: SlackConfigPanelProps) {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Reminder times (local time)</Label>
+            <Label className="text-xs text-white/50">Reminder times (local time)</Label>
             {reminderLabels.map((label, i) => (
               <div key={i} className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground w-44 shrink-0">{label}</span>
+                <span className="text-xs text-white/50 w-44 shrink-0">{label}</span>
                 <Input
                   type="time"
                   value={times[i] ?? DEFAULT_TIMES[i]}
                   onChange={e => updateTime(i, e.target.value)}
-                  className="bg-input border-border text-xs h-8 w-28"
+                  className="bg-white/5 border-white/[0.08] text-xs h-8 w-28"
                 />
               </div>
             ))}
@@ -478,8 +478,8 @@ function ReminderScheduleTab({ coaches, onSave, onToggleLeave, isSaving }: Remin
 
   if (activeCoaches.length === 0) {
     return (
-      <Card className="bg-card border-border">
-        <CardContent className="py-12 text-center text-muted-foreground text-sm">
+      <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
+        <CardContent className="py-12 text-center text-white/50 text-sm">
           No coaches yet. Add coaches first.
         </CardContent>
       </Card>
@@ -489,13 +489,13 @@ function ReminderScheduleTab({ coaches, onSave, onToggleLeave, isSaving }: Remin
   return (
     <div className="space-y-4">
       {/* Summary table */}
-      <Card className="bg-card border-border">
+      <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Bell className="h-4 w-4 text-primary" />
+            <Bell className="h-4 w-4 text-violet-400" />
             Reminder Schedule
           </CardTitle>
-          <p className="text-xs text-muted-foreground mt-0.5">Set which days and times each coach receives their 3 daily Slack reminders. Times are in the coach's local timezone.</p>
+          <p className="text-xs text-white/50 mt-0.5">Set which days and times each coach receives their 3 daily Slack reminders. Times are in the coach's local timezone.</p>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -511,15 +511,15 @@ function ReminderScheduleTab({ coaches, onSave, onToggleLeave, isSaving }: Remin
                 <col style={{ width: "10%" }} />
               </colgroup>
               <thead>
-                <tr className="border-b border-border/50">
-                  <th className="text-left text-xs font-medium text-muted-foreground px-4 py-2.5">Coach</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground px-4 py-2.5">Status</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground px-4 py-2.5">Timezone</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground px-4 py-2.5">Work Days</th>
+                <tr className="border-b border-white/[0.08]/50">
+                  <th className="text-left text-xs font-medium text-white/50 px-4 py-2.5">Coach</th>
+                  <th className="text-left text-xs font-medium text-white/50 px-4 py-2.5">Status</th>
+                  <th className="text-left text-xs font-medium text-white/50 px-4 py-2.5">Timezone</th>
+                  <th className="text-left text-xs font-medium text-white/50 px-4 py-2.5">Work Days</th>
                   {REMINDER_LABELS.map((label, i) => (
-                    <th key={i} className="text-left text-xs font-medium text-muted-foreground px-4 py-2.5">{label}</th>
+                    <th key={i} className="text-left text-xs font-medium text-white/50 px-4 py-2.5">{label}</th>
                   ))}
-                  <th className="text-right text-xs font-medium text-muted-foreground px-4 py-2.5"></th>
+                  <th className="text-right text-xs font-medium text-white/50 px-4 py-2.5"></th>
                 </tr>
               </thead>
               <tbody>
@@ -534,20 +534,20 @@ function ReminderScheduleTab({ coaches, onSave, onToggleLeave, isSaving }: Remin
                   return (
                     <React.Fragment key={coach.id}>
                       {/* Read-only summary row */}
-                      <tr className={`border-b ${isEditing ? "border-primary/20 bg-primary/5" : "border-border/30 hover:bg-secondary/50"} transition-colors`}>
+                      <tr className={`border-b ${isEditing ? "border-violet-500/20 bg-violet-500/5" : "border-white/[0.08]/30 hover:bg-white/5/50"} transition-colors`}>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <div className="h-7 w-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+                            <div className="h-7 w-7 rounded-full bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-xs font-bold text-violet-400">
                               {coach.name.charAt(0)}
                             </div>
-                            <span className="font-medium text-foreground text-sm">{coach.name}</span>
+                            <span className="font-medium text-white/90 text-sm">{coach.name}</span>
                           </div>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-col gap-0.5">
                             <Badge className={enabled && coach.slackUserId
                               ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] px-1.5 w-fit"
-                              : "bg-muted text-muted-foreground border-border text-[10px] px-1.5 w-fit"
+                              : "bg-white/5 text-white/50 border-white/[0.08] text-[10px] px-1.5 w-fit"
                             }>
                               {!coach.slackUserId ? "No Slack ID" : enabled ? "Active" : "Paused"}
                             </Badge>
@@ -559,26 +559,26 @@ function ReminderScheduleTab({ coaches, onSave, onToggleLeave, isSaving }: Remin
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="text-xs text-muted-foreground">{tzLabel.split(" (")[0]}</span>
+                          <span className="text-xs text-white/50">{tzLabel.split(" (")[0]}</span>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex gap-1.5">
                             {ALL_DAYS.map(d => (
                               <span key={d} className={`h-5 w-6 rounded text-[9px] font-medium flex items-center justify-center ${
-                                workdays.includes(d) ? "bg-primary/15 text-primary" : "bg-transparent text-muted-foreground/30"
+                                workdays.includes(d) ? "bg-violet-500/15 text-violet-400" : "bg-transparent text-white/50/30"
                               }`}>{DAY_SHORT[d]}</span>
                             ))}
                           </div>
                         </td>
                         {([0, 1, 2] as const).map(i => (
                           <td key={i} className="px-4 py-3">
-                            <span className="text-xs font-mono text-foreground">{times[i]}</span>
+                            <span className="text-xs font-mono text-white/90">{times[i]}</span>
                           </td>
                         ))}
                         <td className="px-4 py-3 text-right">
                           <div className="flex justify-end items-center gap-1.5">
                             {isEditing ? (
-                              <Button size="sm" variant="outline" className="h-7 text-xs gap-1 bg-transparent text-muted-foreground" onClick={cancelEdit}>
+                              <Button size="sm" variant="outline" className="h-7 text-xs gap-1 bg-transparent text-white/50" onClick={cancelEdit}>
                                 Cancel
                               </Button>
                             ) : (
@@ -593,23 +593,23 @@ function ReminderScheduleTab({ coaches, onSave, onToggleLeave, isSaving }: Remin
 
                       {/* Expanded edit panel */}
                       {isEditing && editState && (
-                        <tr className="border-b border-primary/20 bg-primary/5">
+                        <tr className="border-b border-violet-500/20 bg-violet-500/5">
                           <td colSpan={8} className="px-6 py-5">
                             <div className="grid grid-cols-2 gap-x-8 gap-y-4 max-w-2xl">
                               <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Reminders</label>
+                                <label className="text-xs font-medium text-white/50 uppercase tracking-wide">Reminders</label>
                                 <div className="flex items-center gap-2.5">
                                   <Switch
                                     checked={editState.enabled}
                                     onCheckedChange={v => setEditState(prev => prev ? { ...prev, enabled: v } : prev)}
                                   />
-                                  <span className="text-sm text-foreground">{editState.enabled ? "Enabled" : "Disabled"}</span>
+                                  <span className="text-sm text-white/90">{editState.enabled ? "Enabled" : "Disabled"}</span>
                                 </div>
                               </div>
                               <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Timezone</label>
+                                <label className="text-xs font-medium text-white/50 uppercase tracking-wide">Timezone</label>
                                 <Select value={editState.timezone} onValueChange={v => setEditState(prev => prev ? { ...prev, timezone: v } : prev)}>
-                                  <SelectTrigger className="h-8 text-sm bg-input border-border w-full max-w-xs">
+                                  <SelectTrigger className="h-8 text-sm bg-white/5 border-white/[0.08] w-full max-w-xs">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -620,7 +620,7 @@ function ReminderScheduleTab({ coaches, onSave, onToggleLeave, isSaving }: Remin
                                 </Select>
                               </div>
                               <div className="space-y-1.5 col-span-2">
-                                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Work Days</label>
+                                <label className="text-xs font-medium text-white/50 uppercase tracking-wide">Work Days</label>
                                 <div className="flex gap-2">
                                   {ALL_DAYS.map(d => (
                                     <button
@@ -629,18 +629,18 @@ function ReminderScheduleTab({ coaches, onSave, onToggleLeave, isSaving }: Remin
                                       onClick={() => toggleDay(d)}
                                       className={`h-8 w-10 rounded text-xs font-medium transition-colors ${
                                         editState.workdays.includes(d)
-                                          ? "bg-primary text-primary-foreground"
-                                          : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                                          ? "bg-violet-500 text-violet-400-foreground"
+                                          : "bg-white/5 text-white/50 hover:bg-white/5/80"
                                       }`}
                                     >{DAY_SHORT[d]}</button>
                                   ))}
                                 </div>
                               </div>
                               <div className="space-y-3 col-span-2">
-                                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Reminder Times</label>
+                                <label className="text-xs font-medium text-white/50 uppercase tracking-wide">Reminder Times</label>
                                 {([0, 1, 2] as const).map(i => (
                                   <div key={i} className="flex items-center gap-3">
-                                    <span className="text-sm text-foreground w-52 shrink-0">{REMINDER_LABELS[i]}</span>
+                                    <span className="text-sm text-white/90 w-52 shrink-0">{REMINDER_LABELS[i]}</span>
                                     <input
                                       type="time"
                                       value={editState.times[i]}
@@ -653,38 +653,38 @@ function ReminderScheduleTab({ coaches, onSave, onToggleLeave, isSaving }: Remin
                                           return { ...prev, times: newTimes };
                                         });
                                       }}
-                                      className="h-8 text-sm bg-input border border-border rounded px-3 text-foreground w-32"
+                                      className="h-8 text-sm bg-white/5 border border-white/[0.08] rounded px-3 text-white/90 w-32"
                                     />
                                   </div>
                                 ))}
                               </div>
                               <div className="space-y-1.5 col-span-2">
-                                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Scheduled Leave (optional)</label>
-                                <p className="text-[11px] text-muted-foreground">Reminders are automatically paused between these dates. Leave blank to clear.</p>
+                                <label className="text-xs font-medium text-white/50 uppercase tracking-wide">Scheduled Leave (optional)</label>
+                                <p className="text-[11px] text-white/50">Reminders are automatically paused between these dates. Leave blank to clear.</p>
                                 <div className="flex items-center gap-3 flex-wrap">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-xs text-muted-foreground w-10">From</span>
+                                    <span className="text-xs text-white/50 w-10">From</span>
                                     <input
                                       type="date"
                                       value={editState.leaveStartDate}
                                       onChange={e => setEditState(prev => prev ? { ...prev, leaveStartDate: e.target.value } : prev)}
-                                      className="h-8 text-sm bg-input border border-border rounded px-3 text-foreground w-40"
+                                      className="h-8 text-sm bg-white/5 border border-white/[0.08] rounded px-3 text-white/90 w-40"
                                     />
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <span className="text-xs text-muted-foreground w-10">To</span>
+                                    <span className="text-xs text-white/50 w-10">To</span>
                                     <input
                                       type="date"
                                       value={editState.leaveEndDate}
                                       onChange={e => setEditState(prev => prev ? { ...prev, leaveEndDate: e.target.value } : prev)}
-                                      className="h-8 text-sm bg-input border border-border rounded px-3 text-foreground w-40"
+                                      className="h-8 text-sm bg-white/5 border border-white/[0.08] rounded px-3 text-white/90 w-40"
                                     />
                                   </div>
                                   {(editState.leaveStartDate || editState.leaveEndDate) && (
                                     <button
                                       type="button"
                                       onClick={() => setEditState(prev => prev ? { ...prev, leaveStartDate: "", leaveEndDate: "" } : prev)}
-                                      className="text-[11px] text-muted-foreground hover:text-foreground underline"
+                                      className="text-[11px] text-white/50 hover:text-white/90 underline"
                                     >Clear dates</button>
                                   )}
                                 </div>
@@ -703,7 +703,7 @@ function ReminderScheduleTab({ coaches, onSave, onToggleLeave, isSaving }: Remin
                                 size="sm"
                                 variant="outline"
                                 className={`h-8 text-xs gap-1.5 bg-transparent ${
-                                  !editState?.enabled ? "border-amber-500/50 text-amber-400 hover:bg-amber-500/10" : "text-muted-foreground hover:text-foreground"
+                                  !editState?.enabled ? "border-amber-500/50 text-amber-400 hover:bg-amber-500/10" : "text-white/50 hover:text-white/90"
                                 }`}
                                 onClick={() => onToggleLeave(coach.id, enabled)}
                                 title={enabled ? "Disable all reminders while coach is on leave" : "Re-enable reminders"}
@@ -724,7 +724,7 @@ function ReminderScheduleTab({ coaches, onSave, onToggleLeave, isSaving }: Remin
       </Card>
 
       {/* Legend */}
-      <div className="flex items-center gap-6 text-xs text-muted-foreground px-1">
+      <div className="flex items-center gap-6 text-xs text-white/50 px-1">
         <div className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> Times shown in coach's local timezone</div>
         <div className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> Highlighted days = active work days</div>
       </div>
@@ -809,11 +809,11 @@ export default function TeamManagement() {
     return (
       <DashboardLayout>
         <div className="max-w-lg mx-auto py-16 text-center">
-          <div className="h-16 w-16 rounded-2xl bg-muted border border-border flex items-center justify-center mx-auto mb-4">
-            <Shield className="h-8 w-8 text-muted-foreground" />
+          <div className="h-16 w-16 rounded-2xl bg-white/5 border border-white/[0.08] flex items-center justify-center mx-auto mb-4">
+            <Shield className="h-8 w-8 text-white/50" />
           </div>
-          <h2 className="text-xl font-semibold text-foreground mb-2">Admin Access Required</h2>
-          <p className="text-muted-foreground text-sm">Team management is only available to managers and founders.</p>
+          <h2 className="text-xl font-semibold text-white/90 mb-2">Admin Access Required</h2>
+          <p className="text-white/50 text-sm">Team management is only available to managers and founders.</p>
         </div>
       </DashboardLayout>
     );
@@ -825,8 +825,8 @@ export default function TeamManagement() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Team Management</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">Add coaches, send kudos, configure Slack reminders, and manage roles</p>
+            <h1 className="text-2xl font-bold text-white/90">Team Management</h1>
+            <p className="text-white/50 text-sm mt-0.5">Add coaches, send kudos, configure Slack reminders, and manage roles</p>
           </div>
           <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
             <DialogTrigger asChild>
@@ -835,31 +835,31 @@ export default function TeamManagement() {
                 Add Coach
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-card border-border">
+            <DialogContent className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
               <DialogHeader>
                 <DialogTitle>Add New Coach</DialogTitle>
-                <DialogDescription className="text-muted-foreground">
+                <DialogDescription className="text-white/50">
                   Create a coach profile. They can link their account later via the claim feature.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-2">
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Full Name *</Label>
+                  <Label className="text-xs text-white/50">Full Name *</Label>
                   <Input
                     placeholder="e.g. Steve Johnson"
                     value={newCoachName}
                     onChange={e => setNewCoachName(e.target.value)}
-                    className="bg-input border-border"
+                    className="bg-white/5 border-white/[0.08]"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Email (optional)</Label>
+                  <Label className="text-xs text-white/50">Email (optional)</Label>
                   <Input
                     type="email"
                     placeholder="e.g. steve@example.com"
                     value={newCoachEmail}
                     onChange={e => setNewCoachEmail(e.target.value)}
-                    className="bg-input border-border"
+                    className="bg-white/5 border-white/[0.08]"
                   />
                 </div>
               </div>
@@ -878,7 +878,7 @@ export default function TeamManagement() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={v => setActiveTab(v as typeof activeTab)}>
-          <TabsList className="bg-secondary border border-border/50 h-9">
+          <TabsList className="bg-white/5 border border-white/10 rounded-xl h-9">
             <TabsTrigger value="coaches" className="text-xs gap-1.5"><Users className="h-3.5 w-3.5" />Coaches</TabsTrigger>
             <TabsTrigger value="reminders" className="text-xs gap-1.5"><Bell className="h-3.5 w-3.5" />Reminder Schedule</TabsTrigger>
             <TabsTrigger value="roles" className="text-xs gap-1.5"><Shield className="h-3.5 w-3.5" />User Roles</TabsTrigger>
@@ -886,16 +886,16 @@ export default function TeamManagement() {
 
           {/* ── Coaches tab ── */}
           <TabsContent value="coaches" className="mt-4">
-        <Card className="bg-card border-border">
+        <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Users className="h-4 w-4 text-primary" />
+              <Users className="h-4 w-4 text-violet-400" />
               Active Coaches
             </CardTitle>
           </CardHeader>
           <CardContent>
             {!coaches || coaches.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground text-sm">
+              <div className="py-8 text-center text-white/50 text-sm">
                 No coaches yet. Add your first coach above.
               </div>
             ) : (
@@ -905,27 +905,27 @@ export default function TeamManagement() {
                   return (
                     <div
                       key={coach.id}
-                      className="p-4 rounded-xl bg-secondary border border-border/50 hover:border-border transition-colors"
+                      className="p-4 rounded-xl bg-white/5 border border-white/[0.08]/50 hover:border-white/[0.08] transition-colors"
                     >
                       {/* Coach header row */}
                       <div className="flex items-center justify-between flex-wrap gap-2">
                         <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-bold text-primary">
+                          <div className="h-9 w-9 rounded-full bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-sm font-bold text-violet-400">
                             {coach.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-medium text-foreground text-sm">{coach.name}</p>
-                            <p className="text-xs text-muted-foreground">{coach.email ?? "No email set"}</p>
+                            <p className="font-medium text-white/90 text-sm">{coach.name}</p>
+                            <p className="text-xs text-white/50">{coach.email ?? "No email set"}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
                           {linkedUser ? (
-                            <Badge className="bg-primary/10 text-primary border-primary/20 text-xs gap-1">
+                            <Badge className="bg-violet-500/10 text-violet-400 border-violet-500/20 text-xs gap-1">
                               <UserCheck className="h-3 w-3" />
                               {linkedUser.name ?? linkedUser.email ?? "Linked"}
                             </Badge>
                           ) : (
-                            <Badge className="bg-muted text-muted-foreground border-border text-xs">
+                            <Badge className="bg-white/5 text-white/50 border-white/[0.08] text-xs">
                               Not linked
                             </Badge>
                           )}
@@ -999,16 +999,16 @@ export default function TeamManagement() {
 
           {/* ── User Roles tab ── */}
           <TabsContent value="roles" className="mt-4">
-        <Card className="bg-card border-border">
+        <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Shield className="h-4 w-4 text-primary" />
+              <Shield className="h-4 w-4 text-violet-400" />
               User Roles
             </CardTitle>
           </CardHeader>
           <CardContent>
             {!users || users.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground text-sm">
+              <div className="py-8 text-center text-white/50 text-sm">
                 No users have logged in yet.
               </div>
             ) : (
@@ -1016,21 +1016,21 @@ export default function TeamManagement() {
                 {users.map(u => (
                   <div
                     key={u.id}
-                    className="flex items-center justify-between p-3 rounded-xl bg-secondary border border-border/50 hover:border-border transition-colors"
+                    className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/[0.08]/50 hover:border-white/[0.08] transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-secondary border border-border flex items-center justify-center text-xs font-bold text-muted-foreground">
+                      <div className="h-8 w-8 rounded-full bg-white/5 border border-white/[0.08] flex items-center justify-center text-xs font-bold text-white/50">
                         {(u.name ?? u.email ?? "U").charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <p className="font-medium text-foreground text-sm">{u.name ?? "—"}</p>
-                        <p className="text-xs text-muted-foreground">{u.email ?? u.openId}</p>
+                        <p className="font-medium text-white/90 text-sm">{u.name ?? "—"}</p>
+                        <p className="text-xs text-white/50">{u.email ?? u.openId}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge className={u.role === "admin"
-                        ? "bg-primary/10 text-primary border-primary/20 text-xs"
-                        : "bg-muted text-muted-foreground border-border text-xs"
+                        ? "bg-violet-500/10 text-violet-400 border-violet-500/20 text-xs"
+                        : "bg-white/5 text-white/50 border-white/[0.08] text-xs"
                       }>
                         {u.role === "admin" ? "Manager" : "Coach"}
                       </Badge>
@@ -1080,21 +1080,21 @@ export default function TeamManagement() {
 
         {/* Link account dialog */}
         <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
-          <DialogContent className="bg-card border-border">
+          <DialogContent className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
             <DialogHeader>
               <DialogTitle>Link User Account</DialogTitle>
-              <DialogDescription className="text-muted-foreground">
+              <DialogDescription className="text-white/50">
                 Link a logged-in user account to this coach profile so they can submit check-ins.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-3 py-2">
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Select User Account</Label>
+                <Label className="text-xs text-white/50">Select User Account</Label>
                 <Select
                   value={linkUserId?.toString() ?? ""}
                   onValueChange={v => setLinkUserId(parseInt(v))}
                 >
-                  <SelectTrigger className="bg-input border-border">
+                  <SelectTrigger className="bg-white/5 border-white/[0.08]">
                     <SelectValue placeholder="Choose a user..." />
                   </SelectTrigger>
                   <SelectContent>

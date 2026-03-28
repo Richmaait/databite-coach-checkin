@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Client Check-Ins — Bold Style</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #020617; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-[#020617] text-white min-h-screen">
+
+  <!-- Header -->
+  <div class="max-w-[1440px] mx-auto px-8 pt-8 pb-6">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-6">
+        <h1 class="text-2xl font-bold text-white tracking-tight">Client Check-Ins</h1>
+        <div class="flex items-center gap-2 bg-slate-800 rounded-xl px-4 py-2.5 border border-slate-700">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-sm font-bold shadow-lg shadow-violet-500/20">S</div>
+          <select class="bg-transparent text-white text-sm font-semibold appearance-none cursor-pointer pr-6 outline-none">
+            <option>Steve</option>
+            <option>Sarah</option>
+            <option>Mike</option>
+          </select>
+          <svg class="w-4 h-4 text-slate-400 -ml-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
+        </div>
+        <div class="flex items-center gap-2 bg-slate-800 rounded-xl px-4 py-2.5 border border-slate-700">
+          <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          <span class="text-sm font-semibold text-white">23 Mar – 29 Mar 2026</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-300 transition-colors">← Prev Week</button>
+        <button class="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-300 transition-colors">Next Week →</button>
+      </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="flex items-center gap-4 mt-6">
+      <div class="bg-slate-800 border border-slate-700 rounded-xl px-5 py-3 flex items-center gap-3 flex-1">
+        <div class="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-white">96</div>
+          <div class="text-xs text-slate-400 font-medium">Submitted</div>
+        </div>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl px-5 py-3 flex items-center gap-3 flex-1">
+        <div class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-white">99</div>
+          <div class="text-xs text-slate-400 font-medium">Completed</div>
+        </div>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl px-5 py-3 flex items-center gap-3 flex-1">
+        <div class="w-10 h-10 rounded-lg bg-slate-600/30 flex items-center justify-center">
+          <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-white">24</div>
+          <div class="text-xs text-slate-400 font-medium">Remaining</div>
+        </div>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl px-5 py-3 flex items-center gap-3 flex-1">
+        <div class="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        </div>
+        <div>
+          <div class="text-2xl font-bold text-white">10</div>
+          <div class="text-xs text-slate-400 font-medium">Disengaging</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Day Columns -->
+  <div class="max-w-[1440px] mx-auto px-8 mt-2">
+    <div class="grid grid-cols-5 gap-4">
+
+      <!-- Monday -->
+      <div class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
+        <div class="bg-gradient-to-r from-violet-600 to-violet-500 px-4 py-3 flex items-center justify-between">
+          <span class="text-sm font-bold text-white">Monday</span>
+          <span class="text-xs font-medium text-violet-200 bg-violet-700/50 px-2 py-0.5 rounded-full">23 Mar</span>
+        </div>
+        <div class="p-3 space-y-2">
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-medium text-white">Maria Carlaganis</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white">Annabel Stewart</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-slate-600 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-slate-300">Sarah Russell</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-600/30 text-slate-400">PENDING</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-red-950/30 border-l-[3px] border-red-500 hover:bg-red-950/50 transition-colors">
+            <span class="text-sm font-medium text-red-300">Veronica Hansen</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">MISSED</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white">James Whitfield</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white flex items-center gap-1.5">Natasha Kovac <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 1.944A11.954 11.954 0 012.166 5C2.056 5.649 2 6.319 2 7c0 5.225 3.34 9.67 8 11.317C14.66 16.67 18 12.225 18 7c0-.682-.057-1.351-.166-2.001A11.954 11.954 0 0110 1.944zM13.707 8.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg></span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">EXCUSED</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-slate-600 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-slate-300">Derek Chung</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-600/30 text-slate-400">PENDING</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white">Priya Mehta</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tuesday -->
+      <div class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
+        <div class="bg-gradient-to-r from-sky-600 to-sky-500 px-4 py-3 flex items-center justify-between">
+          <span class="text-sm font-bold text-white">Tuesday</span>
+          <span class="text-xs font-medium text-sky-200 bg-sky-700/50 px-2 py-0.5 rounded-full">24 Mar</span>
+        </div>
+        <div class="p-3 space-y-2">
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white">Rachel Thompson</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-red-950/30 border-l-[3px] border-red-500 hover:bg-red-950/50 transition-colors">
+            <span class="text-sm font-medium text-red-300">Oliver Brennan</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">MISSED</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white">Lucia Fernandez</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-slate-600 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-slate-300">Tom Nakamura</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-600/30 text-slate-400">PENDING</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white">Grace O'Sullivan</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white flex items-center gap-1.5">Ben Kaur <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 1.944A11.954 11.954 0 012.166 5C2.056 5.649 2 6.319 2 7c0 5.225 3.34 9.67 8 11.317C14.66 16.67 18 12.225 18 7c0-.682-.057-1.351-.166-2.001A11.954 11.954 0 0110 1.944zM13.707 8.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg></span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">EXCUSED</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-red-950/30 border-l-[3px] border-red-500 hover:bg-red-950/50 transition-colors">
+            <span class="text-sm font-medium text-red-300">Diana Voss</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">MISSED</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white">Hannah Lee</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Wednesday -->
+      <div class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
+        <div class="bg-gradient-to-r from-teal-600 to-teal-500 px-4 py-3 flex items-center justify-between">
+          <span class="text-sm font-bold text-white">Wednesday</span>
+          <span class="text-xs font-medium text-teal-200 bg-teal-700/50 px-2 py-0.5 rounded-full">25 Mar</span>
+        </div>
+        <div class="p-3 space-y-2">
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white">Marcus Webb</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-slate-600 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-slate-300">Elena Rossi</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-600/30 text-slate-400">PENDING</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white">Jordan Blake</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-red-950/30 border-l-[3px] border-red-500 hover:bg-red-950/50 transition-colors">
+            <span class="text-sm font-medium text-red-300">Sophie Kim</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">MISSED</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white">Ryan Patel</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-slate-600 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-slate-300">Aisha Mohammed</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-600/30 text-slate-400">PENDING</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white flex items-center gap-1.5">Claire Dubois <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 1.944A11.954 11.954 0 012.166 5C2.056 5.649 2 6.319 2 7c0 5.225 3.34 9.67 8 11.317C14.66 16.67 18 12.225 18 7c0-.682-.057-1.351-.166-2.001A11.954 11.954 0 0110 1.944zM13.707 8.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg></span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">EXCUSED</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white">Liam O'Brien</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Thursday -->
+      <div class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
+        <div class="bg-gradient-to-r from-amber-600 to-amber-500 px-4 py-3 flex items-center justify-between">
+          <span class="text-sm font-bold text-white">Thursday</span>
+          <span class="text-xs font-medium text-amber-200 bg-amber-700/50 px-2 py-0.5 rounded-full">26 Mar</span>
+        </div>
+        <div class="p-3 space-y-2">
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white">Nina Schultz</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white">Carlos Mendoza</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-red-950/30 border-l-[3px] border-red-500 hover:bg-red-950/50 transition-colors">
+            <span class="text-sm font-medium text-red-300">Freya Lindgren</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">MISSED</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-slate-600 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-slate-300">Will Archer</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-600/30 text-slate-400">PENDING</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white">Megan Torres</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white flex items-center gap-1.5">Sam Nguyen <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 1.944A11.954 11.954 0 012.166 5C2.056 5.649 2 6.319 2 7c0 5.225 3.34 9.67 8 11.317C14.66 16.67 18 12.225 18 7c0-.682-.057-1.351-.166-2.001A11.954 11.954 0 0110 1.944zM13.707 8.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg></span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">EXCUSED</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-slate-600 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-slate-300">Yuki Tanaka</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-600/30 text-slate-400">PENDING</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white">Alex Rivera</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Friday -->
+      <div class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
+        <div class="bg-gradient-to-r from-purple-600 to-purple-500 px-4 py-3 flex items-center justify-between">
+          <span class="text-sm font-bold text-white">Friday</span>
+          <span class="text-xs font-medium text-purple-200 bg-purple-700/50 px-2 py-0.5 rounded-full">27 Mar</span>
+        </div>
+        <div class="p-3 space-y-2">
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white">Isabelle Moreau</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-slate-600 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-slate-300">David Chen</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-600/30 text-slate-400">PENDING</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-red-950/30 border-l-[3px] border-red-500 hover:bg-red-950/50 transition-colors">
+            <span class="text-sm font-medium text-red-300">Kate Williams</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">MISSED</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white">Leo Bergman</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white">Zara Ahmed</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">DONE</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-slate-600 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-slate-300">Peter Johansson</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-600/30 text-slate-400">PENDING</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-slate-750 border-l-[3px] border-emerald-500 hover:bg-slate-700 transition-colors">
+            <span class="text-sm font-medium text-white flex items-center gap-1.5">Ruby Chang <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 1.944A11.954 11.954 0 012.166 5C2.056 5.649 2 6.319 2 7c0 5.225 3.34 9.67 8 11.317C14.66 16.67 18 12.225 18 7c0-.682-.057-1.351-.166-2.001A11.954 11.954 0 0110 1.944zM13.707 8.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg></span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">EXCUSED</span>
+            </div>
+          </button>
+          <button class="w-full rounded-xl px-3 py-2.5 flex items-center justify-between bg-red-950/30 border-l-[3px] border-red-500 hover:bg-red-950/50 transition-colors">
+            <span class="text-sm font-medium text-red-300">Nadia Petrova</span>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/></svg>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">MISSED</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Bottom Sections -->
+  <div class="max-w-[1440px] mx-auto px-8 mt-8 pb-12">
+    <div class="grid grid-cols-2 gap-6">
+
+      <!-- Missing 2+ Weeks -->
+      <div class="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
+        <div class="bg-gradient-to-r from-red-600 to-red-500 px-5 py-3 flex items-center gap-2">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <h3 class="text-sm font-bold text-white">Clients Missing 2+ Weeks</h3>
+        </div>
+        <div class="p-4 space-y-2">
+          <div class="flex items-center justify-between bg-red-950/20 rounded-xl px-4 py-3 border border-red-500/10">
+            <span class="text-sm font-medium text-red-200">Veronica Hansen</span>
+            <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-red-500/20 text-red-400">3 weeks</span>
+          </div>
+          <div class="flex items-center justify-between bg-red-950/20 rounded-xl px-4 py-3 border border-red-500/10">
+            <span class="text-sm font-medium text-red-200">Diana Voss</span>
+            <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-red-500/20 text-red-400">4 weeks</span>
+          </div>
+          <div class="flex items-center justify-between bg-red-950/20 rounded-xl px-4 py-3 border border-red-500/10">
+            <span class="text-sm font-medium text-red-200">Oliver Brennan</span>
+            <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-red-500/20 text-red-400">2 weeks</span>
+          </div>
+          <div class="flex items-center justify-between bg-red-950/20 rounded-xl px-4 py-3 border border-red-500/10">
+            <span class="text-sm font-medium text-red-200">Sophie Kim</span>
+            <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-red-500/20 text-red-400">2 weeks</span>
+          </div>
+          <div class="flex items-center justify-between bg-red-950/20 rounded-xl px-4 py-3 border border-red-500/10">
+            <span class="text-sm font-medium text-red-200">Kate Williams</span>
+            <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-red-500/20 text-red-400">2 weeks</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pause a Client -->
+      <div class="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
+        <div class="bg-gradient-to-r from-slate-600 to-slate-500 px-5 py-3 flex items-center gap-2">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <h3 class="text-sm font-bold text-white">Pause a Client</h3>
+        </div>
+        <div class="p-4">
+          <p class="text-sm text-slate-400 mb-4">Temporarily remove a client from the active roster. They won't appear in check-in lists until resumed.</p>
+          <div class="flex items-center gap-3 mb-5">
+            <input type="text" placeholder="Search client name..." class="flex-1 bg-slate-900 border border-slate-600 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 transition-colors">
+            <button class="px-5 py-2.5 text-sm font-bold rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/20">Pause</button>
+          </div>
+          <div>
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Currently Paused</span>
+            <div class="mt-2 space-y-2">
+              <div class="flex items-center justify-between bg-slate-900/50 rounded-xl px-4 py-3 border border-slate-700">
+                <span class="text-sm text-slate-400">Emma Blackwell</span>
+                <button class="text-xs font-bold text-indigo-400 hover:text-indigo-300 px-3 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 transition-all">Resume</button>
+              </div>
+              <div class="flex items-center justify-between bg-slate-900/50 rounded-xl px-4 py-3 border border-slate-700">
+                <span class="text-sm text-slate-400">Jake Morrison</span>
+                <button class="text-xs font-bold text-indigo-400 hover:text-indigo-300 px-3 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 transition-all">Resume</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

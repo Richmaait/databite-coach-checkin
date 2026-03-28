@@ -126,13 +126,13 @@ const COACH_COLORS = [
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-card border border-border rounded-xl px-3 py-2 shadow-xl text-xs space-y-1">
-      <p className="text-muted-foreground font-medium mb-1">{label}</p>
+    <div className="bg-zinc-900/95 backdrop-blur-xl border border-white/[0.08] rounded-xl px-3 py-2 shadow-xl text-xs space-y-1">
+      <p className="text-white/50 font-medium mb-1">{label}</p>
       {payload.map((p: any, i: number) => (
         <div key={i} className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full" style={{ background: p.color }} />
-          <span className="text-muted-foreground">{p.name}:</span>
-          <span className="text-foreground font-semibold">{typeof p.value === "number" ? (p.name.includes("%") ? `${p.value.toFixed(1)}%` : p.value) : p.value}</span>
+          <span className="text-white/50">{p.name}:</span>
+          <span className="text-white/90 font-semibold">{typeof p.value === "number" ? (p.name.includes("%") ? `${p.value.toFixed(1)}%` : p.value) : p.value}</span>
         </div>
       ))}
     </div>
@@ -148,8 +148,8 @@ const EngagementTooltip = ({ active, payload, label }: any) => {
   // The data point object is accessible via payload[0].payload
   const dataPoint = payload[0]?.payload ?? {};
   return (
-    <div className="bg-card border border-border rounded-xl px-3 py-2.5 shadow-xl text-xs space-y-1.5 min-w-[160px]">
-      <p className="text-muted-foreground font-medium mb-1.5">{label}</p>
+    <div className="bg-zinc-900/95 backdrop-blur-xl border border-white/[0.08] rounded-xl px-3 py-2.5 shadow-xl text-xs space-y-1.5 min-w-[160px]">
+      <p className="text-white/50 font-medium mb-1.5">{label}</p>
       {visiblePayload.map((p: any, i: number) => {
         const completed = dataPoint[`__completed__${p.name}`] as number | undefined;
         const scheduled = dataPoint[`__scheduled__${p.name}`] as number | undefined;
@@ -157,11 +157,11 @@ const EngagementTooltip = ({ active, payload, label }: any) => {
           <div key={i} className="space-y-0.5">
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ background: p.color }} />
-              <span className="text-foreground font-semibold">{p.name}</span>
-              <span className="text-muted-foreground ml-auto">{typeof p.value === "number" ? `${p.value.toFixed(1)}%` : p.value}</span>
+              <span className="text-white/90 font-semibold">{p.name}</span>
+              <span className="text-white/50 ml-auto">{typeof p.value === "number" ? `${p.value.toFixed(1)}%` : p.value}</span>
             </div>
             {completed !== undefined && scheduled !== undefined && (
-              <p className="text-muted-foreground pl-4">{completed} / {scheduled} clients</p>
+              <p className="text-white/50 pl-4">{completed} / {scheduled} clients</p>
             )}
           </div>
         );
@@ -195,19 +195,19 @@ function SweepReportHistorySection() {
   if (!savedReports || savedReports.length === 0) return null;
 
   return (
-    <Card className="bg-card border-border">
+    <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
-          <Activity className="h-4 w-4 text-muted-foreground" />
-          <CardTitle className="text-sm font-semibold text-foreground">Post-Sweep Report History</CardTitle>
+          <Activity className="h-4 w-4 text-white/50" />
+          <CardTitle className="text-sm font-semibold text-white/90">Post-Sweep Report History</CardTitle>
         </div>
-        <p className="text-xs text-muted-foreground">Saved sweep reports — click any row to open the full report</p>
+        <p className="text-xs text-white/50">Saved sweep reports — click any row to open the full report</p>
       </CardHeader>
       <CardContent className="space-y-5">
         {/* Trend chart: On Track % over time */}
         {chartData.length >= 2 && (
           <div>
-            <p className="text-xs text-muted-foreground mb-3">On Track % trend across sweeps</p>
+            <p className="text-xs text-white/50 mb-3">On Track % trend across sweeps</p>
             <ResponsiveContainer width="100%" height={160}>
               <ComposedChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.3 0 0)" />
@@ -217,13 +217,13 @@ function SweepReportHistorySection() {
                   content={({ active, payload, label }) => {
                     if (!active || !payload?.length) return null;
                     return (
-                      <div className="bg-card border border-border rounded-xl px-3 py-2 shadow-xl text-xs space-y-1">
-                        <p className="text-muted-foreground font-medium mb-1">{label}</p>
+                      <div className="bg-zinc-900/95 backdrop-blur-xl border border-white/[0.08] rounded-xl px-3 py-2 shadow-xl text-xs space-y-1">
+                        <p className="text-white/50 font-medium mb-1">{label}</p>
                         {payload.map((p: any, i: number) => (
                           <div key={i} className="flex items-center gap-2">
                             <div className="h-2 w-2 rounded-full" style={{ background: p.color }} />
-                            <span className="text-muted-foreground">{p.name}:</span>
-                            <span className="text-foreground font-semibold">{typeof p.value === "number" ? `${p.value.toFixed(1)}%` : p.value}</span>
+                            <span className="text-white/50">{p.name}:</span>
+                            <span className="text-white/90 font-semibold">{typeof p.value === "number" ? `${p.value.toFixed(1)}%` : p.value}</span>
                           </div>
                         ))}
                       </div>
@@ -239,7 +239,7 @@ function SweepReportHistorySection() {
         )}
 
         {/* Report list */}
-        <div className="divide-y divide-border rounded-xl overflow-hidden border border-border">
+        <div className="divide-y divide-border rounded-xl overflow-hidden border border-white/[0.08]">
           {savedReports.map((report, i) => {
             const onTrackColor = report.greenPct >= 70 ? "text-emerald-400" : report.greenPct >= 50 ? "text-amber-400" : "text-red-400";
             const engColor = report.overallEngagementPct >= 80 ? "text-emerald-400" : report.overallEngagementPct >= 60 ? "text-amber-400" : "text-red-400";
@@ -247,11 +247,11 @@ function SweepReportHistorySection() {
               <button
                 key={report.id}
                 onClick={() => setLocation(`/sweep-report/${report.id}`)}
-                className="w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-secondary/50 transition-colors"
+                className="w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-white/10 transition-colors"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-medium text-foreground truncate">{report.title}</p>
+                    <p className="text-sm font-medium text-white/90 truncate">{report.title}</p>
                     {report.scopeType === "coach" && report.scopeCoachName && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/15 text-blue-400 border border-blue-500/30 shrink-0">
                         1-on-1: {report.scopeCoachName}
@@ -259,7 +259,7 @@ function SweepReportHistorySection() {
                     )}
                   </div>
                   {report.weekStart && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-xs text-white/50 mt-0.5">
                       Week of {new Date(report.weekStart).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}
                     </p>
                   )}
@@ -267,7 +267,7 @@ function SweepReportHistorySection() {
                 <div className="flex items-center gap-4 shrink-0 text-xs">
                   <div className="text-center">
                     <div className={`font-bold tabular-nums ${onTrackColor}`}>{report.greenPct.toFixed(0)}%</div>
-                    <div className="text-muted-foreground">On Track</div>
+                    <div className="text-white/50">On Track</div>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" /><span className="text-emerald-400 font-semibold">{report.greenCount}</span></span>
@@ -276,12 +276,12 @@ function SweepReportHistorySection() {
                   </div>
                   <div className="text-center hidden sm:block">
                     <div className={`font-bold tabular-nums ${engColor}`}>{report.overallEngagementPct.toFixed(0)}%</div>
-                    <div className="text-muted-foreground">Engagement</div>
+                    <div className="text-white/50">Engagement</div>
                   </div>
-                  <div className="text-muted-foreground hidden md:block">
+                  <div className="text-white/50 hidden md:block">
                     {new Date(report.createdAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", timeZone: "Australia/Melbourne" })}
                   </div>
-                  <svg className="h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="h-4 w-4 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                   </svg>
                 </div>
@@ -719,11 +719,11 @@ export default function Dashboard() {
     return (
       <DashboardLayout>
         <div className="max-w-lg mx-auto py-16 text-center">
-          <div className="h-16 w-16 rounded-2xl bg-muted border border-border flex items-center justify-center mx-auto mb-4">
-            <Activity className="h-8 w-8 text-muted-foreground" />
+          <div className="h-16 w-16 rounded-2xl bg-white/5 border border-white/[0.08] flex items-center justify-center mx-auto mb-4">
+            <Activity className="h-8 w-8 text-white/50" />
           </div>
-          <h2 className="text-xl font-semibold text-foreground mb-2">Manager Access Required</h2>
-          <p className="text-muted-foreground text-sm">The dashboard is only available to managers and founders.</p>
+          <h2 className="text-xl font-semibold text-white/90 mb-2">Manager Access Required</h2>
+          <p className="text-white/50 text-sm">The dashboard is only available to managers and founders.</p>
         </div>
       </DashboardLayout>
     );
@@ -735,9 +735,9 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Manager Dashboard</h1>
-            <p className="text-muted-foreground text-sm mt-0.5 flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 bg-primary/10 text-primary border border-primary/20 rounded-md px-2.5 py-0.5 text-xs font-semibold tracking-wide">
+            <h1 className="text-2xl font-bold tracking-tight text-white/90">Manager Dashboard</h1>
+            <p className="text-white/50 text-sm mt-0.5 flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded-md px-2.5 py-0.5 text-xs font-semibold tracking-wide">
                 {range === "today"
                   ? `Today · ${format(new Date(startDate + "T00:00:00"), "d MMM yyyy")}`
                   : range === "wtd"
@@ -746,7 +746,7 @@ export default function Dashboard() {
               </span>
             </p>
           </div>
-          <div className="flex items-center gap-1 bg-secondary border border-border rounded-xl p-1">
+          <div className="flex items-center gap-1 bg-white/5 border border-white/[0.08] rounded-xl p-1">
             {rangeOptions.map(opt => (
               <button
                 key={opt.value}
@@ -754,8 +754,8 @@ export default function Dashboard() {
                 onClick={() => setRange(opt.value)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   range === opt.value
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                    ? "bg-white/10 text-white shadow-sm"
+                    : "text-white/50 hover:text-white/90 hover:bg-white/10"
                 }`}
               >
                 {opt.label}
@@ -772,8 +772,8 @@ export default function Dashboard() {
                   }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
                     range === "custom"
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                      ? "bg-white/10 text-white shadow-sm"
+                      : "text-white/50 hover:text-white/90 hover:bg-white/10"
                   }`}
                 >
                   <CalendarDays className="h-3 w-3" />
@@ -783,12 +783,12 @@ export default function Dashboard() {
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
-                <div className="p-3 border-b border-border">
-                  <p className="text-xs font-medium text-foreground">
+                <div className="p-3 border-b border-white/[0.08]">
+                  <p className="text-xs font-medium text-white/90">
                     {customStep === "from" ? "Select start date" : "Select end date"}
                   </p>
                   {customFrom && customStep === "to" && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-xs text-white/50 mt-0.5">
                       From: {format(customFrom, "d MMM yyyy")}
                     </p>
                   )}
@@ -820,10 +820,10 @@ export default function Dashboard() {
                   initialFocus
                 />
                 {customStep === "to" && (
-                  <div className="p-2 border-t border-border flex justify-between">
+                  <div className="p-2 border-t border-white/[0.08] flex justify-between">
                     <button
                       type="button"
-                      className="text-xs text-muted-foreground hover:text-foreground"
+                      className="text-xs text-white/50 hover:text-white/90"
                       onClick={() => { setCustomStep("from"); setCustomFrom(null); setCustomTo(null); }}
                     >
                       ← Back
@@ -841,7 +841,7 @@ export default function Dashboard() {
             <AlertTriangle className="h-5 w-5 text-amber-400 mt-0.5 shrink-0" />
             <div>
               <p className="text-sm font-semibold text-amber-300 mb-1">Wellbeing Check Needed Today</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-white/50">
                 {lowMoodAlerts.map(r => {
                   const coach = coaches?.find(c => c.id === r.coachId);
                   const moodLabels = ["", "Not good", "Below average", "Okay", "Good", "Amazing"];
@@ -855,14 +855,14 @@ export default function Dashboard() {
 
         {/* KPI cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-card border-border border-l-[3px] border-l-primary">
+          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl border-l-[3px] border-l-primary">
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Avg Engagement</p>
-                  <p className="text-3xl font-bold text-foreground mt-1">{avgEngagement.toFixed(1)}%</p>
+                  <p className="text-xs text-white/50 uppercase tracking-wider">Avg Engagement</p>
+                  <p className="text-3xl font-bold text-white/90 mt-1">{avgEngagement.toFixed(1)}%</p>
                   <div className="flex items-center gap-1.5 mt-1">
-                    <p className="text-xs text-muted-foreground">{rangeLabels[range]}</p>
+                    <p className="text-xs text-white/50">{rangeLabels[range]}</p>
                     {prevRosterStats && prevEngagement > 0 && (() => {
                       const delta = Math.round((avgEngagement - prevEngagement) * 10) / 10;
                       const isUp = delta >= 0;
@@ -877,21 +877,21 @@ export default function Dashboard() {
                     })()}
                   </div>
                 </div>
-                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <TrendingUp className="h-4 w-4 text-primary" />
+                <div className="h-8 w-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                  <TrendingUp className="h-4 w-4 text-violet-400" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-border border-l-[3px] border-l-blue-500">
+          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl border-l-[3px] border-l-blue-500">
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Check-ins</p>
-                  <p className="text-3xl font-bold text-foreground mt-1">{totalCompleted}</p>
+                  <p className="text-xs text-white/50 uppercase tracking-wider">Check-ins</p>
+                  <p className="text-3xl font-bold text-white/90 mt-1">{totalCompleted}</p>
                   <div className="flex items-center gap-1.5 mt-1">
-                    <p className="text-xs text-muted-foreground">of {totalScheduled} scheduled</p>
+                    <p className="text-xs text-white/50">of {totalScheduled} scheduled</p>
                     {prevRosterStats && prevCompleted > 0 && (() => {
                       const delta = totalCompleted - prevCompleted;
                       const isUp = delta >= 0;
@@ -913,13 +913,13 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-border border-l-[3px] border-l-amber-500">
+          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl border-l-[3px] border-l-amber-500">
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Follow-ups</p>
-                  <p className="text-3xl font-bold text-foreground mt-1">{totalFollowup}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Messages sent</p>
+                  <p className="text-xs text-white/50 uppercase tracking-wider">Follow-ups</p>
+                  <p className="text-3xl font-bold text-white/90 mt-1">{totalFollowup}</p>
+                  <p className="text-xs text-white/50 mt-1">Messages sent</p>
                 </div>
                 <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
                   <MessageSquare className="h-4 w-4 text-amber-400" />
@@ -928,13 +928,13 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-card border-border border-l-[3px] border-l-rose-500">
+          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl border-l-[3px] border-l-rose-500">
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Disengagement</p>
-                  <p className="text-3xl font-bold text-foreground mt-1">{totalDisengagement}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Outreach sent</p>
+                  <p className="text-xs text-white/50 uppercase tracking-wider">Disengagement</p>
+                  <p className="text-3xl font-bold text-white/90 mt-1">{totalDisengagement}</p>
+                  <p className="text-xs text-white/50 mt-1">Outreach sent</p>
                 </div>
                 <div className="h-8 w-8 rounded-lg bg-rose-500/10 flex items-center justify-center">
                   <TrendingDown className="h-4 w-4 text-rose-400" />
@@ -945,12 +945,12 @@ export default function Dashboard() {
         </div>
 
         {/* Combined engagement chart — Scheduled/Completed bars per coach + Engagement % line */}
-        <Card className="bg-card border-border">
+        <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <CardTitle className="text-sm font-semibold text-foreground">Engagement Overview</CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <CardTitle className="text-sm font-semibold text-white/90">Engagement Overview</CardTitle>
+                <p className="text-xs text-white/50 mt-0.5">
                   {chartCoachFilter === "all"
                     ? "Bars = scheduled/completed per coach · Dashed line = team engagement % · Solid lines = per-coach engagement %"
                     : `Scheduled vs Completed · ${coaches?.find(c => c.id === chartCoachFilter)?.name ?? ""} · Engagement % line`}
@@ -960,7 +960,7 @@ export default function Dashboard() {
                 value={chartCoachFilter === "all" ? "all" : String(chartCoachFilter)}
                 onValueChange={v => setChartCoachFilter(v === "all" ? "all" : Number(v))}
               >
-                <SelectTrigger className="h-7 w-36 text-xs bg-background border-border">
+                <SelectTrigger className="h-7 w-36 text-xs bg-white/5 border-white/[0.08]">
                   <SelectValue placeholder="View" />
                 </SelectTrigger>
                 <SelectContent>
@@ -974,7 +974,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {combinedChartData.length === 0 ? (
-              <div className="h-56 flex items-center justify-center text-muted-foreground text-sm">No data for this period</div>
+              <div className="h-56 flex items-center justify-center text-white/50 text-sm">No data for this period</div>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
 <ComposedChart data={combinedChartData} margin={{ top: 24, right: 40, left: -10, bottom: 0 }} barCategoryGap="20%" barGap={6}>
@@ -1005,19 +1005,19 @@ export default function Dashboard() {
                       const color = isTeam ? "oklch(0.88 0.01 240)" : COACH_COLORS[coachIdx % COACH_COLORS.length];
                       const engPct = isTeam ? row.__teamEngPct : row.__coachEngPct;
                       return (
-                        <div className="bg-card border border-border rounded-xl px-3 py-2.5 shadow-xl text-xs space-y-1 min-w-[180px]">
+                        <div className="bg-zinc-900/95 backdrop-blur-xl border border-white/[0.08] rounded-xl px-3 py-2.5 shadow-xl text-xs space-y-1 min-w-[180px]">
                           <p className="font-semibold mb-1" style={{ color }}>{row.coachLabel}</p>
                           <div className="flex justify-between gap-4">
-                            <span className="text-muted-foreground">Scheduled</span>
-                            <span className="font-semibold text-foreground">{row.Scheduled}</span>
+                            <span className="text-white/50">Scheduled</span>
+                            <span className="font-semibold text-white/90">{row.Scheduled}</span>
                           </div>
                           <div className="flex justify-between gap-4">
-                            <span className="text-muted-foreground">Completed</span>
+                            <span className="text-white/50">Completed</span>
                             <span className="font-semibold" style={{ color }}>{row.Completed}</span>
                           </div>
                           {engPct != null && (
-                            <div className="flex justify-between gap-4 border-t border-border pt-1 mt-1">
-                              <span className="text-muted-foreground">Engagement</span>
+                            <div className="flex justify-between gap-4 border-t border-white/[0.08] pt-1 mt-1">
+                              <span className="text-white/50">Engagement</span>
                               <span className="font-semibold" style={{ color: engPct >= 80 ? "oklch(0.72 0.17 145)" : engPct >= 60 ? "oklch(0.85 0.12 85)" : "oklch(0.65 0.22 25)" }}>
                                 {(engPct as number).toFixed(1)}%
                               </span>
@@ -1113,17 +1113,17 @@ export default function Dashboard() {
         </Card>
 
         {/* Mood vs Engagement overlay chart */}
-        <Card className="bg-card border-border">
+        <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-foreground">Mood vs Engagement (Lagged)</CardTitle>
-            <p className="text-xs text-muted-foreground">
+            <CardTitle className="text-sm font-semibold text-white/90">Mood vs Engagement (Lagged)</CardTitle>
+            <p className="text-xs text-white/50">
               Prior period's average mood score (scaled to 100) compared against current period's average engagement % per coach.
               Low mood in the prior period may predict lower engagement in the current period.
             </p>
           </CardHeader>
           <CardContent>
             {moodEngagementData.length === 0 ? (
-              <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
+              <div className="h-48 flex items-center justify-center text-white/50 text-sm">
                 No mood data yet — mood scores will appear once coaches start submitting morning reviews
               </div>
             ) : (
@@ -1143,21 +1143,21 @@ export default function Dashboard() {
         </Card>
 
         {/* Engagement % Over Time */}
-        <Card className="bg-card border-border">
+        <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
-                <CardTitle className="text-sm font-semibold text-foreground">Engagement % Over Time</CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">Weekly engagement rate — {rangeLabels[range]}</p>
+                <CardTitle className="text-sm font-semibold text-white/90">Engagement % Over Time</CardTitle>
+                <p className="text-xs text-white/50 mt-0.5">Weekly engagement rate — {rangeLabels[range]}</p>
               </div>
-              <div className="flex items-center gap-1 bg-secondary border border-border rounded-lg p-0.5">
+              <div className="flex items-center gap-1 bg-white/5 border border-white/[0.08] rounded-lg p-0.5">
                 <button
                   type="button"
                   onClick={() => setEngagementTrendView("team")}
                   className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
                     engagementTrendView === "team"
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "bg-white/10 text-white shadow-sm"
+                      : "text-white/50 hover:text-white/90"
                   }`}
                 >
                   Team
@@ -1167,8 +1167,8 @@ export default function Dashboard() {
                   onClick={() => setEngagementTrendView("individual")}
                   className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
                     engagementTrendView === "individual"
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "bg-white/10 text-white shadow-sm"
+                      : "text-white/50 hover:text-white/90"
                   }`}
                 >
                   Per Coach
@@ -1178,7 +1178,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {engagementTrendData.length === 0 ? (
-              <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">
+              <div className="h-48 flex items-center justify-center text-white/50 text-sm">
                 No engagement data for this period
               </div>
             ) : (
@@ -1195,28 +1195,28 @@ export default function Dashboard() {
                       const completed = dp.__completed as number | undefined;
                       const missed = dp.__missed as number | undefined;
                       return (
-                        <div className="bg-card border border-border rounded-xl px-3 py-2.5 shadow-xl text-xs space-y-1 min-w-[160px]">
-                          <p className="text-muted-foreground font-medium mb-1">{label}</p>
+                        <div className="bg-zinc-900/95 backdrop-blur-xl border border-white/[0.08] rounded-xl px-3 py-2.5 shadow-xl text-xs space-y-1 min-w-[160px]">
+                          <p className="text-white/50 font-medium mb-1">{label}</p>
                           {payload.map((p: any, i: number) => p.value != null && (
                             <div key={i} className="flex items-center gap-2">
                               <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ background: p.color }} />
-                              <span className="text-muted-foreground">{p.name}:</span>
-                              <span className="font-semibold text-foreground ml-auto">{(p.value as number).toFixed(1)}%</span>
+                              <span className="text-white/50">{p.name}:</span>
+                              <span className="font-semibold text-white/90 ml-auto">{(p.value as number).toFixed(1)}%</span>
                             </div>
                           ))}
                           {scheduled !== undefined && completed !== undefined && missed !== undefined && (
-                            <div className="border-t border-border mt-1.5 pt-1.5 space-y-0.5">
+                            <div className="border-t border-white/[0.08] mt-1.5 pt-1.5 space-y-0.5">
                               <div className="flex justify-between gap-3">
-                                <span className="text-muted-foreground">Completed</span>
+                                <span className="text-white/50">Completed</span>
                                 <span className="font-semibold text-emerald-400">{completed}</span>
                               </div>
                               <div className="flex justify-between gap-3">
-                                <span className="text-muted-foreground">Missed</span>
+                                <span className="text-white/50">Missed</span>
                                 <span className="font-semibold text-rose-400">{missed}</span>
                               </div>
                               <div className="flex justify-between gap-3">
-                                <span className="text-muted-foreground">Total</span>
-                                <span className="font-semibold text-foreground">{scheduled}</span>
+                                <span className="text-white/50">Total</span>
+                                <span className="font-semibold text-white/90">{scheduled}</span>
                               </div>
                             </div>
                           )}
@@ -1262,35 +1262,35 @@ export default function Dashboard() {
         </Card>
 
         {/* Per-coach detail table */}
-        <Card className="bg-card border-border">
+        <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-foreground">Coach Performance Breakdown</CardTitle>
-            <p className="text-xs text-muted-foreground">{rangeLabels[range]} — all metrics per coach</p>
+            <CardTitle className="text-sm font-semibold text-white/90">Coach Performance Breakdown</CardTitle>
+            <p className="text-xs text-white/50">{rangeLabels[range]} — all metrics per coach</p>
           </CardHeader>
           <CardContent>
             {coachDetail.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground text-sm">No coaches found</div>
+              <div className="py-8 text-center text-white/50 text-sm">No coaches found</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-2 px-3 text-xs text-muted-foreground font-medium">Coach</th>
-                      <th className="text-right py-2 px-3 text-xs text-muted-foreground font-medium">Scheduled</th>
-                      <th className="text-right py-2 px-3 text-xs text-muted-foreground font-medium">Completed</th>
-                      <th className="text-right py-2 px-3 text-xs text-muted-foreground font-medium">Missed</th>
-                      <th className="text-right py-2 px-3 text-xs text-muted-foreground font-medium">Avg Eng.</th>
-                      <th className="text-right py-2 px-3 text-xs text-muted-foreground font-medium">Best Wk</th>
-                      <th className="text-right py-2 px-3 text-xs text-muted-foreground font-medium">Worst Wk</th>
-                      <th className="text-right py-2 px-3 text-xs text-muted-foreground font-medium">Std Dev</th>
-                      <th className="text-right py-2 px-3 text-xs text-muted-foreground font-medium">Streak</th>
-                      <th className="text-right py-2 px-3 text-xs text-muted-foreground font-medium">Follow-ups</th>
-                      <th className="text-right py-2 px-3 text-xs text-muted-foreground font-medium">Disengagement</th>
+                    <tr className="border-b border-white/[0.08]">
+                      <th className="text-left py-2 px-3 text-xs text-white/50 font-medium">Coach</th>
+                      <th className="text-right py-2 px-3 text-xs text-white/50 font-medium">Scheduled</th>
+                      <th className="text-right py-2 px-3 text-xs text-white/50 font-medium">Completed</th>
+                      <th className="text-right py-2 px-3 text-xs text-white/50 font-medium">Missed</th>
+                      <th className="text-right py-2 px-3 text-xs text-white/50 font-medium">Avg Eng.</th>
+                      <th className="text-right py-2 px-3 text-xs text-white/50 font-medium">Best Wk</th>
+                      <th className="text-right py-2 px-3 text-xs text-white/50 font-medium">Worst Wk</th>
+                      <th className="text-right py-2 px-3 text-xs text-white/50 font-medium">Std Dev</th>
+                      <th className="text-right py-2 px-3 text-xs text-white/50 font-medium">Streak</th>
+                      <th className="text-right py-2 px-3 text-xs text-white/50 font-medium">Follow-ups</th>
+                      <th className="text-right py-2 px-3 text-xs text-white/50 font-medium">Disengagement</th>
                     </tr>
                   </thead>
                   <tbody>
                     {coachDetail.map((row, i) => (
-                      <tr key={row.coach.id} className="border-b border-border/50 hover:bg-secondary/50 transition-colors">
+                      <tr key={row.coach.id} className="border-b border-white/[0.08]/50 hover:bg-white/10 transition-colors">
                         <td className="py-3 px-3">
                           <div className="flex items-center gap-2">
                             <div
@@ -1299,24 +1299,24 @@ export default function Dashboard() {
                             >
                               {row.coach.name.charAt(0).toUpperCase()}
                             </div>
-                            <span className="font-medium text-foreground">{row.coach.name}</span>
+                            <span className="font-medium text-white/90">{row.coach.name}</span>
                           </div>
                         </td>
-                        <td className="py-3 px-3 text-right text-foreground">{row.scheduled}</td>
-                        <td className="py-3 px-3 text-right text-foreground">{row.completed}</td>
+                        <td className="py-3 px-3 text-right text-white/90">{row.scheduled}</td>
+                        <td className="py-3 px-3 text-right text-white/90">{row.completed}</td>
                         <td className="py-3 px-3 text-right text-rose-400">{row.missed}</td>
                         <td className="py-3 px-3 text-right">{getEngagementBadge(row.avgEngagement)}</td>
                         <td className="py-3 px-3 text-right">
-                          {row.bestWeek !== null ? <span className="text-emerald-400 font-medium">{row.bestWeek}%</span> : <span className="text-muted-foreground">—</span>}
+                          {row.bestWeek !== null ? <span className="text-emerald-400 font-medium">{row.bestWeek}%</span> : <span className="text-white/50">—</span>}
                         </td>
                         <td className="py-3 px-3 text-right">
-                          {row.worstWeek !== null ? <span className="text-rose-400 font-medium">{row.worstWeek}%</span> : <span className="text-muted-foreground">—</span>}
+                          {row.worstWeek !== null ? <span className="text-rose-400 font-medium">{row.worstWeek}%</span> : <span className="text-white/50">—</span>}
                         </td>
                         <td className="py-3 px-3 text-right">
-                          {row.stdDev !== null ? <span className="text-muted-foreground">±{row.stdDev}%</span> : <span className="text-muted-foreground">—</span>}
+                          {row.stdDev !== null ? <span className="text-white/50">±{row.stdDev}%</span> : <span className="text-white/50">—</span>}
                         </td>
                         <td className="py-3 px-3 text-right">
-                          <span className={`font-medium ${row.streak >= 5 ? "text-emerald-400" : row.streak >= 2 ? "text-amber-400" : "text-muted-foreground"}`}>
+                          <span className={`font-medium ${row.streak >= 5 ? "text-emerald-400" : row.streak >= 2 ? "text-amber-400" : "text-white/50"}`}>
                             {row.streak > 0 ? `🔥 ${row.streak}d` : "—"}
                           </span>
                         </td>
@@ -1333,23 +1333,23 @@ export default function Dashboard() {
 
         {/* Today's Plans */}
         {isAdmin && (
-          <Card className="bg-card border-border">
+          <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-primary" />
-                <CardTitle className="text-sm font-semibold text-foreground">Today's Plans</CardTitle>
+                <Activity className="h-4 w-4 text-violet-400" />
+                <CardTitle className="text-sm font-semibold text-white/90">Today's Plans</CardTitle>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-white/50">
                 {format(melbourneNow(), "EEEE d MMMM")} — working hours and action plans submitted this morning
               </p>
             </CardHeader>
             <CardContent>
               {!todayMorning || todayMorning.length === 0 ? (
-                <div className="py-6 text-center text-muted-foreground text-sm">No morning submissions yet today</div>
+                <div className="py-6 text-center text-white/50 text-sm">No morning submissions yet today</div>
               ) : (
                 <div className="space-y-3">
                   {todayMorning.map((row, i) => (
-                    <div key={row.coachId} className="rounded-xl bg-secondary/40 border border-border/60 px-4 py-3 space-y-2">
+                    <div key={row.coachId} className="rounded-xl bg-white/5/40 border border-white/[0.08]/60 px-4 py-3 space-y-2">
                       <div className="flex items-center gap-2">
                         <div
                           className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold text-background shrink-0"
@@ -1357,7 +1357,7 @@ export default function Dashboard() {
                         >
                           {row.coachName.charAt(0).toUpperCase()}
                         </div>
-                        <span className="text-sm font-semibold text-foreground">{row.coachName}</span>
+                        <span className="text-sm font-semibold text-white/90">{row.coachName}</span>
                         {row.submitted ? (
                           <>
                             {row.moodScore && (
@@ -1366,20 +1366,20 @@ export default function Dashboard() {
                               </span>
                             )}
                             {row.workingHours && (
-                              <span className="ml-auto text-xs font-medium text-primary bg-primary/10 border border-primary/20 rounded-full px-2.5 py-0.5">
+                              <span className="ml-auto text-xs font-medium text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded-full px-2.5 py-0.5">
                                 {row.workingHours}
                               </span>
                             )}
                           </>
                         ) : (
-                          <span className="ml-auto text-[11px] text-muted-foreground italic">Not submitted yet</span>
+                          <span className="ml-auto text-[11px] text-white/50 italic">Not submitted yet</span>
                         )}
                       </div>
                       {row.actionPlan && (
-                        <p className="text-xs text-muted-foreground leading-relaxed pl-9 whitespace-pre-wrap">{row.actionPlan}</p>
+                        <p className="text-xs text-white/50 leading-relaxed pl-9 whitespace-pre-wrap">{row.actionPlan}</p>
                       )}
                       {row.notes && (
-                        <p className="text-[11px] text-muted-foreground/70 leading-relaxed pl-9 italic">{row.notes}</p>
+                        <p className="text-[11px] text-white/50/70 leading-relaxed pl-9 italic">{row.notes}</p>
                       )}
                     </div>
                   ))}
@@ -1409,31 +1409,31 @@ export default function Dashboard() {
                       { label: "Warning", bg: "bg-yellow-950/30", border: "border-yellow-700/40", text: "text-yellow-300", dot: "bg-yellow-500" };
 
           return (
-            <Card className="bg-card border-border">
+            <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4 text-orange-400" />
-                    <CardTitle className="text-sm font-semibold text-foreground">Disengagement Tracking</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-white/90">Disengagement Tracking</CardTitle>
                   </div>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-white/50">
                     {allDisengagedClients.length} client{allDisengagedClients.length !== 1 ? "s" : ""} flagged
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-xs text-white/50 mt-0.5">
                   Consecutive missed check-ins per coach — streak resets when marked complete
                 </p>
               </CardHeader>
               <CardContent className="pt-0">
                 {/* Legend */}
-                <div className="flex items-center gap-4 mb-4 pb-3 border-b border-border/50">
-                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-4 mb-4 pb-3 border-b border-white/[0.08]/50">
+                  <div className="flex items-center gap-1.5 text-[11px] text-white/50">
                     <span className="inline-block w-2 h-2 rounded-full bg-red-500" /> Critical (3+ misses)
                   </div>
-                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <div className="flex items-center gap-1.5 text-[11px] text-white/50">
                     <span className="inline-block w-2 h-2 rounded-full bg-orange-500" /> Alert (2 misses)
                   </div>
-                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <div className="flex items-center gap-1.5 text-[11px] text-white/50">
                     <span className="inline-block w-2 h-2 rounded-full bg-yellow-500" /> Warning (1 miss)
                   </div>
                 </div>
@@ -1451,11 +1451,11 @@ export default function Dashboard() {
                     return (
                       <div key={coachName} className="flex flex-col gap-1.5">
                         {/* Coach header with roster stats */}
-                        <div className="pb-2 border-b border-border/40">
+                        <div className="pb-2 border-b border-white/[0.08]/40">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-foreground">{coachName}</span>
+                            <span className="text-xs font-semibold text-white/90">{coachName}</span>
                             {clients.length > 0 ? (
-                              <span className="text-[10px] text-muted-foreground">
+                              <span className="text-[10px] text-white/50">
                                 {clients.length}{rosterSize > 0 ? `/${rosterSize}` : ""} flagged
                               </span>
                             ) : (
@@ -1484,7 +1484,7 @@ export default function Dashboard() {
                         </div>
                         {/* Client rows grouped by tier */}
                         {clients.length === 0 ? (
-                          <p className="text-[11px] text-muted-foreground/50 italic py-1">No disengaged clients</p>
+                          <p className="text-[11px] text-white/50/50 italic py-1">No disengaged clients</p>
                         ) : (
                           <div className="flex flex-col gap-0">
                             {/* Critical tier */}
@@ -1505,7 +1505,7 @@ export default function Dashboard() {
                                           <span className={`font-medium text-[11px] truncate ${t.text}`}>{c.clientName}</span>
                                         </div>
                                         <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                                          <span className="text-[10px] text-muted-foreground capitalize">{c.dayOfWeek}</span>
+                                          <span className="text-[10px] text-white/50 capitalize">{c.dayOfWeek}</span>
                                           <span className={`text-[11px] font-bold tabular-nums ${t.text}`}>{c.consecutiveMissed}w</span>
                                         </div>
                                       </div>
@@ -1530,7 +1530,7 @@ export default function Dashboard() {
                                         className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 border ${t.bg} ${t.border}`}>
                                         <span className={`font-medium text-[11px] truncate ${t.text}`}>{c.clientName}</span>
                                         <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                                          <span className="text-[10px] text-muted-foreground capitalize">{c.dayOfWeek}</span>
+                                          <span className="text-[10px] text-white/50 capitalize">{c.dayOfWeek}</span>
                                           <span className={`text-[11px] font-bold tabular-nums ${t.text}`}>{c.consecutiveMissed}w</span>
                                         </div>
                                       </div>
@@ -1555,7 +1555,7 @@ export default function Dashboard() {
                                         className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 border ${t.bg} ${t.border}`}>
                                         <span className={`font-medium text-[11px] truncate ${t.text}`}>{c.clientName}</span>
                                         <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                                          <span className="text-[10px] text-muted-foreground capitalize">{c.dayOfWeek}</span>
+                                          <span className="text-[10px] text-white/50 capitalize">{c.dayOfWeek}</span>
                                           <span className={`text-[11px] font-bold tabular-nums ${t.text}`}>{c.consecutiveMissed}w</span>
                                         </div>
                                       </div>
@@ -1586,29 +1586,29 @@ export default function Dashboard() {
           ])).sort().reverse();
           if (allDates.length === 0) return null;
           return (
-            <Card className="bg-card border-border">
+            <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 text-blue-400" />
-                  <CardTitle className="text-sm font-semibold text-foreground">Follow-ups &amp; Outreach by Day</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-white/90">Follow-ups &amp; Outreach by Day</CardTitle>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-xs text-white/50 mt-0.5">
                   Check-in 2 (follow-up messages) and Check-in 3 (disengagement outreach) sent per coach per day
                 </p>
               </CardHeader>
               <CardContent className="pt-0 overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b border-border/50">
-                      <th className="text-left py-2 px-3 text-muted-foreground font-medium">Date</th>
+                    <tr className="border-b border-white/[0.08]/50">
+                      <th className="text-left py-2 px-3 text-white/50 font-medium">Date</th>
                       {coaches.map(coach => (
-                        <th key={coach.id} className="text-center py-2 px-3 text-muted-foreground font-medium" colSpan={2}>
+                        <th key={coach.id} className="text-center py-2 px-3 text-white/50 font-medium" colSpan={2}>
                           {coach.name}
                         </th>
                       ))}
-                      <th className="text-center py-2 px-3 text-muted-foreground font-medium" colSpan={2}>Total</th>
+                      <th className="text-center py-2 px-3 text-white/50 font-medium" colSpan={2}>Total</th>
                     </tr>
-                    <tr className="border-b border-border/30">
+                    <tr className="border-b border-white/[0.08]/30">
                       <th className="py-1 px-3" />
                       {coaches.map(coach => (
                         <Fragment key={coach.id}>
@@ -1624,8 +1624,8 @@ export default function Dashboard() {
                     {allDates.map(date => {
                       let totalFu = 0, totalDis = 0;
                       return (
-                        <tr key={date} className="border-b border-border/20 hover:bg-muted/20">
-                          <td className="py-2 px-3 text-muted-foreground">
+                        <tr key={date} className="border-b border-white/[0.08]/20 hover:bg-white/5/20">
+                          <td className="py-2 px-3 text-white/50">
                             {new Date(date + 'T12:00:00').toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })}
                           </td>
                           {coaches.map(coach => {
@@ -1636,19 +1636,19 @@ export default function Dashboard() {
                             totalFu += fu; totalDis += dis;
                             return (
                               <Fragment key={coach.id}>
-                                <td className={`py-2 px-2 text-center ${fu > 0 ? 'text-blue-300 font-medium' : 'text-muted-foreground/40'}`}>{fu > 0 ? fu : '—'}</td>
-                                <td className={`py-2 px-2 text-center ${dis > 0 ? 'text-rose-300 font-medium' : 'text-muted-foreground/40'}`}>{dis > 0 ? dis : '—'}</td>
+                                <td className={`py-2 px-2 text-center ${fu > 0 ? 'text-blue-300 font-medium' : 'text-white/50/40'}`}>{fu > 0 ? fu : '—'}</td>
+                                <td className={`py-2 px-2 text-center ${dis > 0 ? 'text-rose-300 font-medium' : 'text-white/50/40'}`}>{dis > 0 ? dis : '—'}</td>
                               </Fragment>
                             );
                           })}
-                          <td className={`py-2 px-2 text-center font-semibold ${totalFu > 0 ? 'text-blue-300' : 'text-muted-foreground/40'}`}>{totalFu > 0 ? totalFu : '—'}</td>
-                          <td className={`py-2 px-2 text-center font-semibold ${totalDis > 0 ? 'text-rose-300' : 'text-muted-foreground/40'}`}>{totalDis > 0 ? totalDis : '—'}</td>
+                          <td className={`py-2 px-2 text-center font-semibold ${totalFu > 0 ? 'text-blue-300' : 'text-white/50/40'}`}>{totalFu > 0 ? totalFu : '—'}</td>
+                          <td className={`py-2 px-2 text-center font-semibold ${totalDis > 0 ? 'text-rose-300' : 'text-white/50/40'}`}>{totalDis > 0 ? totalDis : '—'}</td>
                         </tr>
                       );
                     })}
                     {/* Totals row */}
-                    <tr className="border-t border-border/50 bg-muted/10">
-                      <td className="py-2 px-3 text-muted-foreground font-medium">Total</td>
+                    <tr className="border-t border-white/[0.08]/50 bg-white/5/10">
+                      <td className="py-2 px-3 text-white/50 font-medium">Total</td>
                       {coaches.map(coach => {
                         const fu = followupRecs.filter(r => r.coachId === coach.id).reduce((s, r) => s + (r.followupMessagesSent ?? 0), 0);
                         const dis = disengagementRecs.filter(r => r.coachId === coach.id).reduce((s, r) => s + (r.disengagementMessagesSent ?? 0), 0);
@@ -1681,25 +1681,25 @@ export default function Dashboard() {
             <>
               {/* Pending approvals */}
               {pending.length > 0 && (
-                <Card className="bg-card border-border border-l-[3px] border-l-blue-500">
+                <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl border-l-[3px] border-l-blue-500">
                   <CardHeader className="pb-2">
                     <div className="flex items-center gap-2">
                       <ShieldAlert className="h-4 w-4 text-blue-500" />
-                      <CardTitle className="text-sm font-semibold text-foreground">Pending Excuse Approvals</CardTitle>
+                      <CardTitle className="text-sm font-semibold text-white/90">Pending Excuse Approvals</CardTitle>
                       <span className="ml-auto text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{pending.length}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">Coaches have flagged clients as excused — approve or reject each request below</p>
+                    <p className="text-xs text-white/50">Coaches have flagged clients as excused — approve or reject each request below</p>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
                       {pending.map((e: any) => (
-                        <div key={e.id} className="flex items-start justify-between gap-3 rounded-xl bg-muted/50 border px-3 py-2.5">
+                        <div key={e.id} className="flex items-start justify-between gap-3 rounded-xl bg-white/5/50 border px-3 py-2.5">
                           <div className="flex items-start gap-2 min-w-0">
                             <Clock3 className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />
                             <div className="min-w-0">
-                              <p className="text-xs font-semibold text-foreground">{e.clientName} <span className="font-normal text-muted-foreground capitalize">({e.dayOfWeek})</span></p>
-                              <p className="text-[11px] text-muted-foreground">Coach: {e.coachName} &middot; Week of {formatDateAU(e.weekStart)}</p>
-                              <p className="text-[11px] text-foreground/80 mt-0.5 italic">"{e.reason}"</p>
+                              <p className="text-xs font-semibold text-white/90">{e.clientName} <span className="font-normal text-white/50 capitalize">({e.dayOfWeek})</span></p>
+                              <p className="text-[11px] text-white/50">Coach: {e.coachName} &middot; Week of {formatDateAU(e.weekStart)}</p>
+                              <p className="text-[11px] text-white/90/80 mt-0.5 italic">"{e.reason}"</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
@@ -1726,18 +1726,18 @@ export default function Dashboard() {
               )}
               {/* Per-coach excuse counts this week */}
               {counts.length > 0 && (
-                <Card className="bg-card border-border">
+                <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
                   <CardHeader className="pb-2">
                     <div className="flex items-center gap-2">
-                      <ShieldAlert className="h-4 w-4 text-muted-foreground" />
-                      <CardTitle className="text-sm font-semibold text-foreground">Valid Excuses — Week of {formatDateAU(disengagementViewWeek)}</CardTitle>
+                      <ShieldAlert className="h-4 w-4 text-white/50" />
+                      <CardTitle className="text-sm font-semibold text-white/90">Valid Excuses — Week of {formatDateAU(disengagementViewWeek)}</CardTitle>
                     </div>
-                    <p className="text-xs text-muted-foreground">Number of valid excuses submitted per coach for the selected week</p>
+                    <p className="text-xs text-white/50">Number of valid excuses submitted per coach for the selected week</p>
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-wrap gap-3">
                       {counts.map((c: any) => (
-                        <div key={c.coachName} className="flex items-center gap-2 rounded-xl bg-muted/50 border px-3 py-2">
+                        <div key={c.coachName} className="flex items-center gap-2 rounded-xl bg-white/5/50 border px-3 py-2">
                           <div
                             className="h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold text-background shrink-0"
                             style={{ background: COACH_COLORS[(coaches?.findIndex(co => co.name === c.coachName) ?? 0) % COACH_COLORS.length] }}
@@ -1745,8 +1745,8 @@ export default function Dashboard() {
                             {c.coachName.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <p className="text-xs font-semibold text-foreground">{c.coachName}</p>
-                            <p className="text-[11px] text-muted-foreground">
+                            <p className="text-xs font-semibold text-white/90">{c.coachName}</p>
+                            <p className="text-[11px] text-white/50">
                               {c.total} excuse{c.total !== 1 ? "s" : ""}
                               {c.pending > 0 && <span className="text-blue-500 ml-1">({c.pending} pending)</span>}
                               {c.approved > 0 && <span className="text-green-600 ml-1">({c.approved} approved)</span>}
@@ -1766,17 +1766,17 @@ export default function Dashboard() {
         <SweepReportHistorySection />
 
         {/* Recent Notes feed */}
-        <Card className="bg-card border-border">
+        <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-semibold text-foreground">Recent Coach Notes</CardTitle>
+              <FileText className="h-4 w-4 text-white/50" />
+              <CardTitle className="text-sm font-semibold text-white/90">Recent Coach Notes</CardTitle>
             </div>
-            <p className="text-xs text-muted-foreground">Latest notes submitted by coaches across all check-in types</p>
+            <p className="text-xs text-white/50">Latest notes submitted by coaches across all check-in types</p>
           </CardHeader>
           <CardContent>
             {!recentNotes || recentNotes.length === 0 ? (
-              <div className="py-6 text-center text-muted-foreground text-sm">No notes submitted yet</div>
+              <div className="py-6 text-center text-white/50 text-sm">No notes submitted yet</div>
             ) : (
               <div className="space-y-2">
                 {recentNotes.map((note, i) => {
@@ -1785,7 +1785,7 @@ export default function Dashboard() {
                   const typeColors: Record<string, string> = { morning: "text-amber-400", followup: "text-blue-400", disengagement: "text-rose-400" };
                   const noteType = (note as any).submissionType as string ?? "morning";
                   return (
-                    <div key={i} className="flex items-start gap-3 rounded-xl bg-secondary/50 px-3 py-2.5">
+                    <div key={i} className="flex items-start gap-3 rounded-xl bg-white/5/50 px-3 py-2.5">
                       <div
                         className="h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold text-background shrink-0 mt-0.5"
                         style={{ background: COACH_COLORS[(coaches?.findIndex(c => c.id === note.coachId) ?? 0) % COACH_COLORS.length] }}
@@ -1794,15 +1794,15 @@ export default function Dashboard() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-xs font-medium text-foreground">{coach?.name ?? "Unknown"}</span>
-                          <span className={`text-[10px] font-medium ${typeColors[noteType] ?? "text-muted-foreground"}`}>
+                          <span className="text-xs font-medium text-white/90">{coach?.name ?? "Unknown"}</span>
+                          <span className={`text-[10px] font-medium ${typeColors[noteType] ?? "text-white/50"}`}>
                             {typeLabels[noteType] ?? noteType}
                           </span>
-                          <span className="text-[10px] text-muted-foreground ml-auto">
+                          <span className="text-[10px] text-white/50 ml-auto">
                             {new Date(note.createdAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                           </span>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">{note.notes}</p>
+                        <p className="text-xs text-white/50 leading-relaxed">{note.notes}</p>
                       </div>
                     </div>
                   );

@@ -103,17 +103,17 @@ export default function WeeklySummary() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2.5 mb-1">
-              <FileBarChart2 className="h-5 w-5 text-primary" />
-              <h1 className="text-xl font-semibold text-foreground">Weekly Summary</h1>
+              <FileBarChart2 className="h-5 w-5 text-violet-400" />
+              <h1 className="text-xl font-semibold text-white/90">Weekly Summary</h1>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-white/50">
               Key metrics for the selected week — ready to share with the team.
             </p>
           </div>
           <div className="flex items-center gap-3">
             <div className="w-full sm:w-72">
               <Select value={selectedWeek} onValueChange={setSelectedWeek}>
-                <SelectTrigger className="h-9 text-sm bg-card border-border">
+                <SelectTrigger className="h-9 text-sm bg-white/5 border border-white/10 rounded-xl text-white/80">
                   <SelectValue placeholder="Select week…" />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
@@ -128,7 +128,7 @@ export default function WeeklySummary() {
                 onClick={handleExportPDF}
                 disabled={exporting}
                 size="sm"
-                className="shrink-0 gap-2"
+                className="shrink-0 gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white rounded-xl"
               >
                 {exporting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -142,14 +142,14 @@ export default function WeeklySummary() {
         </div>
 
         {isLoading && (
-          <div className="py-24 text-center text-muted-foreground text-sm">
+          <div className="py-24 text-center text-white/50 text-sm">
             <Loader2 className="mx-auto mb-3 h-8 w-8 opacity-30 animate-spin" />
             Loading summary…
           </div>
         )}
 
         {error && (
-          <div className="py-16 text-center text-destructive text-sm">
+          <div className="py-16 text-center text-red-400 text-sm">
             <AlertTriangle className="mx-auto mb-2 h-6 w-6" />
             Failed to load summary. Please try again.
           </div>
@@ -159,7 +159,7 @@ export default function WeeklySummary() {
           /* ── Printable content area — dark theme ── */
           <div
             ref={printRef}
-            className="space-y-6 rounded-xl p-6"
+            className="space-y-6 rounded-2xl p-6 bg-white/5 backdrop-blur-xl border border-white/10"
             style={{ background: "#0f172a", color: "#e2e8f0" }}
           >
 

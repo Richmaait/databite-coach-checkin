@@ -767,24 +767,8 @@ const clientCheckinsRouter = t.router({
             and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, weekStart)),
           );
 
-        let completed = completions.filter((c) => c.completedAt != null).length;
+        const completed = completions.filter((c) => c.completedAt != null).length;
         const clientSubmittedCount = completions.filter((c) => c.clientSubmitted === 1).length;
-
-        // Fallback to weekly snapshots if no client_check_ins data
-        if (completed === 0) {
-          const [snapshot] = await db
-            .select()
-            .from(rosterWeeklySnapshots)
-            .where(
-              and(eq(rosterWeeklySnapshots.coachId, coach.id), eq(rosterWeeklySnapshots.weekStart, weekStart)),
-            )
-            .limit(1);
-          if (snapshot?.snapshotJson) {
-            const snap = typeof snapshot.snapshotJson === "string" ? JSON.parse(snapshot.snapshotJson) : snapshot.snapshotJson;
-            completed = snap.completed ?? 0;
-            if (snap.scheduled) scheduled = snap.scheduled;
-          }
-        }
 
         // Get approved excuses for this coach/week
         const excuses = await db

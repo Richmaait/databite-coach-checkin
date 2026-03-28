@@ -134,17 +134,11 @@ function isClientOverdue(
 ): boolean {
   if (isDone) return false;
   const dateStr = addDays(weekStart, dayIndex(day));
-  // Melbourne midday = ~01:00 UTC (AEDT) or ~02:00 UTC (AEST)
-  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Australia/Melbourne" }));
-  const melbNow = new Date(
-    now.toLocaleString("en-US", { timeZone: "Australia/Melbourne" }),
-  );
-  const dayDate = new Date(dateStr + "T12:00:00");
-  // Compare using Melbourne local time
+  // Client turns red only after midnight Melbourne time on their allocated day
+  const melbNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Australia/Melbourne" }));
   const melbDateStr = `${melbNow.getFullYear()}-${String(melbNow.getMonth() + 1).padStart(2, "0")}-${String(melbNow.getDate()).padStart(2, "0")}`;
-  if (melbDateStr < dateStr) return false; // day hasn't arrived yet
-  if (melbDateStr > dateStr) return true; // day has passed entirely
-  return melbNow.getHours() >= 12;
+  // Only overdue if the day has fully passed (it's now the next day or later)
+  return melbDateStr > dateStr;
 }
 
 /** Get the date label for a day column (e.g. "25/03"). */
@@ -372,9 +366,9 @@ export default function ClientCheckins() {
   const syncTypeformMutation = trpc.clientCheckins.syncTypeform.useMutation({
     onSuccess: () => {
       utils.clientCheckins.getRosterWeeklyStats.invalidate();
-      toast.success("Typeform sync complete");
+      utils.clientCheckins.getWeekStatusAll.invalidate();
     },
-    onError: (e) => toast.error(e.message),
+    onError: () => {},
   });
 
   // Auto-sync Typeform on page load
@@ -475,26 +469,24 @@ export default function ClientCheckins() {
               Track weekly client check-in completions
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            {/* Coach selector */}
-            {isAdmin && coaches && (
-              <Select
-                value={selectedCoachId?.toString() ?? ""}
-                onValueChange={(v) => setSelectedCoachId(parseInt(v))}
-              >
-                <SelectTrigger className="w-44 bg-secondary border-border">
-                  <SelectValue placeholder="Select coach" />
-                </SelectTrigger>
-                <SelectContent>
-                  {coaches.map((c) => (
-                    <SelectItem key={c.id} value={c.id.toString()}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
+          {/* Coach selector — top right */}
+          {isAdmin && coaches && (
+            <Select
+              value={selectedCoachId?.toString() ?? ""}
+              onValueChange={(v) => setSelectedCoachId(parseInt(v))}
+            >
+              <SelectTrigger className="w-44 bg-secondary border-border">
+                <SelectValue placeholder="Select coach" />
+              </SelectTrigger>
+              <SelectContent>
+                {coaches.map((c) => (
+                  <SelectItem key={c.id} value={c.id.toString()}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {/* ── Reminder banner ─────────────────────────────────────────────── */}
@@ -505,6 +497,27 @@ export default function ClientCheckins() {
 
         {/* ── Week navigation + stats ─────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          {/* Stats badges — left side */}
+          {coachStats && (
+            <div className="flex items-center gap-3">
+              <Badge
+                variant="outline"
+                className="text-xs py-1 px-2.5 border-sky-300 text-sky-700 bg-sky-50"
+              >
+                <FileText className="h-3 w-3 mr-1" />
+                {coachStats.clientSubmitted} Submitted
+              </Badge>
+              <Badge
+                variant="outline"
+                className="text-xs py-1 px-2.5 border-emerald-300 text-emerald-700 bg-emerald-50"
+              >
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                {coachStats.completed} Completed
+              </Badge>
+            </div>
+          )}
+
+          {/* Week selector — right side */}
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -529,31 +542,11 @@ export default function ClientCheckins() {
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-
-          {/* Stats badges */}
-          {coachStats && (
-            <div className="flex items-center gap-3">
-              <Badge
-                variant="outline"
-                className="text-xs py-1 px-2.5 border-sky-300 text-sky-700 bg-sky-50"
-              >
-                <FileText className="h-3 w-3 mr-1" />
-                {coachStats.clientSubmitted} Submitted
-              </Badge>
-              <Badge
-                variant="outline"
-                className="text-xs py-1 px-2.5 border-emerald-300 text-emerald-700 bg-emerald-50"
-              >
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                {coachStats.completed} Completed
-              </Badge>
-            </div>
-          )}
         </div>
 
-        {/* ── Tabs ────────────────────────────────────────────────────────── */}
+        {/* ── Tabs — full width ──────────────────────────────────────────── */}
         <Tabs defaultValue="roster" className="w-full">
-          <TabsList>
+          <TabsList className="w-full grid grid-cols-2">
             <TabsTrigger value="roster">Roster</TabsTrigger>
             <TabsTrigger value="disengagement">
               Disengagement Tracking

@@ -47,6 +47,14 @@ const DAY_LABELS: Record<DayKey, string> = {
   friday: "Fri",
 };
 
+const DAY_ACCENT_COLORS: Record<DayKey, string> = {
+  monday: "#8b5cf6",    // violet
+  tuesday: "#0ea5e9",   // sky
+  wednesday: "#14b8a6",  // teal
+  thursday: "#f59e0b",   // amber
+  friday: "#a855f7",     // purple
+};
+
 const DAY_COLORS: Record<
   string,
   {
@@ -795,27 +803,26 @@ export default function ClientCheckins() {
                   return (
                     <div
                       key={day}
-                      className={`${colours.header} overflow-hidden`}
+                      className="border-l-2 border-l-white/10 pl-0"
+                      style={{ borderLeftColor: DAY_ACCENT_COLORS[day] }}
                     >
-                      {/* Day header accent bar + content */}
-                      <div className={`${colours.headerAccent} px-3 py-2.5`}>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="text-sm font-semibold text-white/90">
-                              {DAY_FULL_NAMES[day]}
-                            </div>
-                            <span className="text-xs text-white/40">
-                              {getDayFullLabel(weekStart, day)}
-                            </span>
+                      {/* Day header — clean, no box */}
+                      <div className="px-3 py-2 flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-semibold text-white/90">
+                            {DAY_FULL_NAMES[day]}
                           </div>
-                          <span className="text-sm font-bold text-white/40">
-                            {ds.completed}/{ds.total}
+                          <span className="text-xs text-white/40">
+                            {getDayFullLabel(weekStart, day)}
                           </span>
                         </div>
+                        <span className="text-sm font-bold text-white/40">
+                          {ds.completed}/{ds.total}
+                        </span>
                       </div>
 
-                      {/* Client list */}
-                      <div className="p-2 space-y-1.5 bg-transparent min-h-[120px]">
+                      {/* Client list — floating on dark bg */}
+                      <div className="px-1 space-y-1.5 min-h-[120px]">
                         {clients.length === 0 ? (
                           <p className="text-xs text-white/30 text-center py-4">
                             No clients

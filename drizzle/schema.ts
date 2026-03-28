@@ -1,4 +1,4 @@
-import { mysqlTable, int, varchar, text, timestamp, mysqlEnum, uniqueIndex, json, boolean, tinyint, date } from "drizzle-orm/mysql-core";
+import { mysqlTable, int, varchar, text, timestamp, datetime, mysqlEnum, uniqueIndex, json, boolean, tinyint, date } from "drizzle-orm/mysql-core";
 
 // ─── Users ───────────────────────────────────────────────
 // Managed by auth system. Stores all authenticated users.
@@ -217,7 +217,7 @@ export const pausedClients = mysqlTable("paused_clients", {
   coachId: int("coachId").notNull(),
   clientName: varchar("clientName", { length: 255 }).notNull(),
   pausedByUserId: int("pausedByUserId"),
-  pausedAt: datetime("pausedAt").default(sql`CURRENT_TIMESTAMP`),
+  pausedAt: datetime("pausedAt"),
   resumedAt: datetime("resumedAt"),
 });
 

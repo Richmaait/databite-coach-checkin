@@ -40,7 +40,7 @@ const DAY_GRADIENT_PILLS: Record<DayKey, string> = {
   monday: "from-violet-400 to-fuchsia-400",
   tuesday: "from-sky-400 to-cyan-400",
   wednesday: "from-teal-400 to-emerald-400",
-  thursday: "from-amber-400 to-orange-400",
+  thursday: "from-yellow-300 to-amber-300",
   friday: "from-purple-400 to-pink-400",
 };
 
@@ -612,10 +612,11 @@ export default function ClientCheckins() {
   // ── Disengagement grouping — by coach, then by tier ───────────────────────
   const disengagedByCoach = useMemo(() => {
     if (!allDisengaged || !coaches) return [];
-    const map = new Map<string, { coachName: string; critical: typeof allDisengaged; alert: typeof allDisengaged; warning: typeof allDisengaged; total: number }>();
+    type ExcusedEntry = { clientName: string; dayOfWeek: string; reason: string };
+    const map = new Map<string, { coachName: string; critical: typeof allDisengaged; alert: typeof allDisengaged; warning: typeof allDisengaged; excused: ExcusedEntry[]; total: number }>();
     for (const d of allDisengaged) {
       if (!map.has(d.coachName)) {
-        map.set(d.coachName, { coachName: d.coachName, critical: [], alert: [], warning: [], total: 0 });
+        map.set(d.coachName, { coachName: d.coachName, critical: [], alert: [], warning: [], excused: [], total: 0 });
       }
       const group = map.get(d.coachName)!;
       group.total++;
@@ -623,8 +624,19 @@ export default function ClientCheckins() {
       else if (d.consecutiveMissedWeeks === 2) group.alert.push(d);
       else if (d.consecutiveMissedWeeks === 1) group.warning.push(d);
     }
+    // Add excused clients to their coach's group
+    if (weekExcuses) {
+      for (const e of weekExcuses as Array<{ coachId: number; coachName: string; clientName: string; dayOfWeek: string; reason: string; status: string }>) {
+        if (e.status !== "approved") continue;
+        const coachName = e.coachName;
+        if (!map.has(coachName)) {
+          map.set(coachName, { coachName, critical: [], alert: [], warning: [], excused: [], total: 0 });
+        }
+        map.get(coachName)!.excused.push({ clientName: e.clientName, dayOfWeek: e.dayOfWeek, reason: e.reason });
+      }
+    }
     return Array.from(map.values());
-  }, [allDisengaged, coaches]);
+  }, [allDisengaged, coaches, weekExcuses]);
 
   // ── Render guard ───────────────────────────────────────────────────────────
   if (!user) return null;
@@ -797,7 +809,7 @@ export default function ClientCheckins() {
                                   title={isClientSub ? "Client submitted (click to unmark)" : "Mark client as submitted"}
                                   className="shrink-0"
                                 >
-                                  <svg className={`w-3.5 h-3.5 ${isClientSub ? "text-violet-400/70" : formIconClass}`} fill="currentColor" viewBox="0 0 20 20">
+                                  <svg className={`w-3.5 h-3.5 ${isClientSub ? colours.subActive : formIconClass}`} fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
                                     <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"/>
                                   </svg>
@@ -1131,6 +1143,7 @@ export default function ClientCheckins() {
                       {coach.critical.length > 0 && <span className="text-red-400">{coach.critical.length} critical</span>}
                       {coach.alert.length > 0 && <span className="text-orange-400">{coach.alert.length} alert</span>}
                       {coach.warning.length > 0 && <span className="text-yellow-400">{coach.warning.length} warning</span>}
+                      {coach.excused.length > 0 && <span className="text-emerald-400">{coach.excused.length} excused</span>}
                       {coach.total === 0 && <span className="text-emerald-400">All clear</span>}
                     </div>
                     <div className="space-y-3">
@@ -1196,6 +1209,29 @@ export default function ClientCheckins() {
                               <div className="flex items-center gap-2 shrink-0 ml-2">
                                 <span className="text-[10px] text-white/40 capitalize">{d.dayOfWeek}</span>
                                 <span className="text-[10px] font-bold text-yellow-300">{d.consecutiveMissedWeeks}w</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* Excused tier — green */}
+                      {coach.excused.length > 0 && (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                            <span className="text-[9px] font-bold uppercase text-emerald-300 tracking-wider">Valid Excuse</span>
+                            <div className="flex-1 border-t border-emerald-700/40" />
+                          </div>
+                          {coach.excused.map((e) => (
+                            <div
+                              key={`excused-${e.clientName}-${e.dayOfWeek}`}
+                              className="glass-btn rounded-xl px-3 py-2 flex items-center justify-between"
+                              style={{ borderColor: "rgba(52,211,153,0.15)" }}
+                            >
+                              <span className="text-xs font-medium text-emerald-300 truncate min-w-0">{e.clientName}</span>
+                              <div className="flex items-center gap-2 shrink-0 ml-2">
+                                <span className="text-[10px] text-white/40 capitalize">{e.dayOfWeek}</span>
+                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">APPROVED</span>
                               </div>
                             </div>
                           ))}

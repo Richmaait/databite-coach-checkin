@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -391,6 +392,27 @@ export default function ClientCheckins() {
     day: DayKey;
   } | null>(null);
   const [excuseReason, setExcuseReason] = useState("");
+  const [excuseSearch, setExcuseSearch] = useState("");
+  const [excuseSelectedClient, setExcuseSelectedClient] = useState<string | null>(null);
+  const [excuseSelectedDay, setExcuseSelectedDay] = useState<DayKey | null>(null);
+
+  // Build flat list of all clients in current roster for excuse search
+  const allRosterClients = useMemo(() => {
+    if (!roster) return [];
+    const clients: Array<{ name: string; day: DayKey }> = [];
+    for (const day of DAYS) {
+      for (const name of ((roster as Record<string, string[]>)[day] ?? [])) {
+        clients.push({ name, day });
+      }
+    }
+    return clients;
+  }, [roster]);
+
+  const excuseSearchResults = useMemo(() => {
+    if (!excuseSearch.trim()) return [];
+    const q = excuseSearch.toLowerCase();
+    return allRosterClients.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 8);
+  }, [excuseSearch, allRosterClients]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -499,7 +521,13 @@ export default function ClientCheckins() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           {/* Stats badges — left side */}
           {coachStats && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge
+                variant="outline"
+                className="text-xs py-1 px-2.5 border-zinc-400 text-zinc-700 bg-zinc-50"
+              >
+                {coachStats.scheduled} Total
+              </Badge>
               <Badge
                 variant="outline"
                 className="text-xs py-1 px-2.5 border-sky-300 text-sky-700 bg-sky-50"
@@ -513,6 +541,13 @@ export default function ClientCheckins() {
               >
                 <CheckCircle2 className="h-3 w-3 mr-1" />
                 {coachStats.completed} Completed
+              </Badge>
+              <Badge
+                variant="outline"
+                className="text-xs py-1 px-2.5 border-red-300 text-red-700 bg-red-50"
+              >
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                {coachStats.scheduled - coachStats.clientSubmitted} Not Submitted
               </Badge>
             </div>
           )}
@@ -647,7 +682,7 @@ export default function ClientCheckins() {
                                   }
                                   className={`shrink-0 p-1 rounded-md transition-all duration-150 ${
                                     isClientSub
-                                      ? `${colours.subActive} ring-1 ring-current/30`
+                                      ? `${colours.subActive} opacity-40`
                                       : colours.subHover
                                   }`}
                                 >
@@ -733,25 +768,6 @@ export default function ClientCheckins() {
                                   </span>
                                 </button>
 
-                                {/* Excuse button */}
-                                {canEdit &&
-                                  !isCompleted &&
-                                  !isExcused && (
-                                    <button
-                                      onClick={() => {
-                                        setExcuseReason("");
-                                        setExcuseDialog({
-                                          clientName,
-                                          day,
-                                        });
-                                      }}
-                                      title="Submit excuse"
-                                      className="shrink-0 p-1 rounded text-muted-foreground hover:text-amber-600 hover:bg-amber-50 transition-colors"
-                                    >
-                                      <ShieldAlert className="h-3 w-3" />
-                                    </button>
-                                  )}
-
                                 {/* Undo button */}
                                 {isCompleted && canEdit && (
                                   <button
@@ -788,6 +804,95 @@ export default function ClientCheckins() {
                   );
                 })}
               </div>
+            )}
+
+            {/* ── Valid Excuse Submission ──────────────────────────────────── */}
+            {effectiveCoachId && canEdit && (
+              <Card className="mt-6">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold">Submit Valid Excuse</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {!excuseSelectedClient ? (
+                    <>
+                      <Input
+                        placeholder="Search for a client..."
+                        value={excuseSearch}
+                        onChange={(e) => {
+                          setExcuseSearch(e.target.value);
+                          setExcuseSelectedClient(null);
+                          setExcuseSelectedDay(null);
+                        }}
+                        className="bg-secondary border-border"
+                      />
+                      {excuseSearchResults.length > 0 && (
+                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                          {excuseSearchResults.map((c) => (
+                            <button
+                              key={`${c.name}|${c.day}`}
+                              onClick={() => {
+                                setExcuseSelectedClient(c.name);
+                                setExcuseSelectedDay(c.day);
+                                setExcuseSearch("");
+                              }}
+                              className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-accent transition-colors flex items-center justify-between"
+                            >
+                              <span className="font-medium">{c.name}</span>
+                              <span className="text-xs text-muted-foreground capitalize">{c.day}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between bg-secondary rounded-lg px-3 py-2">
+                        <div>
+                          <span className="text-sm font-medium">{excuseSelectedClient}</span>
+                          <span className="text-xs text-muted-foreground ml-2 capitalize">{excuseSelectedDay}</span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setExcuseSelectedClient(null);
+                            setExcuseSelectedDay(null);
+                            setExcuseReason("");
+                          }}
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          Change
+                        </button>
+                      </div>
+                      <Textarea
+                        placeholder="Reason for valid excuse..."
+                        value={excuseReason}
+                        onChange={(e) => setExcuseReason(e.target.value)}
+                        rows={2}
+                        className="bg-secondary border-border"
+                      />
+                      <Button
+                        onClick={() => {
+                          if (!excuseSelectedClient || !excuseSelectedDay || !excuseReason.trim()) return;
+                          submitExcuseMutation.mutate({
+                            coachId: effectiveCoachId!,
+                            coachName: effectiveCoachName ?? "",
+                            clientName: excuseSelectedClient,
+                            dayOfWeek: excuseSelectedDay,
+                            weekStart,
+                            reason: excuseReason.trim(),
+                          });
+                          setExcuseSelectedClient(null);
+                          setExcuseSelectedDay(null);
+                          setExcuseReason("");
+                        }}
+                        disabled={!excuseReason.trim() || submitExcuseMutation.isPending}
+                        size="sm"
+                      >
+                        {submitExcuseMutation.isPending ? "Submitting..." : "Submit Excuse for Approval"}
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
 

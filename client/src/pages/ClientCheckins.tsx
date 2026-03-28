@@ -650,9 +650,10 @@ export default function ClientCheckins() {
         <div className="max-w-[1440px] mx-auto px-8 pt-8 pb-4">
           {/* Top row: Logo + title on left, coach selector on right */}
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <img src="/databite-icon-white.svg" alt="Databite" className="h-8 w-8 opacity-80" />
-              <h1 className="text-xl font-semibold text-white/90 tracking-tight">Client Check-Ins</h1>
+            <div className="flex items-center gap-4">
+              <img src="/databite-wordmark.png" alt="Databite" className="h-7 brightness-0 invert opacity-80" />
+              <div className="w-px h-6 bg-white/10"></div>
+              <h1 className="text-2xl font-bold text-white/90 tracking-tight">Client Check-Ins</h1>
             </div>
 
             {/* Coach selector — top right */}

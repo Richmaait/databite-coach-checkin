@@ -736,6 +736,7 @@ export default function ClientCheckins() {
             <div className="grid grid-cols-5 gap-4">
               {DAYS.map((day) => {
                 const clients = (roster as Record<string, string[]>)[day] ?? [];
+                const colours = DAY_COLORS[day];
 
                 return (
                   <div key={day} className="glass rounded-2xl p-4">

@@ -210,3 +210,15 @@ export const slackReminderLog = mysqlTable("slack_reminder_log", {
 }));
 
 export type SlackReminderLog = typeof slackReminderLog.$inferSelect;
+
+// ─── Paused Clients ─────────────────────────────────────────────────────────
+export const pausedClients = mysqlTable("paused_clients", {
+  id: int("id").primaryKey().autoincrement(),
+  coachId: int("coachId").notNull(),
+  clientName: varchar("clientName", { length: 255 }).notNull(),
+  pausedByUserId: int("pausedByUserId"),
+  pausedAt: datetime("pausedAt").default(sql`CURRENT_TIMESTAMP`),
+  resumedAt: datetime("resumedAt"),
+});
+
+export type PausedClient = typeof pausedClients.$inferSelect;

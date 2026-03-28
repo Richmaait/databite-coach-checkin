@@ -226,6 +226,53 @@ export default function ClientCheckins() {
       staleTime: 5 * 60 * 1000,
     });
 
+  // Paused clients
+  const { data: pausedClientNames, refetch: refetchPaused } =
+    trpc.clientCheckins.getActivePauses.useQuery(
+      { coachId: effectiveCoachId! },
+      { enabled: !!effectiveCoachId },
+    );
+  const pausedSet = useMemo(() => new Set(pausedClientNames ?? []), [pausedClientNames]);
+
+  // Pause/resume mutations
+  const pauseClientMutation = trpc.clientCheckins.pauseClient.useMutation({
+    onSuccess: (_data, variables) => {
+      refetchPaused();
+      toast.success(`Paused ${variables.clientName}`);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const resumeClientMutation = trpc.clientCheckins.resumeClient.useMutation({
+    onSuccess: (_data, variables) => {
+      refetchPaused();
+      toast.success(`Resumed ${variables.clientName}`);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  // Upfront alerts — clients with UPFRONT dates in their name
+  const upfrontAlerts = useMemo(() => {
+    if (!roster) return [];
+    const alerts: Array<{ name: string; day: string; dateStr: string; daysLeft: number }> = [];
+    const now = new Date();
+    for (const day of DAYS) {
+      for (const name of ((roster as Record<string, string[]>)[day] ?? [])) {
+        const match = name.match(/UPFRONT\s*[-–—]\s*(\d{1,2}\s+\w+(?:\s+\d{4})?)/i);
+        if (match) {
+          const dateStr = match[1];
+          const parsed = new Date(dateStr + (dateStr.match(/\d{4}/) ? '' : ' 2026'));
+          if (!isNaN(parsed.getTime())) {
+            const daysLeft = Math.ceil((parsed.getTime() - now.getTime()) / 86400000);
+            if (daysLeft <= 60) {
+              alerts.push({ name, day, dateStr, daysLeft });
+            }
+          }
+        }
+      }
+    }
+    return alerts.sort((a, b) => a.daysLeft - b.daysLeft);
+  }, [roster]);
+
   // ── Build client-level sets from data ──────────────────────────────────────
 
   // We track completed/submitted/excused per `clientName|day` using the
@@ -393,6 +440,7 @@ export default function ClientCheckins() {
   } | null>(null);
   const [excuseReason, setExcuseReason] = useState("");
   const [excuseSearch, setExcuseSearch] = useState("");
+  const [pauseSearch, setPauseSearch] = useState("");
   const [excuseSelectedClient, setExcuseSelectedClient] = useState<string | null>(null);
   const [excuseSelectedDay, setExcuseSelectedDay] = useState<DayKey | null>(null);
 
@@ -648,18 +696,20 @@ export default function ClientCheckins() {
                             );
                             const isExcused =
                               !!excuseEntry && !isCompleted;
+                            const isPaused = pausedSet.has(clientName);
                             const isMissedStreak = missedSet.has(
                               `${clientName}|${day}`,
                             );
                             const isOverdue = isClientOverdue(
                               weekStart,
                               day,
-                              isCompleted || isExcused,
+                              isCompleted || isExcused || isPaused,
                             );
                             const showRed =
                               (isOverdue || isMissedStreak) &&
                               !isCompleted &&
-                              !isExcused;
+                              !isExcused &&
+                              !isPaused;
 
                             return (
                               <div
@@ -725,31 +775,38 @@ export default function ClientCheckins() {
                                     canEdit &&
                                     !isCompleted &&
                                     !isExcused &&
+                                    !isPaused &&
                                     handleClientClick(clientName, day)
                                   }
                                   disabled={
-                                    isCompleted || isExcused || !canEdit
+                                    isCompleted || isExcused || !canEdit || isPaused
                                   }
                                   title={
-                                    isExcused
-                                      ? `Excused — ${excuseEntry?.reason}`
-                                      : undefined
+                                    isPaused
+                                      ? "Client is paused"
+                                      : isExcused
+                                        ? `Excused — ${excuseEntry?.reason}`
+                                        : undefined
                                   }
                                   className={`
                                     flex-1 text-left px-2.5 py-2 rounded-lg border text-xs font-medium
                                     transition-all duration-150 flex items-center gap-2
                                     ${
-                                      isCompleted
-                                        ? `${colours.completedBg} cursor-default opacity-80`
-                                        : isExcused
-                                          ? "bg-emerald-50 border-emerald-300 cursor-default opacity-80"
-                                          : showRed
-                                            ? "bg-red-50 border-red-300 hover:bg-red-100 hover:border-red-400 cursor-pointer"
-                                            : `${colours.pendingBg} ${colours.pendingHover} cursor-pointer`
+                                      isPaused
+                                        ? "bg-gray-100 border-gray-200 cursor-default opacity-60"
+                                        : isCompleted
+                                          ? `${colours.completedBg} cursor-default opacity-80`
+                                          : isExcused
+                                            ? "bg-emerald-50 border-emerald-300 cursor-default opacity-80"
+                                            : showRed
+                                              ? "bg-red-50 border-red-300 hover:bg-red-100 hover:border-red-400 cursor-pointer"
+                                              : `${colours.pendingBg} ${colours.pendingHover} cursor-pointer`
                                     }
                                   `}
                                 >
-                                  {isCompleted ? (
+                                  {isPaused ? (
+                                    <Circle className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                                  ) : isCompleted ? (
                                     <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                                   ) : isExcused ? (
                                     <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
@@ -760,16 +817,29 @@ export default function ClientCheckins() {
                                   )}
                                   <span
                                     className={`leading-tight ${
-                                      isExcused
-                                        ? "text-emerald-700"
-                                        : showRed
-                                          ? "text-red-700"
-                                          : "text-gray-800"
+                                      isPaused
+                                        ? "line-through text-gray-400"
+                                        : isExcused
+                                          ? "text-emerald-700"
+                                          : showRed
+                                            ? "text-red-700"
+                                            : "text-gray-800"
                                     }`}
                                   >
                                     {clientName}
                                   </span>
                                 </button>
+
+                                {/* Resume button for paused clients */}
+                                {isPaused && canEdit && (
+                                  <button
+                                    onClick={() => resumeClientMutation.mutate({ coachId: effectiveCoachId ?? 0, clientName })}
+                                    title="Click to resume"
+                                    className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+                                  >
+                                    PAUSED
+                                  </button>
+                                )}
 
                                 {/* Undo button */}
                                 {isCompleted && canEdit && (
@@ -894,6 +964,90 @@ export default function ClientCheckins() {
                       </Button>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── Pause a Client ──────────────────────────────────────────── */}
+            {effectiveCoachId && canEdit && (
+              <Card className="mt-4">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold">Pause a Client</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Input
+                    placeholder="Search for a client to pause..."
+                    value={pauseSearch}
+                    onChange={(e) => setPauseSearch(e.target.value)}
+                    className="bg-secondary border-border"
+                  />
+                  {pauseSearch.trim() && (
+                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                      {allRosterClients
+                        .filter((c) => c.name.toLowerCase().includes(pauseSearch.toLowerCase()) && !pausedSet.has(c.name))
+                        .slice(0, 8)
+                        .map((c) => (
+                          <button
+                            key={`pause-${c.name}|${c.day}`}
+                            onClick={() => {
+                              pauseClientMutation.mutate({ coachId: effectiveCoachId!, clientName: c.name });
+                              setPauseSearch("");
+                            }}
+                            className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-amber-50 hover:text-amber-800 transition-colors flex items-center justify-between"
+                          >
+                            <span className="font-medium">{c.name}</span>
+                            <span className="text-xs text-muted-foreground capitalize">{c.day}</span>
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                  {pausedSet.size > 0 && (
+                    <div className="pt-2 border-t border-border">
+                      <p className="text-xs text-muted-foreground mb-2">Currently paused:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {Array.from(pausedSet).map((name) => (
+                          <button
+                            key={name}
+                            onClick={() => resumeClientMutation.mutate({ coachId: effectiveCoachId!, clientName: name })}
+                            className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+                            title="Click to resume"
+                          >
+                            {name} ✕
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── Upfront Alerts ───────────────────────────────────────────── */}
+            {upfrontAlerts.length > 0 && (
+              <Card className="mt-4 border-orange-200">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold text-orange-700 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    Upfront Renewals Coming Up ({upfrontAlerts.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-1">
+                    {upfrontAlerts.map((a) => (
+                      <div
+                        key={a.name}
+                        className="flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-orange-50 border border-orange-200 text-sm"
+                      >
+                        <span className="font-medium text-orange-800">{a.name}</span>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="capitalize text-muted-foreground">{a.day}</span>
+                          <span className={`font-bold ${a.daysLeft <= 14 ? "text-red-600" : a.daysLeft <= 30 ? "text-orange-600" : "text-amber-600"}`}>
+                            {a.daysLeft} days left
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             )}

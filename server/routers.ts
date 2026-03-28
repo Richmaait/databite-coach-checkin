@@ -32,6 +32,7 @@ import {
   sweepReports,
   clientRatings,
   slackReminderLog,
+  pausedClients,
 } from "../drizzle/schema";
 import { runTypeformBackfill } from "./typeformBackfill";
 import { sendSlackDM } from "./slackReminders";
@@ -986,6 +987,13 @@ const clientCheckinsRouter = t.router({
         .from(excusedClients)
         .where(and(eq(excusedClients.coachId, coach.id), eq(excusedClients.status, "approved")));
 
+      // Get paused clients — excluded from disengagement
+      const paused = await db
+        .select()
+        .from(pausedClients)
+        .where(and(eq(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
+      const pausedSet = new Set(paused.map((p) => p.clientName));
+
       // Get start dates
       const starts = await db
         .select()
@@ -1007,6 +1015,9 @@ const clientCheckinsRouter = t.router({
       for (const day of DAYS) {
         const clients = roster[day] ?? [];
         for (const clientName of clients) {
+          // Skip paused clients
+          if (pausedSet.has(clientName)) continue;
+
           const clientStart = startMap.get(`${clientName}|${day}`) ?? epochWeek;
           let missed = 0;
           let lastCompleted: string | null = null;
@@ -1834,12 +1845,50 @@ const clientCheckinsRouter = t.router({
       return roster as Record<DayKey, string[]>;
     }),
 
-  /** Get active pauses for a coach (placeholder — no paused column exists yet). */
+  /** Get active pauses for a coach. */
   getActivePauses: protectedProcedure
     .input(z.object({ coachId: z.number() }))
-    .query(async () => {
-      // No dedicated paused column on client_check_ins yet — return empty array.
-      return [] as string[];
+    .query(async ({ input }) => {
+      const db = await requireDb();
+      const rows = await db
+        .select()
+        .from(pausedClients)
+        .where(and(eq(pausedClients.coachId, input.coachId), isNull(pausedClients.resumedAt)));
+      return rows.map((r) => r.clientName);
+    }),
+
+  /** Pause a client — excludes from disengagement tracking. */
+  pauseClient: protectedProcedure
+    .input(z.object({ coachId: z.number(), clientName: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await requireDb();
+      // Check if already paused
+      const [existing] = await db
+        .select()
+        .from(pausedClients)
+        .where(and(eq(pausedClients.coachId, input.coachId), eq(pausedClients.clientName, input.clientName), isNull(pausedClients.resumedAt)))
+        .limit(1);
+      if (existing) {
+        throw new TRPCError({ code: "CONFLICT", message: "Client is already paused" });
+      }
+      await db.insert(pausedClients).values({
+        coachId: input.coachId,
+        clientName: input.clientName,
+        pausedByUserId: ctx.user.id,
+      });
+      return { ok: true };
+    }),
+
+  /** Resume a paused client. */
+  resumeClient: protectedProcedure
+    .input(z.object({ coachId: z.number(), clientName: z.string() }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      await db
+        .update(pausedClients)
+        .set({ resumedAt: sql`NOW()` })
+        .where(and(eq(pausedClients.coachId, input.coachId), eq(pausedClients.clientName, input.clientName), isNull(pausedClients.resumedAt)));
+      return { ok: true };
     }),
 
   /** Get excuses for a given week, optionally filtered by coach. */

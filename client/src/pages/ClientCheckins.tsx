@@ -461,19 +461,22 @@ export default function ClientCheckins() {
     });
   }
 
-  // ── Disengagement grouping ─────────────────────────────────────────────────
-  const disengagedGrouped = useMemo(() => {
-    if (!allDisengaged) return { critical: [], alert: [], warning: [] };
-    const critical: typeof allDisengaged = [];
-    const alert: typeof allDisengaged = [];
-    const warning: typeof allDisengaged = [];
+  // ── Disengagement grouping — by coach, then by tier ───────────────────────
+  const disengagedByCoach = useMemo(() => {
+    if (!allDisengaged || !coaches) return [];
+    const map = new Map<string, { coachName: string; critical: typeof allDisengaged; alert: typeof allDisengaged; warning: typeof allDisengaged; total: number }>();
     for (const d of allDisengaged) {
-      if (d.consecutiveMissedWeeks >= 3) critical.push(d);
-      else if (d.consecutiveMissedWeeks === 2) alert.push(d);
-      else if (d.consecutiveMissedWeeks === 1) warning.push(d);
+      if (!map.has(d.coachName)) {
+        map.set(d.coachName, { coachName: d.coachName, critical: [], alert: [], warning: [], total: 0 });
+      }
+      const group = map.get(d.coachName)!;
+      group.total++;
+      if (d.consecutiveMissedWeeks >= 3) group.critical.push(d);
+      else if (d.consecutiveMissedWeeks === 2) group.alert.push(d);
+      else if (d.consecutiveMissedWeeks === 1) group.warning.push(d);
     }
-    return { critical, alert, warning };
-  }, [allDisengaged]);
+    return Array.from(map.values());
+  }, [allDisengaged, coaches]);
 
   // ── Render guard ───────────────────────────────────────────────────────────
   if (!user) return null;
@@ -896,156 +899,120 @@ export default function ClientCheckins() {
             )}
           </TabsContent>
 
-          {/* ── Disengagement Tab ────────────────────────────────────────── */}
-          <TabsContent value="disengagement" className="mt-4 space-y-4">
-            {/* Critical: 3+ consecutive missed weeks */}
-            {disengagedGrouped.critical.length > 0 && (
-              <Card className="border-red-200">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-semibold text-red-700 flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    Critical — 3+ Consecutive Missed Weeks (
-                    {disengagedGrouped.critical.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-1">
-                    {disengagedGrouped.critical.map((d) => (
-                      <div
-                        key={`${d.coachName}-${d.clientName}-${d.dayOfWeek}`}
-                        className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-red-50 text-sm"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-red-800">
-                            {d.clientName}
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] border-red-300 text-red-600"
-                          >
-                            {d.dayOfWeek}
-                          </Badge>
+          {/* ── Disengagement Tab — 3-column per coach layout ────────────── */}
+          <TabsContent value="disengagement" className="mt-4">
+            <p className="text-xs text-muted-foreground mb-3">
+              Consecutive missed check-ins per coach — streak resets when marked complete
+            </p>
+            {disengagedByCoach.length > 0 ? (
+              <div
+                className="grid gap-4"
+                style={{ gridTemplateColumns: `repeat(${Math.min(disengagedByCoach.length, 3)}, minmax(0, 1fr))` }}
+              >
+                {disengagedByCoach.map((coach) => (
+                  <Card key={coach.coachName} className="border-border">
+                    {/* Coach header */}
+                    <CardHeader className="pb-2 pt-4 px-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+                          {coach.coachName.charAt(0)}
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-red-600">
-                          <span>{d.consecutiveMissedWeeks} weeks missed</span>
-                          <span className="text-muted-foreground">
-                            Coach: {d.coachName}
-                          </span>
-                          {d.lastCompletedWeek && (
-                            <span className="text-muted-foreground">
-                              Last done: {formatDateAU(d.lastCompletedWeek)}
-                            </span>
-                          )}
-                        </div>
+                        <span className="text-sm font-bold">{coach.coachName}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">{coach.total} flagged</span>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Alert: 2 consecutive missed weeks */}
-            {disengagedGrouped.alert.length > 0 && (
-              <Card className="border-amber-200">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-semibold text-amber-700 flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    Alert — 2 Consecutive Missed Weeks (
-                    {disengagedGrouped.alert.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-1">
-                    {disengagedGrouped.alert.map((d) => (
-                      <div
-                        key={`${d.coachName}-${d.clientName}-${d.dayOfWeek}`}
-                        className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-amber-50 text-sm"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-amber-800">
-                            {d.clientName}
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] border-amber-300 text-amber-600"
-                          >
-                            {d.dayOfWeek}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-amber-600">
-                          <span>2 weeks missed</span>
-                          <span className="text-muted-foreground">
-                            Coach: {d.coachName}
-                          </span>
-                          {d.lastCompletedWeek && (
-                            <span className="text-muted-foreground">
-                              Last done: {formatDateAU(d.lastCompletedWeek)}
-                            </span>
-                          )}
-                        </div>
+                      <div className="flex items-center gap-2 text-[10px]">
+                        {coach.critical.length > 0 && (
+                          <span className="text-red-400">{coach.critical.length} critical</span>
+                        )}
+                        {coach.alert.length > 0 && (
+                          <span className="text-orange-400">{coach.alert.length} alert</span>
+                        )}
+                        {coach.warning.length > 0 && (
+                          <span className="text-yellow-400">{coach.warning.length} warning</span>
+                        )}
+                        {coach.total === 0 && (
+                          <span className="text-emerald-400">✓ All clear</span>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Warning: 1 missed week */}
-            {disengagedGrouped.warning.length > 0 && (
-              <Card className="border-yellow-200">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-semibold text-yellow-700 flex items-center gap-2">
-                    <Circle className="h-4 w-4" />
-                    Warning — 1 Missed Week ({disengagedGrouped.warning.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-1">
-                    {disengagedGrouped.warning.map((d) => (
-                      <div
-                        key={`${d.coachName}-${d.clientName}-${d.dayOfWeek}`}
-                        className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-yellow-50 text-sm"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-yellow-800">
-                            {d.clientName}
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] border-yellow-300 text-yellow-600"
-                          >
-                            {d.dayOfWeek}
-                          </Badge>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4 space-y-3">
+                      {/* Critical tier */}
+                      {coach.critical.length > 0 && (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <div className="h-2 w-2 rounded-full bg-red-500" />
+                            <span className="text-[9px] font-bold uppercase text-red-300 tracking-wider">Critical</span>
+                            <div className="flex-1 border-t border-red-700/40" />
+                          </div>
+                          {coach.critical.map((d) => (
+                            <div
+                              key={`${d.clientName}-${d.dayOfWeek}`}
+                              className="flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-red-950/50 border border-red-700/60 text-sm"
+                            >
+                              <span className="font-medium text-red-300 truncate min-w-0">{d.clientName}</span>
+                              <div className="flex items-center gap-2 shrink-0 ml-2">
+                                <span className="text-[10px] text-muted-foreground capitalize">{d.dayOfWeek}</span>
+                                <span className="text-xs font-bold text-red-300">{d.consecutiveMissedWeeks}w</span>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-yellow-600">
-                          <span>1 week missed</span>
-                          <span className="text-muted-foreground">
-                            Coach: {d.coachName}
-                          </span>
-                          {d.lastCompletedWeek && (
-                            <span className="text-muted-foreground">
-                              Last done: {formatDateAU(d.lastCompletedWeek)}
-                            </span>
-                          )}
+                      )}
+                      {/* Alert tier */}
+                      {coach.alert.length > 0 && (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <div className="h-2 w-2 rounded-full bg-orange-500" />
+                            <span className="text-[9px] font-bold uppercase text-orange-300 tracking-wider">Alert</span>
+                            <div className="flex-1 border-t border-orange-700/50" />
+                          </div>
+                          {coach.alert.map((d) => (
+                            <div
+                              key={`${d.clientName}-${d.dayOfWeek}`}
+                              className="flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-orange-950/40 border border-orange-700/50 text-sm"
+                            >
+                              <span className="font-medium text-orange-300 truncate min-w-0">{d.clientName}</span>
+                              <div className="flex items-center gap-2 shrink-0 ml-2">
+                                <span className="text-[10px] text-muted-foreground capitalize">{d.dayOfWeek}</span>
+                                <span className="text-xs font-bold text-orange-300">{d.consecutiveMissedWeeks}w</span>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Empty state */}
-            {!allDisengaged ||
-              (disengagedGrouped.critical.length === 0 &&
-                disengagedGrouped.alert.length === 0 &&
-                disengagedGrouped.warning.length === 0 && (
-                  <Card>
-                    <CardContent className="p-8 text-center text-muted-foreground text-sm">
-                      No disengaged clients this week. Great work!
+                      )}
+                      {/* Warning tier */}
+                      {coach.warning.length > 0 && (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <div className="h-2 w-2 rounded-full bg-yellow-500" />
+                            <span className="text-[9px] font-bold uppercase text-yellow-300 tracking-wider">Warning</span>
+                            <div className="flex-1 border-t border-yellow-700/40" />
+                          </div>
+                          {coach.warning.map((d) => (
+                            <div
+                              key={`${d.clientName}-${d.dayOfWeek}`}
+                              className="flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-yellow-950/30 border border-yellow-700/40 text-sm"
+                            >
+                              <span className="font-medium text-yellow-300 truncate min-w-0">{d.clientName}</span>
+                              <div className="flex items-center gap-2 shrink-0 ml-2">
+                                <span className="text-[10px] text-muted-foreground capitalize">{d.dayOfWeek}</span>
+                                <span className="text-xs font-bold text-yellow-300">{d.consecutiveMissedWeeks}w</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="p-8 text-center text-muted-foreground text-sm">
+                  No disengaged clients this week. Great work!
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>

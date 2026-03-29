@@ -2768,7 +2768,7 @@ var performanceRouter = t.router({
     })
   ).query(async ({ input }) => {
     const db2 = await requireDb();
-    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq4(coaches.isActive, 1));
+    const coachList = await db2.select({ id: coaches.id, name: coaches.name, workdays: coaches.workdays }).from(coaches).where(eq4(coaches.isActive, 1));
     const coachSummaries = [];
     for (const coach of coachList) {
       const roster = await fetchRosterForCoach(coach.name);
@@ -2823,12 +2823,12 @@ var performanceRouter = t.router({
       )
     );
     const today = getTodayMelbourne();
-    let workdayCount = 5;
+    let elapsedWeekdays = 5;
     if (weekEnd > today) {
       const todayDate = /* @__PURE__ */ new Date(today + "T12:00:00+10:00");
       const weekStartDate = /* @__PURE__ */ new Date(input.weekStart + "T12:00:00+10:00");
       const diff = Math.floor((todayDate.getTime() - weekStartDate.getTime()) / 864e5) + 1;
-      workdayCount = Math.max(1, Math.min(5, diff));
+      elapsedWeekdays = Math.max(1, Math.min(5, diff));
     }
     const coachActivity = coachList.map((coach) => {
       const coachRecords = allRecords.filter((r) => r.coachId === coach.id);
@@ -2836,11 +2836,20 @@ var performanceRouter = t.router({
       const followupDays = coachRecords.filter((r) => r.followupSubmittedAt).length;
       const totalFollowupMsgs = coachRecords.reduce((s, r) => s + (r.followupCount ?? 0), 0);
       const totalDisengagementMsgs = coachRecords.reduce((s, r) => s + (r.disengagementCount ?? 0), 0);
+      let coachWorkdays = [1, 2, 3, 4, 5];
+      if (coach.workdays) {
+        try {
+          const parsed = typeof coach.workdays === "string" ? JSON.parse(coach.workdays) : coach.workdays;
+          if (Array.isArray(parsed) && parsed.length > 0) coachWorkdays = parsed.filter((d) => d >= 1 && d <= 5);
+        } catch {
+        }
+      }
+      const workdayCount = weekEnd > today ? coachWorkdays.filter((d) => d <= elapsedWeekdays).length : coachWorkdays.length;
       return {
         coachId: coach.id,
         coachName: coach.name,
         morningDays,
-        workdayCount,
+        workdayCount: Math.max(1, workdayCount),
         followupDays,
         totalFollowupMsgs,
         totalDisengagementMsgs
@@ -2960,12 +2969,58 @@ var performanceRouter = t.router({
   /** Clear all ratings, or for a specific coach if coachId provided. */
   resetAllRatings: adminProcedure.input(z.object({ coachId: z.number().optional() }).optional()).mutation(async ({ input }) => {
     const db2 = await requireDb();
+    const ratingsToBackup = input?.coachId ? await db2.select().from(clientRatings).where(eq4(clientRatings.coachId, input.coachId)) : await db2.select().from(clientRatings);
+    const backupSnapshot = {
+      _isRatingBackup: true,
+      ratings: ratingsToBackup.map((r) => ({
+        coachId: r.coachId,
+        clientName: r.clientName,
+        rating: r.rating,
+        notes: r.notes
+      }))
+    };
+    const [backupResult] = await db2.insert(sweepReports).values({
+      title: `[Rating Backup] ${(/* @__PURE__ */ new Date()).toISOString()}`,
+      createdByUserId: 0,
+      createdByName: "System Backup",
+      snapshotJson: backupSnapshot,
+      weekStart: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10),
+      scopeType: input?.coachId ? "coach" : "all",
+      scopeCoachId: input?.coachId ?? null
+    });
     if (input?.coachId) {
       await db2.delete(clientRatings).where(eq4(clientRatings.coachId, input.coachId));
     } else {
       await db2.delete(clientRatings);
     }
-    return { success: true };
+    return { success: true, backupId: backupResult.insertId, backedUp: ratingsToBackup.length };
+  }),
+  /** Undo a rating reset by restoring from backup. */
+  undoResetRatings: adminProcedure.input(z.object({ backupId: z.number() })).mutation(async ({ input }) => {
+    const db2 = await requireDb();
+    const [backup] = await db2.select().from(sweepReports).where(eq4(sweepReports.id, input.backupId)).limit(1);
+    if (!backup) throw new TRPCError({ code: "NOT_FOUND", message: "Backup not found" });
+    const snapshot = backup.snapshotJson;
+    if (!snapshot?._isRatingBackup || !snapshot?.ratings) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Not a valid rating backup" });
+    }
+    let restored = 0;
+    for (const r of snapshot.ratings) {
+      const existing = await db2.select().from(clientRatings).where(and2(eq4(clientRatings.coachId, r.coachId), eq4(clientRatings.clientName, r.clientName))).limit(1);
+      if (existing.length > 0) {
+        await db2.update(clientRatings).set({ rating: r.rating, notes: r.notes }).where(eq4(clientRatings.id, existing[0].id));
+      } else {
+        await db2.insert(clientRatings).values({
+          coachId: r.coachId,
+          clientName: r.clientName,
+          rating: r.rating,
+          notes: r.notes
+        });
+      }
+      restored++;
+    }
+    await db2.delete(sweepReports).where(eq4(sweepReports.id, input.backupId));
+    return { success: true, restored };
   })
 });
 var sweepReportRouter = t.router({

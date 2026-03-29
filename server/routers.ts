@@ -2409,7 +2409,7 @@ const performanceRouter = t.router({
     .query(async ({ input }) => {
       const db = await requireDb();
       const coachList = await db
-        .select({ id: coaches.id, name: coaches.name })
+        .select({ id: coaches.id, name: coaches.name, workdays: coaches.workdays })
         .from(coaches)
         .where(eq(coaches.isActive, 1));
 
@@ -2501,14 +2501,14 @@ const performanceRouter = t.router({
           ),
         );
 
-      // Count workdays in the selected week (Mon-Fri, up to today)
+      // Determine how many weekdays have elapsed so far this week (for current/partial weeks)
       const today = getTodayMelbourne();
-      let workdayCount = 5;
+      let elapsedWeekdays = 5;
       if (weekEnd > today) {
         const todayDate = new Date(today + "T12:00:00+10:00");
         const weekStartDate = new Date(input.weekStart + "T12:00:00+10:00");
         const diff = Math.floor((todayDate.getTime() - weekStartDate.getTime()) / 86400000) + 1;
-        workdayCount = Math.max(1, Math.min(5, diff));
+        elapsedWeekdays = Math.max(1, Math.min(5, diff));
       }
 
       const coachActivity = coachList.map((coach) => {
@@ -2517,11 +2517,25 @@ const performanceRouter = t.router({
         const followupDays = coachRecords.filter((r) => r.followupSubmittedAt).length;
         const totalFollowupMsgs = coachRecords.reduce((s, r) => s + (r.followupCount ?? 0), 0);
         const totalDisengagementMsgs = coachRecords.reduce((s, r) => s + (r.disengagementCount ?? 0), 0);
+
+        // Parse per-coach workdays (e.g. [2,5] for Tue/Fri) — default Mon-Fri
+        let coachWorkdays: number[] = [1, 2, 3, 4, 5];
+        if (coach.workdays) {
+          try {
+            const parsed = (typeof coach.workdays === "string" ? JSON.parse(coach.workdays) : coach.workdays) as number[];
+            if (Array.isArray(parsed) && parsed.length > 0) coachWorkdays = parsed.filter(d => d >= 1 && d <= 5);
+          } catch { /* use default */ }
+        }
+        // For partial weeks, only count coach workdays that have elapsed
+        const workdayCount = weekEnd > today
+          ? coachWorkdays.filter(d => d <= elapsedWeekdays).length
+          : coachWorkdays.length;
+
         return {
           coachId: coach.id,
           coachName: coach.name,
           morningDays,
-          workdayCount,
+          workdayCount: Math.max(1, workdayCount),
           followupDays,
           totalFollowupMsgs,
           totalDisengagementMsgs,
@@ -2682,12 +2696,82 @@ const performanceRouter = t.router({
     .input(z.object({ coachId: z.number().optional() }).optional())
     .mutation(async ({ input }) => {
       const db = await requireDb();
+
+      // Backup all ratings before clearing (for undo)
+      const ratingsToBackup = input?.coachId
+        ? await db.select().from(clientRatings).where(eq(clientRatings.coachId, input.coachId))
+        : await db.select().from(clientRatings);
+
+      // Store backup as a sweep report snapshot with a special title
+      const backupSnapshot = {
+        _isRatingBackup: true,
+        ratings: ratingsToBackup.map(r => ({
+          coachId: r.coachId,
+          clientName: r.clientName,
+          rating: r.rating,
+          notes: r.notes,
+        })),
+      };
+      const [backupResult] = await db.insert(sweepReports).values({
+        title: `[Rating Backup] ${new Date().toISOString()}`,
+        createdByUserId: 0,
+        createdByName: "System Backup",
+        snapshotJson: backupSnapshot,
+        weekStart: new Date().toISOString().slice(0, 10),
+        scopeType: input?.coachId ? "coach" : "all",
+        scopeCoachId: input?.coachId ?? null,
+      });
+
+      // Now clear
       if (input?.coachId) {
         await db.delete(clientRatings).where(eq(clientRatings.coachId, input.coachId));
       } else {
         await db.delete(clientRatings);
       }
-      return { success: true };
+
+      return { success: true, backupId: backupResult.insertId, backedUp: ratingsToBackup.length };
+    }),
+
+  /** Undo a rating reset by restoring from backup. */
+  undoResetRatings: adminProcedure
+    .input(z.object({ backupId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+
+      const [backup] = await db.select().from(sweepReports).where(eq(sweepReports.id, input.backupId)).limit(1);
+      if (!backup) throw new TRPCError({ code: "NOT_FOUND", message: "Backup not found" });
+
+      const snapshot = backup.snapshotJson as any;
+      if (!snapshot?._isRatingBackup || !snapshot?.ratings) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Not a valid rating backup" });
+      }
+
+      // Restore each rating
+      let restored = 0;
+      for (const r of snapshot.ratings) {
+        // Upsert — check if rating already exists
+        const existing = await db.select().from(clientRatings)
+          .where(and(eq(clientRatings.coachId, r.coachId), eq(clientRatings.clientName, r.clientName)))
+          .limit(1);
+        if (existing.length > 0) {
+          await db.update(clientRatings)
+            .set({ rating: r.rating, notes: r.notes })
+            .where(eq(clientRatings.id, existing[0].id));
+        } else {
+          await db.insert(clientRatings).values({
+            coachId: r.coachId,
+            clientName: r.clientName,
+            rating: r.rating,
+            notes: r.notes,
+          });
+        }
+        restored++;
+      }
+
+      // Clean up the backup record
+      await db.delete(sweepReports).where(eq(sweepReports.id, input.backupId));
+
+      return { success: true, restored };
     }),
 });
 

@@ -104,7 +104,7 @@ export default function WeeklySummary() {
           <div>
             <div className="flex items-center gap-2.5 mb-1">
               <FileBarChart2 className="h-5 w-5 text-violet-400" />
-              <h1 className="text-2xl font-bold text-white/90" style={{ fontFamily: "'Comfortaa', cursive" }}>Weekly Summary</h1>
+              <h1 className="text-3xl font-bold text-white/90" style={{ fontFamily: "'Comfortaa', cursive" }}>Weekly Summary</h1>
             </div>
             <p className="text-sm text-white/50">
               Key metrics for the selected week — ready to share with the team.
@@ -160,11 +160,11 @@ export default function WeeklySummary() {
           <div
             ref={printRef}
             className="space-y-6 rounded-2xl p-6 bg-white/5 backdrop-blur-xl border border-white/10"
-            style={{ background: "#0f172a", color: "#e2e8f0" }}
+            style={{ color: "#e2e8f0" }}
           >
 
             {/* PDF Header */}
-            <div style={{ borderBottom: "1px solid #1e293b", paddingBottom: "16px" }}>
+            <div style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "16px" }}>
               <div className="flex items-center justify-between">
                 <div>
                   <h2 style={{ fontSize: "22px", fontWeight: 700, color: "#f1f5f9", margin: 0 }}>
@@ -263,8 +263,8 @@ export default function WeeklySummary() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
 
               {/* Disengaged Clients — grouped by coach */}
-              <div style={{ border: "1px solid #1e293b", borderRadius: "8px", overflow: "hidden" }}>
-                <div style={{ background: "#1e293b", padding: "12px 16px", borderBottom: "1px solid #334155", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px", overflow: "hidden" }}>
+                <div style={{ background: "rgba(255,255,255,0.05)", padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div>
                     <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "13px" }}>Disengaged Clients This Week</div>
                     <div style={{ color: "#64748b", fontSize: "11px", marginTop: "2px" }}>! = consecutive misses · grouped by coach</div>
@@ -309,7 +309,7 @@ export default function WeeklySummary() {
                               {/* Coach header */}
                               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
                                 <span style={{ fontSize: "11px", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em" }}>{coachName}</span>
-                                <span style={{ fontSize: "11px", color: "#475569", background: "#1e293b", borderRadius: "999px", padding: "1px 8px" }}>{clients.length} client{clients.length !== 1 ? "s" : ""}</span>
+                                <span style={{ fontSize: "11px", color: "#475569", background: "rgba(255,255,255,0.05)", borderRadius: "999px", padding: "1px 8px" }}>{clients.length} client{clients.length !== 1 ? "s" : ""}</span>
                               </div>
                               {/* Tier sections */}
                               {([critical, alert, warning] as const).map((group, gi) => {
@@ -349,10 +349,10 @@ export default function WeeklySummary() {
               </div>
 
               {/* Client Health */}
-              <div style={{ border: "1px solid #1e293b", borderRadius: "8px", overflow: "hidden" }}>
-                <div style={{ background: "#1e293b", padding: "12px 16px", borderBottom: "1px solid #334155" }}>
+              <div style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px", overflow: "hidden" }}>
+                <div style={{ background: "rgba(255,255,255,0.05)", padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                   <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "13px" }}>Client Health Snapshot</div>
-                  <div style={{ color: "#64748b", fontSize: "11px", marginTop: "2px" }}>Current traffic light ratings</div>
+                  <div style={{ color: "#64748b", fontSize: "11px", marginTop: "2px" }}>Current Client Ratings</div>
                 </div>
                 <div style={{ padding: "16px" }}>
                   {data.clientHealth.total === 0 ? (
@@ -367,7 +367,7 @@ export default function WeeklySummary() {
                         </span>
                         <span style={{ fontSize: "13px", color: "#64748b" }}>clients on track</span>
                       </div>
-                      <div style={{ height: "10px", borderRadius: "999px", background: "#1e293b", overflow: "hidden", display: "flex" }}>
+                      <div style={{ height: "10px", borderRadius: "999px", background: "rgba(255,255,255,0.05)", overflow: "hidden", display: "flex" }}>
                         <div style={{ background: "#34d399", width: `${data.clientHealth.greenPct}%` }} />
                         <div style={{ background: "#fde047", width: `${data.clientHealth.total > 0 ? Math.round(data.clientHealth.yellow / data.clientHealth.total * 100) : 0}%` }} />
                         <div style={{ background: "#ef4444", width: `${data.clientHealth.total > 0 ? Math.round(data.clientHealth.red / data.clientHealth.total * 100) : 0}%` }} />
@@ -397,7 +397,7 @@ export default function WeeklySummary() {
             </div>
 
             {/* Footer */}
-            <div style={{ borderTop: "1px solid #1e293b", paddingTop: "12px", textAlign: "center", fontSize: "11px", color: "#475569" }}>
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "12px", textAlign: "center", fontSize: "11px", color: "#475569" }}>
               Coach Check-In Tracker · {selectedLabel}
             </div>
           </div>
@@ -421,7 +421,7 @@ function StatCard({ label, value, sub, accent, trend, trendLabel, trendPositiveI
   const trendArrow = trend === null || trend === undefined ? null
     : trend > 0 ? "↑" : trend < 0 ? "↓" : "→";
   return (
-    <div style={{ borderRadius: "8px", border: `1px solid ${accent}33`, background: `${accent}11`, padding: "12px" }}>
+    <div style={{ borderRadius: "12px", border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)", padding: "12px" }}>
       <div style={{ fontSize: "11px", fontWeight: 500, color: "#94a3b8", marginBottom: "4px" }}>{label}</div>
       <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
         <div style={{ fontSize: "24px", fontWeight: 700, color: accent }}>{value}</div>
@@ -460,12 +460,12 @@ function DarkTable({ headers, rows, emptyMessage, lastRowHighlight }: {
   const totalRow = lastRowHighlight && rows.length > 1 ? rows[rows.length - 1] : null;
 
   return (
-    <div style={{ border: "1px solid #1e293b", borderRadius: "8px", overflow: "hidden" }}>
+    <div style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px", overflow: "hidden" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
         <thead>
-          <tr style={{ background: "#1e293b" }}>
+          <tr style={{ background: "rgba(255,255,255,0.05)" }}>
             {headers.map((h, i) => (
-              <th key={i} style={{ padding: "8px 12px", textAlign: i === 0 ? "left" : "center", fontSize: "11px", fontWeight: 600, color: "#64748b", borderBottom: "1px solid #334155" }}>
+              <th key={i} style={{ padding: "8px 12px", textAlign: i === 0 ? "left" : "center", fontSize: "11px", fontWeight: 600, color: "#64748b", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                 {h}
               </th>
             ))}
@@ -480,7 +480,7 @@ function DarkTable({ headers, rows, emptyMessage, lastRowHighlight }: {
             </tr>
           )}
           {dataRows.map((row, ri) => (
-            <tr key={ri} style={{ background: ri % 2 === 0 ? "transparent" : "#0f172a22", borderBottom: "1px solid #1e293b" }}>
+            <tr key={ri} style={{ background: ri % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
               {row.map((cell, ci) => (
                 <td key={ci} style={{ padding: "8px 12px", textAlign: ci === 0 ? "left" : "center", color: "#cbd5e1" }}>
                   {cell}
@@ -489,7 +489,7 @@ function DarkTable({ headers, rows, emptyMessage, lastRowHighlight }: {
             </tr>
           ))}
           {totalRow && (
-            <tr style={{ background: "#1e293b", borderTop: "1px solid #334155" }}>
+            <tr style={{ background: "rgba(255,255,255,0.05)", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
               {totalRow.map((cell, ci) => (
                 <td key={ci} style={{ padding: "8px 12px", textAlign: ci === 0 ? "left" : "center", color: "#94a3b8" }}>
                   {cell}

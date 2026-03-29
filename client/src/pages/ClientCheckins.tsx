@@ -622,7 +622,7 @@ export default function ClientCheckins() {
           <div className="flex items-center justify-between mb-5">
             <div>
               <img src="/databite-wordmark.png" alt="Databite" className="h-10 brightness-0 invert opacity-80" />
-              <h1 className="text-2xl font-bold text-white/50 tracking-tight mt-1" style={{ fontFamily: "'Comfortaa', cursive" }}>Client Check-Ins</h1>
+              <h1 className="text-3xl font-bold text-white/50 tracking-tight mt-1" style={{ fontFamily: "'Comfortaa', cursive" }}>Client Check-Ins</h1>
             </div>
 
             {/* Coach selector + Date selector — top right */}

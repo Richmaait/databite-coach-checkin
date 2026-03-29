@@ -85,15 +85,15 @@ function formatWeekLabel(weekStart: string): string {
 
 function engagementColor(pct: number | null | undefined): string {
   if (pct == null) return "text-white/50";
-  if (pct >= 90) return "text-emerald-400";
-  if (pct >= 70) return "text-yellow-200";
+  if (pct >= 80) return "text-emerald-400";
+  if (pct >= 60) return "text-white/80";
   return "text-red-400";
 }
 
 function engagementBadgeClass(pct: number | null | undefined): string {
-  if (pct == null) return "text-white/50 border-muted-foreground/30 bg-white/5/10";
-  if (pct >= 90) return "text-emerald-400 border-emerald-400/30 bg-emerald-400/10";
-  if (pct >= 70) return "text-yellow-200 border-yellow-200/30 bg-yellow-400/10";
+  if (pct == null) return "text-white/50 border-white/10 bg-white/5";
+  if (pct >= 80) return "text-emerald-400 border-emerald-400/30 bg-emerald-400/10";
+  if (pct >= 60) return "text-white/80 border-white/20 bg-white/10";
   return "text-red-400 border-red-400/30 bg-red-400/10";
 }
 
@@ -281,6 +281,12 @@ export default function CoachPerformanceReport() {
                   </CardHeader>
                   <CardContent className="px-4 pb-4">
                     <p className={`text-3xl font-bold ${card.color}`}>{card.value}</p>
+                    {card.label === "Engagement" && teamEngagementPct != null && teamEngagementPct >= 80 && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-400/15 text-emerald-400 border border-emerald-400/20 mt-1">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        KPI ACHIEVED
+                      </span>
+                    )}
                     <p className="text-xs text-white/50 mt-0.5">{card.sub}</p>
                   </CardContent>
                 </Card>

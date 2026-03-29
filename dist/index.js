@@ -525,6 +525,32 @@ async function registerAuthRoutes(app) {
       role: user.role
     });
   });
+  if (!ENV.isProduction) {
+    app.get("/api/auth/dev-login", async (req, res) => {
+      const email = req.query.email || ADMIN_EMAILS[0];
+      const db2 = await getDb();
+      if (!db2) return res.status(500).json({ error: "Database unavailable" });
+      let [user] = await db2.select().from(users).where(eq2(users.email, email)).limit(1);
+      if (!user) {
+        const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
+        const [result] = await db2.insert(users).values({
+          email,
+          name: isAdmin ? "Rich" : email.split("@")[0],
+          role: isAdmin ? "admin" : "coach"
+        });
+        [user] = await db2.select().from(users).where(eq2(users.id, result.insertId)).limit(1);
+      }
+      const token = await createToken(user.id);
+      res.cookie(COOKIE_NAME, token, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+        maxAge: COOKIE_MAX_AGE * 1e3,
+        path: "/"
+      });
+      res.redirect("/client-checkins");
+    });
+  }
   app.get("/api/auth/google", (_req, res) => {
     const redirectUri = `${ENV.appUrl}/api/auth/google/callback`;
     const params = new URLSearchParams({
@@ -1620,8 +1646,9 @@ var clientCheckinsRouter = t.router({
     })
   ).query(async ({ input }) => {
     const db2 = await requireDb();
-    const weekStart = input.weekStart || (input.weekStarts ? input.weekStarts[0] : void 0);
-    if (!weekStart) throw new TRPCError({ code: "BAD_REQUEST", message: "weekStart or weekStarts required" });
+    const weekStartList = input.weekStarts && input.weekStarts.length > 0 ? input.weekStarts : input.weekStart ? [input.weekStart] : [];
+    if (weekStartList.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "weekStart or weekStarts required" });
+    const weekStart = weekStartList[0];
     let coachList;
     if (input.coachId) {
       const [coach] = await db2.select().from(coaches).where(eq4(coaches.id, input.coachId)).limit(1);
@@ -1630,37 +1657,40 @@ var clientCheckinsRouter = t.router({
       coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq4(coaches.isActive, 1));
     }
     const results = [];
-    for (const coach of coachList) {
+    const coachData = await Promise.all(coachList.map(async (coach) => {
       const roster = await fetchRosterForCoach(coach.name);
+      const paused = await db2.select().from(pausedClients).where(and2(eq4(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
+      const pausedSet = new Set(paused.map((p) => p.clientName));
       let scheduled = 0;
       for (const day of DAYS) {
-        scheduled += (roster[day] ?? []).length;
+        scheduled += (roster[day] ?? []).filter((c) => !pausedSet.has(c)).length;
       }
-      const completions = await db2.select().from(clientCheckIns).where(
-        and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, weekStart))
-      );
-      const completed = completions.filter((c) => c.completedAt != null).length;
-      const clientSubmittedCount = completions.filter((c) => c.clientSubmitted === 1).length;
-      const excuses = await db2.select().from(excusedClients).where(
-        and2(
+      return { coach, scheduled };
+    }));
+    for (const ws of weekStartList) {
+      for (const { coach, scheduled } of coachData) {
+        const completions = await db2.select().from(clientCheckIns).where(and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, ws)));
+        const completed = completions.filter((c) => c.completedAt != null).length;
+        const clientSubmittedCount = completions.filter((c) => c.clientSubmitted === 1).length;
+        const excuses = await db2.select().from(excusedClients).where(and2(
           eq4(excusedClients.coachId, coach.id),
-          eq4(excusedClients.weekStart, weekStart),
+          eq4(excusedClients.weekStart, ws),
           eq4(excusedClients.status, "approved")
-        )
-      );
-      const excusedCount = excuses.length;
-      const effectiveScheduled = Math.max(scheduled - excusedCount, 0);
-      const pct = effectiveScheduled > 0 ? Math.round(completed / effectiveScheduled * 100) : 0;
-      results.push({
-        coachId: coach.id,
-        coachName: coach.name,
-        weekStart,
-        scheduled,
-        completed,
-        excused: excusedCount,
-        clientSubmitted: clientSubmittedCount,
-        pct
-      });
+        ));
+        const excusedCount = excuses.length;
+        const effectiveScheduled = Math.max(scheduled - excusedCount, 0);
+        const pct = effectiveScheduled > 0 ? Math.round(completed / effectiveScheduled * 100) : 0;
+        results.push({
+          coachId: coach.id,
+          coachName: coach.name,
+          weekStart: ws,
+          scheduled,
+          completed,
+          excused: excusedCount,
+          clientSubmitted: clientSubmittedCount,
+          pct
+        });
+      }
     }
     return results;
   }),
@@ -1783,9 +1813,12 @@ var clientCheckinsRouter = t.router({
       const completionSet = new Set(
         completions.filter((c) => c.completedAt != null).map((c) => `${c.clientName}|${c.dayOfWeek}|${c.weekStart}`)
       );
-      const excuseSet = new Set(
-        approvedExcuses.map((e) => `${e.clientName}|${e.dayOfWeek}|${e.weekStart}`)
-      );
+      const excuseSet = /* @__PURE__ */ new Set();
+      for (const e of approvedExcuses) {
+        excuseSet.add(`${e.clientName}|${e.weekStart}`);
+        const baseName = e.clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+        if (baseName !== e.clientName) excuseSet.add(`${baseName}|${e.weekStart}`);
+      }
       const startMap = new Map(
         starts.map((s) => [`${s.clientName}|${s.dayOfWeek}`, s.firstWeekStart])
       );
@@ -1799,8 +1832,11 @@ var clientCheckinsRouter = t.router({
           for (const week of allWeeks) {
             if (week < clientStart) break;
             if (week > currentWeek) continue;
-            const key = `${clientName}|${day}|${week}`;
-            if (completionSet.has(key) || excuseSet.has(key)) {
+            const compKey = `${clientName}|${day}|${week}`;
+            const excKey = `${clientName}|${week}`;
+            const baseName = clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+            const baseExcKey = baseName !== clientName ? `${baseName}|${week}` : null;
+            if (completionSet.has(compKey) || excuseSet.has(excKey) || baseExcKey && excuseSet.has(baseExcKey)) {
               if (!lastCompleted) lastCompleted = week;
               break;
             }
@@ -1832,21 +1868,30 @@ var clientCheckinsRouter = t.router({
     const streaks = [];
     for (const coach of coachList) {
       const roster = await fetchRosterForCoach(coach.name);
+      const paused = await db2.select().from(pausedClients).where(and2(eq4(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
+      const pausedSet = new Set(paused.map((p) => p.clientName));
       const completions = await db2.select().from(clientCheckIns).where(eq4(clientCheckIns.coachId, coach.id));
       const approvedExcuses = await db2.select().from(excusedClients).where(and2(eq4(excusedClients.coachId, coach.id), eq4(excusedClients.status, "approved")));
       const completionSet = new Set(
         completions.filter((c) => c.completedAt != null).map((c) => `${c.clientName}|${c.dayOfWeek}|${c.weekStart}`)
       );
-      const excuseSet = new Set(
-        approvedExcuses.map((e) => `${e.clientName}|${e.dayOfWeek}|${e.weekStart}`)
-      );
+      const excuseSet = /* @__PURE__ */ new Set();
+      for (const e of approvedExcuses) {
+        excuseSet.add(`${e.clientName}|${e.weekStart}`);
+        const baseName = e.clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+        if (baseName !== e.clientName) excuseSet.add(`${baseName}|${e.weekStart}`);
+      }
       for (const day of DAYS) {
         const clients = roster[day] ?? [];
         for (const clientName of clients) {
+          if (pausedSet.has(clientName)) continue;
           let missed = 0;
           for (const week of allWeeks) {
-            const key = `${clientName}|${day}|${week}`;
-            if (completionSet.has(key) || excuseSet.has(key)) break;
+            const compKey = `${clientName}|${day}|${week}`;
+            const excKey = `${clientName}|${week}`;
+            const baseName = clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+            const baseExcKey = baseName !== clientName ? `${baseName}|${week}` : null;
+            if (completionSet.has(compKey) || excuseSet.has(excKey) || baseExcKey && excuseSet.has(baseExcKey)) break;
             missed++;
           }
           if (missed >= 2) {
@@ -2409,6 +2454,68 @@ var clientCheckinsRouter = t.router({
       }
     }
     return alerts;
+  }),
+  /** Public: client self-check-in. Finds the client by name (case-insensitive) and marks submitted. */
+  clientSelfCheckin: publicProcedure.input(
+    z.object({
+      clientName: z.string().min(1)
+    })
+  ).mutation(async ({ input }) => {
+    const db2 = await requireDb();
+    const melbNow = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "Australia/Melbourne" }));
+    const dayIdx = melbNow.getDay();
+    const diff = melbNow.getDate() - dayIdx + (dayIdx === 0 ? -6 : 1);
+    const monday = new Date(melbNow);
+    monday.setDate(diff);
+    const weekStart = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, "0")}-${String(monday.getDate()).padStart(2, "0")}`;
+    const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    const todayName = dayNames[melbNow.getDay()];
+    if (!["monday", "tuesday", "wednesday", "thursday", "friday"].includes(todayName)) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Check-ins are only available Monday to Friday." });
+    }
+    const dayOfWeek = todayName;
+    const allCoaches = await db2.select().from(coaches).where(eq4(coaches.isActive, 1));
+    let foundCoach = null;
+    let foundClientName = null;
+    const searchName = input.clientName.toLowerCase().trim();
+    for (const coach of allCoaches) {
+      const roster = await fetchRosterForCoach(coach.name);
+      const dayClients = roster[dayOfWeek] ?? [];
+      const match = dayClients.find((c) => c.toLowerCase().includes(searchName));
+      if (match) {
+        foundCoach = { id: coach.id, name: coach.name };
+        foundClientName = match;
+        break;
+      }
+    }
+    if (!foundCoach || !foundClientName) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Could not find your name on today's roster. Please check with your coach." });
+    }
+    const existing = await db2.select().from(clientCheckIns).where(
+      and2(
+        eq4(clientCheckIns.coachId, foundCoach.id),
+        eq4(clientCheckIns.clientName, foundClientName),
+        eq4(clientCheckIns.dayOfWeek, dayOfWeek),
+        eq4(clientCheckIns.weekStart, weekStart)
+      )
+    ).limit(1);
+    if (existing.length > 0) {
+      if (existing[0].clientSubmitted === 1) {
+        return { alreadySubmitted: true, clientName: foundClientName, coachName: foundCoach.name, dayOfWeek };
+      }
+      await db2.update(clientCheckIns).set({ clientSubmitted: 1, clientSubmittedAt: /* @__PURE__ */ new Date() }).where(eq4(clientCheckIns.id, existing[0].id));
+      return { alreadySubmitted: false, clientName: foundClientName, coachName: foundCoach.name, dayOfWeek };
+    }
+    await db2.insert(clientCheckIns).values({
+      coachId: foundCoach.id,
+      coachName: foundCoach.name,
+      clientName: foundClientName,
+      dayOfWeek,
+      weekStart,
+      clientSubmitted: 1,
+      clientSubmittedAt: /* @__PURE__ */ new Date()
+    });
+    return { alreadySubmitted: false, clientName: foundClientName, coachName: foundCoach.name, dayOfWeek };
   })
 });
 var coachesRouter = t.router({

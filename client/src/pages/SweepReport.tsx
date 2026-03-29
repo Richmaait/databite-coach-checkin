@@ -552,7 +552,47 @@ export default function SweepReportPage() {
     );
   }
 
-  const { snapshot } = data;
+  // Transform raw DB snapshot into the expected Snapshot shape
+  const snapshot: Snapshot = (() => {
+    const raw = (data as any).snapshotJson ?? (data as any).snapshot ?? {};
+    const rawCoaches: any[] = raw.coaches ?? [];
+
+    let totalGreen = 0, totalYellow = 0, totalRed = 0, totalRated = 0;
+    const coachSections: CoachSection[] = rawCoaches.map((c: any) => {
+      const ratingDetails: any[] = c.ratingDetails ?? [];
+      const clients: ClientEntry[] = ratingDetails.map((rd: any) => ({
+        name: rd.clientName,
+        rating: rd.rating as Rating,
+        notes: rd.notes ?? null,
+        streak: 0,
+      }));
+
+      const g = c.ratings?.green ?? clients.filter(cl => cl.rating === "green").length;
+      const y = c.ratings?.yellow ?? clients.filter(cl => cl.rating === "yellow").length;
+      const r = c.ratings?.red ?? clients.filter(cl => cl.rating === "red").length;
+      totalGreen += g; totalYellow += y; totalRed += r; totalRated += g + y + r;
+
+      return {
+        coachId: c.coachId,
+        coachName: c.coachName,
+        engagement: { scheduled: c.scheduled ?? 0, completed: c.completed ?? 0, pct: c.pct ?? 0 },
+        clients,
+        green: g,
+        yellow: y,
+        red: r,
+        total: g + y + r,
+      };
+    });
+
+    const greenPct = totalRated > 0 ? Math.round((totalGreen / totalRated) * 1000) / 10 : 0;
+
+    return {
+      generatedAt: data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString(),
+      weekStart: data.weekStart ?? "",
+      business: { green: totalGreen, yellow: totalYellow, red: totalRed, total: totalRated, greenPct },
+      coaches: coachSections,
+    };
+  })();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 text-white/90">
@@ -577,12 +617,12 @@ export default function SweepReportPage() {
             <div>
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <h1 className="text-2xl font-bold text-white/90" style={{ fontFamily: "'Comfortaa', cursive" }}>{data.title}</h1>
-                {data.scopeType === "coach" && data.scopeCoachName && (
+                {data.scopeType === "coach" && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-300 border border-blue-500/30">
                     <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                     </svg>
-                    1-on-1: {data.scopeCoachName}
+                    1-on-1: {((data as any).scopeCoachName) || (snapshot.coaches.find(c => c.coachId === (data as any).scopeCoachId)?.coachName) || "Coach"}
                   </span>
                 )}
                 {(!data.scopeType || data.scopeType === "all") && (

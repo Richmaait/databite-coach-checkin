@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { formatDateAU, formatWeekAU, melbourneNow } from "@/lib/utils";
-import { format, subDays, subMonths, getISOWeek, getYear, startOfWeek, endOfWeek } from "date-fns";
+import { format, subDays, addDays, subMonths, getISOWeek, getYear, startOfWeek, endOfWeek } from "date-fns";
 import { Activity, AlertTriangle, CalendarDays, FileText, ListChecks, MessageSquare, TrendingDown, TrendingUp, Users, ShieldAlert, ShieldCheck, ShieldX, Clock3, Loader2 } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -31,20 +31,22 @@ import { useLocation } from "wouter";
 
 type RangeKey = "today" | "wtd" | "7d" | "14d" | "30d" | "90d" | "180d" | "12m" | "custom";
 
-/** Returns the most recent Sunday (the end of the last complete week). */
-function lastSunday(from: Date = melbourneNow()): Date {
+/** Returns the Monday of the current work week.
+ *  Mon–Sat: returns this week's Monday.
+ *  Sunday: the work week (Mon–Fri) is over, so "this week" = the week that just finished.
+ *  The new week flips on Monday. */
+function currentMonday(from: Date = melbourneNow()): Date {
   const d = new Date(from);
-  const dow = d.getDay(); // 0=Sun
-  // If today is Sunday, that IS the end of the last complete week
-  // Otherwise subtract back to the previous Sunday
-  if (dow !== 0) d.setDate(d.getDate() - dow);
+  const dow = d.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  // Sunday: treat as end of the prior work week — go back to that Monday
+  const diff = dow === 0 ? 6 : dow - 1;
+  d.setDate(d.getDate() - diff);
   return d;
 }
 
-/** Returns the Monday that is `weeks` complete weeks before the given Sunday. */
-function mondayNWeeksBeforeSunday(sunday: Date, weeks: number): Date {
-  // Go back (weeks * 7) days from Sunday to land on the Monday of the first week
-  return subDays(sunday, weeks * 7 - 1);
+/** Returns the Friday of a given Monday's week. */
+function fridayOfWeek(monday: Date): Date {
+  return addDays(monday, 4);
 }
 
 function getDateRange(
@@ -57,42 +59,46 @@ function getDateRange(
     case "today":
       return { startDate: format(today, "yyyy-MM-dd"), endDate: format(today, "yyyy-MM-dd") };
     case "wtd": {
-      // Mon of current week → today
-      const dow = today.getDay();
-      const daysToMon = dow === 0 ? 6 : dow - 1;
-      const mon = subDays(today, daysToMon);
+      // This week: Mon of current week → today
+      const mon = currentMonday(today);
       return { startDate: format(mon, "yyyy-MM-dd"), endDate: format(today, "yyyy-MM-dd") };
     }
     case "7d": {
-      // Last 1 complete Mon–Sun week
-      const sun = lastSunday(today);
-      const mon = mondayNWeeksBeforeSunday(sun, 1);
-      return { startDate: format(mon, "yyyy-MM-dd"), endDate: format(sun, "yyyy-MM-dd") };
+      // Last week: data range is full 7 days (Sun–Sat), displayed as Mon–Fri
+      const thisMon = currentMonday(today);
+      const lastMon = subDays(thisMon, 7);
+      const lastSun = subDays(thisMon, 1); // Sunday end of last week
+      return { startDate: format(lastMon, "yyyy-MM-dd"), endDate: format(lastSun, "yyyy-MM-dd") };
     }
     case "14d": {
-      const sun = lastSunday(today);
-      const mon = mondayNWeeksBeforeSunday(sun, 2);
-      return { startDate: format(mon, "yyyy-MM-dd"), endDate: format(sun, "yyyy-MM-dd") };
+      const thisMon = currentMonday(today);
+      const startMon = subDays(thisMon, 14);
+      const lastSun = subDays(thisMon, 1);
+      return { startDate: format(startMon, "yyyy-MM-dd"), endDate: format(lastSun, "yyyy-MM-dd") };
     }
     case "30d": {
-      const sun = lastSunday(today);
-      const mon = mondayNWeeksBeforeSunday(sun, 4);
-      return { startDate: format(mon, "yyyy-MM-dd"), endDate: format(sun, "yyyy-MM-dd") };
+      const thisMon = currentMonday(today);
+      const startMon = subDays(thisMon, 28);
+      const lastSun = subDays(thisMon, 1);
+      return { startDate: format(startMon, "yyyy-MM-dd"), endDate: format(lastSun, "yyyy-MM-dd") };
     }
     case "90d": {
-      const sun = lastSunday(today);
-      const mon = mondayNWeeksBeforeSunday(sun, 13);
-      return { startDate: format(mon, "yyyy-MM-dd"), endDate: format(sun, "yyyy-MM-dd") };
+      const thisMon = currentMonday(today);
+      const startMon = subDays(thisMon, 91);
+      const lastSun = subDays(thisMon, 1);
+      return { startDate: format(startMon, "yyyy-MM-dd"), endDate: format(lastSun, "yyyy-MM-dd") };
     }
     case "180d": {
-      const sun = lastSunday(today);
-      const mon = mondayNWeeksBeforeSunday(sun, 26);
-      return { startDate: format(mon, "yyyy-MM-dd"), endDate: format(sun, "yyyy-MM-dd") };
+      const thisMon = currentMonday(today);
+      const startMon = subDays(thisMon, 182);
+      const lastSun = subDays(thisMon, 1);
+      return { startDate: format(startMon, "yyyy-MM-dd"), endDate: format(lastSun, "yyyy-MM-dd") };
     }
     case "12m": {
-      const sun = lastSunday(today);
-      const mon = mondayNWeeksBeforeSunday(sun, 52);
-      return { startDate: format(mon, "yyyy-MM-dd"), endDate: format(sun, "yyyy-MM-dd") };
+      const thisMon = currentMonday(today);
+      const startMon = subDays(thisMon, 364);
+      const lastSun = subDays(thisMon, 1);
+      return { startDate: format(startMon, "yyyy-MM-dd"), endDate: format(lastSun, "yyyy-MM-dd") };
     }
     case "custom":
       if (customFrom && customTo) {
@@ -484,6 +490,26 @@ export default function Dashboard() {
     { enabled: !!user && isAdmin && prevWeekStarts.length > 0, staleTime: 5 * 60 * 1000 }
   );
 
+  // Prior 6 weeks for KPI tracker (always fetched regardless of range)
+  const kpiTrackerWeekStarts = useMemo(() => {
+    const starts: string[] = [];
+    const today = melbourneNow();
+    const dow = today.getDay();
+    const daysToMon = dow === 0 ? 6 : dow - 1;
+    const d = new Date(today);
+    d.setDate(d.getDate() - daysToMon); // Monday of current week
+    // Go back 6 weeks from current Monday
+    for (let i = 0; i < 6; i++) {
+      starts.push(format(d, "yyyy-MM-dd"));
+      d.setDate(d.getDate() - 7);
+    }
+    return starts;
+  }, []);
+  const { data: kpiTrackerStats } = trpc.clientCheckins.getRosterWeeklyStats.useQuery(
+    { weekStarts: kpiTrackerWeekStarts },
+    { enabled: !!user && isAdmin && kpiTrackerWeekStarts.length > 0, staleTime: 5 * 60 * 1000 }
+  );
+
   // ── Compute summary stats (must be before any early return — React hooks rules) ─
   const morningRecords = rawRecords?.filter(r => r.submissionType === "morning") ?? [];
   const followupRecords = rawRecords?.filter(r => r.submissionType === "followup") ?? [];
@@ -497,12 +523,16 @@ export default function Dashboard() {
   const prevEngagement = (() => {
     const rows = prevRosterStats ?? [];
     const sched = rows.reduce((s, r) => s + r.scheduled, 0);
-    return sched > 0 ? Math.round((rows.reduce((s, r) => s + r.completed, 0) / sched) * 1000) / 10 : 0;
+    const exc = rows.reduce((s, r) => s + (r.excused ?? 0), 0);
+    const eff = Math.max(sched - exc, 1);
+    return sched > 0 ? Math.round((rows.reduce((s, r) => s + r.completed, 0) / eff) * 1000) / 10 : 0;
   })();
   const avgEngagement = (() => {
     const rows = rosterStats ?? [];
     const sched = rows.reduce((s, r) => s + r.scheduled, 0);
-    return sched > 0 ? Math.round((rows.reduce((s, r) => s + r.completed, 0) / sched) * 1000) / 10 : 0;
+    const exc = rows.reduce((s, r) => s + (r.excused ?? 0), 0);
+    const eff = Math.max(sched - exc, 1);
+    return sched > 0 ? Math.round((rows.reduce((s, r) => s + r.completed, 0) / eff) * 1000) / 10 : 0;
   })();
   const totalFollowup = followupRecords.reduce((s, r) => s + (r.followupMessagesSent ?? 0), 0);
   const totalDisengagement = disengagementRecords.reduce((s, r) => s + (r.disengagementMessagesSent ?? 0), 0);
@@ -517,25 +547,31 @@ export default function Dashboard() {
     const byWeek: Record<string, Record<string, number>> = {};
     for (const r of rosterStats) {
       if (chartCoachFilter !== "all" && r.coachId !== chartCoachFilter) continue;
-      if (!byWeek[r.weekStart]) byWeek[r.weekStart] = { __totalScheduled: 0, __totalCompleted: 0 };
+      if (!byWeek[r.weekStart]) byWeek[r.weekStart] = { __totalScheduled: 0, __totalCompleted: 0, __totalExcused: 0 };
+      const excused = (r as any).excused ?? 0;
       byWeek[r.weekStart][`${r.coachName}_scheduled`] = (byWeek[r.weekStart][`${r.coachName}_scheduled`] ?? 0) + r.scheduled;
       byWeek[r.weekStart][`${r.coachName}_completed`] = (byWeek[r.weekStart][`${r.coachName}_completed`] ?? 0) + r.completed;
+      byWeek[r.weekStart][`${r.coachName}_excused`] = (byWeek[r.weekStart][`${r.coachName}_excused`] ?? 0) + excused;
       byWeek[r.weekStart].__totalScheduled += r.scheduled;
       byWeek[r.weekStart].__totalCompleted += r.completed;
+      byWeek[r.weekStart].__totalExcused += excused;
     }
     const sortedWeeks = Object.entries(byWeek).sort(([a], [b]) => a.localeCompare(b));
     const rows: Record<string, string | number | null>[] = [];
     sortedWeeks.forEach(([weekStart, vals], wi) => {
       const weekLabel = formatDateAU(weekStart);
+      const teamEffective = Math.max(vals.__totalScheduled - vals.__totalExcused, 1);
       const teamEngPct = vals.__totalScheduled > 0
-        ? Math.round((vals.__totalCompleted / vals.__totalScheduled) * 1000) / 10
+        ? Math.round((vals.__totalCompleted / teamEffective) * 1000) / 10
         : 0;
       // One row per coach — always show coach name on X-axis
       filteredCoaches.forEach((coach, ci) => {
         const coachSched = vals[`${coach.name}_scheduled`] ?? 0;
         const coachComp = vals[`${coach.name}_completed`] ?? 0;
+        const coachExc = vals[`${coach.name}_excused`] ?? 0;
+        const coachEffective = Math.max(coachSched - coachExc, 1);
         const coachEngPct = coachSched > 0
-          ? Math.round((coachComp / coachSched) * 1000) / 10
+          ? Math.round((coachComp / coachEffective) * 1000) / 10
           : null;
         rows.push({
           date: coach.name,
@@ -642,8 +678,10 @@ export default function Dashboard() {
       const cRoster = (rosterStats ?? []).filter(r => r.coachId === coach.id);
       const rScheduled = cRoster.reduce((s, r) => s + r.scheduled, 0);
       const rCompleted = cRoster.reduce((s, r) => s + r.completed, 0);
+      const rExcused = cRoster.reduce((s, r) => s + ((r as any).excused ?? 0), 0);
+      const rEffective = Math.max(rScheduled - rExcused, 1);
       const avgEngCurrent = rScheduled > 0
-        ? Math.round((rCompleted / rScheduled) * 1000) / 10
+        ? Math.round((rCompleted / rEffective) * 1000) / 10
         : null;
       // Prior period mood from morning check-in records
       const priorRecords = priorMorning.filter(r => r.coachId === coach.id);
@@ -865,6 +903,12 @@ export default function Dashboard() {
                 <div>
                   <p className="text-xs text-white/50 uppercase tracking-wider">Avg Engagement</p>
                   <p className="text-3xl font-bold text-white/90 mt-1">{avgEngagement.toFixed(1)}%</p>
+                  {avgEngagement >= 80 && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-400/15 text-emerald-400 border border-emerald-400/20 mt-1">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                      KPI ACHIEVED
+                    </span>
+                  )}
                   <div className="flex items-center gap-1.5 mt-1">
                     <p className="text-xs text-white/50">{rangeLabels[range]}</p>
                     {prevRosterStats && prevEngagement > 0 && (() => {
@@ -947,6 +991,96 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Weekly KPI Tracker — only show on "This Week" or "Last Week" views */}
+        {(range === "wtd" || range === "7d") && kpiTrackerStats && kpiTrackerStats.length > 0 && (() => {
+          const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+          // Build per-week engagement from kpiTrackerStats
+          const weekMap = new Map<string, { scheduled: number; completed: number; excused: number }>();
+          for (const r of kpiTrackerStats) {
+            const cur = weekMap.get(r.weekStart) ?? { scheduled: 0, completed: 0, excused: 0 };
+            cur.scheduled += r.scheduled;
+            cur.completed += r.completed;
+            cur.excused += (r as any).excused ?? 0;
+            weekMap.set(r.weekStart, cur);
+          }
+          const allWeeks = Array.from(weekMap.entries())
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([weekStart, vals]) => {
+              const eff = Math.max(vals.scheduled - vals.excused, 1);
+              const pct = vals.scheduled > 0 ? Math.round((vals.completed / eff) * 1000) / 10 : 0;
+              const achieved = pct >= 80;
+              const mon = new Date(weekStart + "T00:00:00");
+              const fri = new Date(weekStart + "T00:00:00");
+              fri.setDate(fri.getDate() + 4);
+              const label = `${mon.getDate()} ${months[mon.getMonth()]} – ${fri.getDate()} ${months[fri.getMonth()]}`;
+              return { weekStart, label, pct, achieved };
+            });
+
+          // For "This Week" show current week; for "Last Week" show last complete week
+          // rosterWeekStarts is newest-first, so [0] is the week we're viewing
+          const viewingWeekStart = rosterWeekStarts.length > 0 ? rosterWeekStarts[0] : null;
+          const currentWeek = allWeeks.find(w => w.weekStart === viewingWeekStart) ?? allWeeks[allWeeks.length - 1];
+          // Prior weeks = all weeks except the one we're viewing, newest first, max 5
+          const priorWeeks = allWeeks
+            .filter(w => currentWeek && w.weekStart !== currentWeek.weekStart)
+            .reverse()
+            .slice(0, 5);
+          const allTracked = currentWeek ? [currentWeek, ...priorWeeks] : priorWeeks;
+          const achievedCount = allTracked.filter(w => w.achieved).length;
+
+          if (!currentWeek) return null;
+          return (
+            <div className="glass rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-white/80">Weekly KPI Tracker</h3>
+                  <span className="text-xs text-white/40">80%+ = achieved</span>
+                </div>
+                <span className="text-sm font-bold text-emerald-400">{achievedCount}/{allTracked.length} weeks</span>
+              </div>
+              {/* Current week — big bar with centered percentage */}
+              <div className="mb-4">
+                <div className="flex flex-col items-center gap-1 mb-2">
+                  <span className={`text-2xl font-bold ${currentWeek.achieved ? "text-emerald-400" : "text-red-400"}`}>
+                    {currentWeek.pct.toFixed(1)}%
+                  </span>
+                  {currentWeek.achieved
+                    ? <span className="text-[10px] font-bold text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-400/10 border border-emerald-400/20">KPI ACHIEVED</span>
+                    : <span className="text-[10px] font-bold text-red-400 px-2 py-0.5 rounded-full bg-red-400/10 border border-red-400/20">KPI MISSED</span>
+                  }
+                  <span className="text-xs text-white/40">{currentWeek.label}</span>
+                </div>
+                <div className="w-full h-3 rounded-full bg-white/10 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${currentWeek.achieved ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.4)]" : "bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.4)]"}`}
+                    style={{ width: `${Math.min(currentWeek.pct, 100)}%` }}
+                  />
+                </div>
+              </div>
+              {/* Prior weeks — small badges */}
+              {priorWeeks.length > 0 && (
+                <div>
+                  <span className="text-[10px] text-white/30 uppercase tracking-wider">Prior Weeks</span>
+                  <div className="flex items-center gap-2 mt-2">
+                    {priorWeeks.map(w => (
+                      <div key={w.weekStart} className={`flex-1 glass rounded-xl px-3 py-2 text-center border ${w.achieved ? "border-emerald-400/15" : "border-red-400/15"}`}>
+                        <span className={`text-sm font-bold block ${w.achieved ? "text-emerald-400" : "text-red-400"}`}>
+                          {w.pct.toFixed(1)}%
+                        </span>
+                        <span className="text-[9px] text-white/30 block mt-0.5">{w.label}</span>
+                        {w.achieved
+                          ? <span className="text-[8px] font-bold text-emerald-400 mt-1 block">ACHIEVED</span>
+                          : <span className="text-[8px] font-bold text-red-400 mt-1 block">MISSED</span>
+                        }
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Combined engagement chart — Scheduled/Completed bars per coach + Engagement % line */}
         <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
@@ -1124,14 +1258,14 @@ export default function Dashboard() {
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={moodEngagementData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <BarChart data={moodEngagementData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barCategoryGap="30%" barGap={6}>
                   <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.24 0.012 240)" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: "oklch(0.52 0.010 240)" }} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: "oklch(0.52 0.010 240)", fontWeight: 600 }} tickLine={false} axisLine={false} />
                   <YAxis tick={{ fontSize: 10, fill: "oklch(0.52 0.010 240)" }} tickLine={false} axisLine={false} domain={[0, 100]} tickFormatter={v => `${v}%`} />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ fontSize: "11px" }} />
-                  <Bar dataKey="Prior Period Avg Mood (×20)" fill="oklch(0.75 0.13 280)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Current Period Engagement %" fill="oklch(0.72 0.17 162)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Prior Period Avg Mood (×20)" fill="oklch(0.75 0.13 280)" radius={[3, 3, 0, 0]} barSize={22} />
+                  <Bar dataKey="Current Period Engagement %" fill="oklch(0.72 0.17 162)" radius={[3, 3, 0, 0]} barSize={22} />
                 </BarChart>
               </ResponsiveContainer>
             )}

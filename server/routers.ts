@@ -728,8 +728,11 @@ const clientCheckinsRouter = t.router({
       const db = await requireDb();
 
       // Support both weekStart (single) and weekStarts (array)
-      const weekStart = input.weekStart || (input.weekStarts ? input.weekStarts[0] : undefined);
-      if (!weekStart) throw new TRPCError({ code: "BAD_REQUEST", message: "weekStart or weekStarts required" });
+      const weekStartList = input.weekStarts && input.weekStarts.length > 0
+        ? input.weekStarts
+        : input.weekStart ? [input.weekStart] : [];
+      if (weekStartList.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "weekStart or weekStarts required" });
+      const weekStart = weekStartList[0];
 
       // Get all coaches if no specific coachId
       let coachList: Array<{ id: number; name: string }>;
@@ -746,6 +749,7 @@ const clientCheckinsRouter = t.router({
       const results: Array<{
         coachId: number;
         coachName: string;
+        weekStart: string;
         scheduled: number;
         completed: number;
         excused: number;
@@ -753,50 +757,53 @@ const clientCheckinsRouter = t.router({
         pct: number;
       }> = [];
 
-      for (const coach of coachList) {
+      // Pre-fetch roster and paused data per coach (same across all weeks)
+      const coachData = await Promise.all(coachList.map(async (coach) => {
         const roster = await fetchRosterForCoach(coach.name);
+        const paused = await db.select().from(pausedClients)
+          .where(and(eq(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
+        const pausedSet = new Set(paused.map(p => p.clientName));
         let scheduled = 0;
         for (const day of DAYS) {
-          scheduled += (roster[day] ?? []).length;
+          scheduled += (roster[day] ?? []).filter((c: string) => !pausedSet.has(c)).length;
         }
+        return { coach, scheduled };
+      }));
 
-        // Get completions for this coach/week
-        const completions = await db
-          .select()
-          .from(clientCheckIns)
-          .where(
-            and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, weekStart)),
-          );
+      for (const ws of weekStartList) {
+        for (const { coach, scheduled } of coachData) {
+          const completions = await db
+            .select()
+            .from(clientCheckIns)
+            .where(and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, ws)));
 
-        const completed = completions.filter((c) => c.completedAt != null).length;
-        const clientSubmittedCount = completions.filter((c) => c.clientSubmitted === 1).length;
+          const completed = completions.filter((c) => c.completedAt != null).length;
+          const clientSubmittedCount = completions.filter((c) => c.clientSubmitted === 1).length;
 
-        // Get approved excuses for this coach/week
-        const excuses = await db
-          .select()
-          .from(excusedClients)
-          .where(
-            and(
+          const excuses = await db
+            .select()
+            .from(excusedClients)
+            .where(and(
               eq(excusedClients.coachId, coach.id),
-              eq(excusedClients.weekStart, weekStart),
+              eq(excusedClients.weekStart, ws),
               eq(excusedClients.status, "approved"),
-            ),
-          );
+            ));
 
-        const excusedCount = excuses.length;
-        const effectiveScheduled = Math.max(scheduled - excusedCount, 0);
-        const pct = effectiveScheduled > 0 ? Math.round((completed / effectiveScheduled) * 100) : 0;
+          const excusedCount = excuses.length;
+          const effectiveScheduled = Math.max(scheduled - excusedCount, 0);
+          const pct = effectiveScheduled > 0 ? Math.round((completed / effectiveScheduled) * 100) : 0;
 
-        results.push({
-          coachId: coach.id,
-          coachName: coach.name,
-          weekStart,
-          scheduled,
-          completed,
-          excused: excusedCount,
-          clientSubmitted: clientSubmittedCount,
-          pct,
-        });
+          results.push({
+            coachId: coach.id,
+            coachName: coach.name,
+            weekStart: ws,
+            scheduled,
+            completed,
+            excused: excusedCount,
+            clientSubmitted: clientSubmittedCount,
+            pct,
+          });
+        }
       }
 
       return results;
@@ -1005,9 +1012,13 @@ const clientCheckinsRouter = t.router({
           .filter((c) => c.completedAt != null)
           .map((c) => `${c.clientName}|${c.dayOfWeek}|${c.weekStart}`),
       );
-      const excuseSet = new Set(
-        approvedExcuses.map((e) => `${e.clientName}|${e.dayOfWeek}|${e.weekStart}`),
-      );
+      // Build excuse set — day-independent (excuse covers the whole week) + fuzzy name matching
+      const excuseSet = new Set<string>();
+      for (const e of approvedExcuses) {
+        excuseSet.add(`${e.clientName}|${e.weekStart}`);
+        const baseName = e.clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+        if (baseName !== e.clientName) excuseSet.add(`${baseName}|${e.weekStart}`);
+      }
       const startMap = new Map(
         starts.map((s) => [`${s.clientName}|${s.dayOfWeek}`, s.firstWeekStart]),
       );
@@ -1027,8 +1038,11 @@ const clientCheckinsRouter = t.router({
             if (week < clientStart) break; // client wasn't on roster yet
             if (week > currentWeek) continue;
 
-            const key = `${clientName}|${day}|${week}`;
-            if (completionSet.has(key) || excuseSet.has(key)) {
+            const compKey = `${clientName}|${day}|${week}`;
+            const excKey = `${clientName}|${week}`;
+            const baseName = clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+            const baseExcKey = baseName !== clientName ? `${baseName}|${week}` : null;
+            if (completionSet.has(compKey) || excuseSet.has(excKey) || (baseExcKey && excuseSet.has(baseExcKey))) {
               if (!lastCompleted) lastCompleted = week;
               break; // stop counting consecutive misses
             }
@@ -1079,6 +1093,11 @@ const clientCheckinsRouter = t.router({
     for (const coach of coachList) {
       const roster = await fetchRosterForCoach(coach.name);
 
+      // Exclude paused clients
+      const paused = await db.select().from(pausedClients)
+        .where(and(eq(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
+      const pausedSet = new Set(paused.map(p => p.clientName));
+
       const completions = await db
         .select()
         .from(clientCheckIns)
@@ -1094,17 +1113,25 @@ const clientCheckinsRouter = t.router({
           .filter((c) => c.completedAt != null)
           .map((c) => `${c.clientName}|${c.dayOfWeek}|${c.weekStart}`),
       );
-      const excuseSet = new Set(
-        approvedExcuses.map((e) => `${e.clientName}|${e.dayOfWeek}|${e.weekStart}`),
-      );
+      // Day-independent excuse matching + fuzzy names
+      const excuseSet = new Set<string>();
+      for (const e of approvedExcuses) {
+        excuseSet.add(`${e.clientName}|${e.weekStart}`);
+        const baseName = e.clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+        if (baseName !== e.clientName) excuseSet.add(`${baseName}|${e.weekStart}`);
+      }
 
       for (const day of DAYS) {
         const clients = roster[day] ?? [];
         for (const clientName of clients) {
+          if (pausedSet.has(clientName)) continue;
           let missed = 0;
           for (const week of allWeeks) {
-            const key = `${clientName}|${day}|${week}`;
-            if (completionSet.has(key) || excuseSet.has(key)) break;
+            const compKey = `${clientName}|${day}|${week}`;
+            const excKey = `${clientName}|${week}`;
+            const baseName = clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+            const baseExcKey = baseName !== clientName ? `${baseName}|${week}` : null;
+            if (completionSet.has(compKey) || excuseSet.has(excKey) || (baseExcKey && excuseSet.has(baseExcKey))) break;
             missed++;
           }
           if (missed >= 2) {

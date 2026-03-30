@@ -834,23 +834,10 @@ export default function ClientCheckins() {
                                       </svg>
                                     </span>
                                   )}
-                                  {isCancellation && dateTag && (
-                                    <span className="shrink-0 relative">
-                                      <span
-                                        className="w-5 h-5 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-[9px] font-bold text-red-400 cursor-pointer peer"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          const tip = e.currentTarget.nextElementSibling as HTMLElement;
-                                          if (tip) { tip.style.display = tip.style.display === "flex" ? "none" : "flex"; setTimeout(() => { if (tip) tip.style.display = "none"; }, 3000); }
-                                        }}
-                                      >
-                                        C
-                                      </span>
-                                      <span style={{ display: "none" }} className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 items-center px-3 py-1.5 rounded-lg bg-zinc-900 border border-red-400/40 text-xs font-semibold text-red-300 whitespace-nowrap z-50 shadow-xl">
-                                        Finishes {dateTag}
-                                      </span>
-                                    </span>
-                                  )}
+                                  {isCancellation && dateTag && (<>
+                                    <span className="shrink-0 w-5 h-5 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-[9px] font-bold text-red-400">C</span>
+                                    <span className="shrink-0 text-[10px] font-medium text-red-400/70">{dateTag}</span>
+                                  </>)}
                                 </span>
                               </div>
 

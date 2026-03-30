@@ -782,6 +782,13 @@ export default function ClientCheckins() {
                             .replace(/\s*(UPFRONT|DEC\s*OFFER)\s*[-–—]\s*\d{1,2}[\s/.-]+\w+[\s/.-]*\d{0,4}/gi, "")
                             .trim();
 
+                          // Check raw name for date/tag info
+                          const rawName = (roster as any)?.rawNameMap?.[clientName] as string | undefined;
+                          const dateMatch = rawName?.match(/\(([^)]+)\)/);
+                          const dateTag = dateMatch?.[1]?.trim() ?? null;
+                          const isUpfrontOrDec = dateTag && /UPFRONT|DEC.OFFER/i.test(dateTag);
+                          const isCancellation = dateTag && !isUpfrontOrDec;
+
                           return (
                             <div
                               key={clientName}
@@ -825,6 +832,16 @@ export default function ClientCheckins() {
                                         <line x1="12" y1="8" x2="12" y2="12"/>
                                         <line x1="12" y1="16" x2="12.01" y2="16"/>
                                       </svg>
+                                    </span>
+                                  )}
+                                  {isCancellation && dateTag && (
+                                    <span className="shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-white/[0.06] border border-white/10 text-white/40">
+                                      Finishes {dateTag}
+                                    </span>
+                                  )}
+                                  {isUpfrontOrDec && dateTag && (
+                                    <span className="shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-300">
+                                      {dateTag}
                                     </span>
                                   )}
                                 </span>
@@ -877,6 +894,44 @@ export default function ClientCheckins() {
             </div>
           )}
         </div>
+
+        {/* ── Renewal Alerts banner ── */}
+        {renewalAlerts.length > 0 && (
+        <div className="max-w-[1600px] mx-auto px-8 mt-6">
+            <div className="glass rounded-2xl p-6" style={{ borderColor: "rgba(251,146,60,0.2)" }}>
+              <div className="flex items-center gap-2.5 mb-5">
+                <AlertTriangle className="h-5 w-5 text-orange-400" />
+                <h3 className="text-base font-bold text-orange-300">
+                  {renewalAlerts.length} Upcoming Renewal{renewalAlerts.length !== 1 ? "s" : ""}
+                </h3>
+              </div>
+              <div className="space-y-2.5">
+                {renewalAlerts.map((a) => (
+                  <div
+                    key={a.name + a.day}
+                    className="rounded-xl px-4 py-3 flex items-center justify-between border border-orange-500/10 bg-orange-500/[0.04] hover:bg-orange-500/[0.08] transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <span className="text-sm font-medium text-orange-200 truncate">{a.name}</span>
+                      <span className="text-xs text-white/40 capitalize shrink-0">{a.day}</span>
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-300 border border-orange-500/20 shrink-0">
+                        {a.offerType}
+                      </span>
+                      <span className="text-xs text-white/40 shrink-0">{a.dateLabel}</span>
+                    </div>
+                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ml-3 ${
+                      a.daysLeft <= 0 ? "bg-red-500/20 text-red-300 border border-red-500/30" :
+                      a.daysLeft <= 7 ? "bg-red-500/10 text-red-400 border border-red-500/20" :
+                      "bg-orange-500/10 text-orange-300 border border-orange-500/20"
+                    }`}>
+                      {a.daysLeft <= 0 ? `${Math.abs(a.daysLeft)}d overdue` : `in ${a.daysLeft}d`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+        </div>
+        )}
 
         {/* ── Bottom Sections: Pause a Client & Valid Excuse side by side ── */}
         <div className="max-w-[1600px] mx-auto px-8 mt-8 pb-12">
@@ -1064,42 +1119,7 @@ export default function ClientCheckins() {
 
           </div>
 
-          {/* ── Renewal Alerts (orange banner) ──────────────────────────── */}
-          {renewalAlerts.length > 0 && (
-            <div className="glass rounded-2xl p-6 mt-6" style={{ borderColor: "rgba(245,158,11,0.2)" }}>
-              <div className="flex items-center gap-2.5 mb-5">
-                <AlertTriangle className="h-5 w-5 text-amber-300" />
-                <h3 className="text-base font-bold text-amber-200">
-                  {renewalAlerts.length} Client Renewal{renewalAlerts.length !== 1 ? "s" : ""} Coming Up
-                </h3>
-              </div>
-              <div className="space-y-2.5">
-                {renewalAlerts.map((a) => (
-                  <div
-                    key={a.name}
-                    className="rounded-xl px-4 py-3 flex items-center justify-between border border-amber-500/10 bg-amber-500/[0.04] hover:bg-amber-500/[0.08] transition-colors"
-                  >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <span className="text-sm font-medium text-amber-200 truncate">{a.name.replace(/\s*(UPFRONT|DEC\s*OFFER)\s*[-–—].*/gi, "").trim()}</span>
-                      <span className="text-xs text-white/40 capitalize shrink-0">{a.day}</span>
-                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 shrink-0">
-                        {a.offerType}
-                      </span>
-                      <span className="text-xs text-white/40 shrink-0">{a.dateLabel}</span>
-                    </div>
-                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ml-3 ${
-                      a.daysLeft <= 0 ? "bg-red-500/20 text-red-300 border border-red-500/30" :
-                      a.daysLeft <= 7 ? "bg-red-500/10 text-red-400 border border-red-500/20" :
-                      a.daysLeft <= 14 ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" :
-                      "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                    }`}>
-                      {a.daysLeft <= 0 ? `${Math.abs(a.daysLeft)}d overdue` : `in ${a.daysLeft}d`}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Renewal alerts moved above Pause/Excuse section */}
 
         </div>
         </>)}

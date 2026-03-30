@@ -2832,11 +2832,20 @@ var performanceRouter = t.router({
     }
     if (!coachName) throw new TRPCError({ code: "BAD_REQUEST", message: "coachName or coachId required" });
     const roster = await fetchRosterForCoach(coachName);
+    const rawRoster = await fetchRawRosterForCoach(coachName);
+    const rawNameMap = {};
+    for (const day of DAYS) {
+      const clean = roster[day] ?? [];
+      const raw = rawRoster[day] ?? [];
+      for (let i = 0; i < clean.length && i < raw.length; i++) {
+        if (clean[i] !== raw[i]) rawNameMap[clean[i]] = raw[i];
+      }
+    }
     const allClients = /* @__PURE__ */ new Set();
     for (const day of DAYS) {
       for (const c of roster[day] ?? []) allClients.add(c);
     }
-    return { ...roster, clients: [...allClients].sort() };
+    return { ...roster, clients: [...allClients].sort(), rawNameMap };
   }),
   /** All client ratings. */
   allRatings: adminProcedure.query(async () => {

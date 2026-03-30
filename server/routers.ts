@@ -12,7 +12,7 @@ import { eq, and, gte, lte, desc, sql, inArray, asc, isNull, ne } from "drizzle-
 
 import type { TrpcContext } from "./_core/context";
 import { getDb } from "./db";
-import { fetchRosterForCoach, type DayKey } from "./rosterUtils";
+import { fetchRosterForCoach, fetchRawRosterForCoach, type DayKey } from "./rosterUtils";
 import {
   UNAUTHED_ERR_MSG,
   CLIENT_CHECKINS_EPOCH,
@@ -1966,7 +1966,7 @@ const clientCheckinsRouter = t.router({
     }> = [];
 
     for (const coach of coachList) {
-      const roster = await fetchRosterForCoach(coach.name);
+      const roster = await fetchRawRosterForCoach(coach.name);
       for (const day of DAYS) {
         const clients = roster[day] ?? [];
         for (const clientName of clients) {

@@ -767,6 +767,58 @@ function cleanClientName(raw) {
   if (/^---/.test(raw.trim())) return "";
   return raw.replace(/\s*\(.*\)\s*$/, "").trim();
 }
+async function fetchRawRosterForCoach(coachName) {
+  const empty = {
+    monday: [],
+    tuesday: [],
+    wednesday: [],
+    thursday: [],
+    friday: []
+  };
+  const rows = await fetchSheetRows();
+  if (rows.length === 0) return empty;
+  const upperName = coachName.toUpperCase();
+  const aliases = [upperName, upperName.replace("STEVE", "STEPHEN"), upperName.replace("STEPHEN", "STEVE")];
+  let sectionStart = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const cell = (rows[i]?.[0] ?? "").trim().toUpperCase();
+    if (aliases.some((a) => cell === `${a} - MONDAY`)) {
+      sectionStart = i;
+      break;
+    }
+  }
+  if (sectionStart === -1) return empty;
+  const headerRow = rows[sectionStart];
+  const prevRow = sectionStart > 0 ? rows[sectionStart - 1] ?? [] : [];
+  const colToDay = { 0: "monday" };
+  for (let col = 1; col <= 9; col++) {
+    const fromHeader = (headerRow[col] ?? "").trim().toLowerCase();
+    const fromPrev = (prevRow[col] ?? "").trim().toLowerCase();
+    const dayName = DAYS2.includes(fromHeader) ? fromHeader : DAYS2.includes(fromPrev) ? fromPrev : null;
+    if (dayName) colToDay[col] = dayName;
+  }
+  const days = { ...empty };
+  for (const [colStr, day] of Object.entries(colToDay)) {
+    const col = Number(colStr);
+    if (col === 0) continue;
+    const cell = (headerRow[col] ?? "").trim();
+    if (cell && !DAYS2.includes(cell.toLowerCase()) && !/^CLIENT NAME$/i.test(cell) && !/^UPFRONT$/i.test(cell) && !/^---/.test(cell)) {
+      days[day].push(cell);
+    }
+  }
+  for (let i = sectionStart + 1; i < rows.length; i++) {
+    const row = rows[i] ?? [];
+    const firstCell = (row[0] ?? "").trim();
+    if (/^[A-Z]+ - MONDAY$/i.test(firstCell) && i !== sectionStart) break;
+    if (!firstCell && row.every((c) => !c?.trim())) break;
+    for (const [colStr, day] of Object.entries(colToDay)) {
+      const raw = (row[Number(colStr)] ?? "").trim();
+      if (!raw || /^CLIENT NAME$/i.test(raw) || /^UPFRONT$/i.test(raw) || /^---/.test(raw)) continue;
+      days[day].push(raw);
+    }
+  }
+  return days;
+}
 
 // server/typeformBackfill.ts
 var SHEET_ID2 = "1puu4oLAmC5jV_GEmRrMxvXuTak_dl6pOJ6iWC44Nfl4";
@@ -2452,7 +2504,7 @@ var clientCheckinsRouter = t.router({
     const now = /* @__PURE__ */ new Date();
     const alerts = [];
     for (const coach of coachList) {
-      const roster = await fetchRosterForCoach(coach.name);
+      const roster = await fetchRawRosterForCoach(coach.name);
       for (const day of DAYS) {
         const clients = roster[day] ?? [];
         for (const clientName of clients) {

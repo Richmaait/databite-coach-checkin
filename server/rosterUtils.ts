@@ -153,3 +153,62 @@ function cleanClientName(raw: string): string {
   // Strip parenthetical suffixes
   return raw.replace(/\s*\(.*\)\s*$/, "").trim();
 }
+
+/**
+ * Same as fetchRosterForCoach but returns RAW names (with parenthetical dates/tags intact).
+ */
+export async function fetchRawRosterForCoach(
+  coachName: string,
+): Promise<Record<DayKey, string[]>> {
+  const empty: Record<DayKey, string[]> = {
+    monday: [], tuesday: [], wednesday: [], thursday: [], friday: [],
+  };
+
+  const rows = await fetchSheetRows();
+  if (rows.length === 0) return empty;
+
+  const upperName = coachName.toUpperCase();
+  const aliases = [upperName, upperName.replace("STEVE", "STEPHEN"), upperName.replace("STEPHEN", "STEVE")];
+
+  let sectionStart = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const cell = (rows[i]?.[0] ?? "").trim().toUpperCase();
+    if (aliases.some(a => cell === `${a} - MONDAY`)) { sectionStart = i; break; }
+  }
+  if (sectionStart === -1) return empty;
+
+  const headerRow = rows[sectionStart];
+  const prevRow = sectionStart > 0 ? (rows[sectionStart - 1] ?? []) : [];
+  const colToDay: Record<number, DayKey> = { 0: "monday" };
+  for (let col = 1; col <= 9; col++) {
+    const fromHeader = (headerRow[col] ?? "").trim().toLowerCase();
+    const fromPrev = (prevRow[col] ?? "").trim().toLowerCase();
+    const dayName = DAYS.includes(fromHeader as DayKey) ? fromHeader : DAYS.includes(fromPrev as DayKey) ? fromPrev : null;
+    if (dayName) colToDay[col] = dayName as DayKey;
+  }
+
+  const days: Record<DayKey, string[]> = { ...empty };
+
+  for (const [colStr, day] of Object.entries(colToDay)) {
+    const col = Number(colStr);
+    if (col === 0) continue;
+    const cell = (headerRow[col] ?? "").trim();
+    if (cell && !DAYS.includes(cell.toLowerCase() as DayKey) && !/^CLIENT NAME$/i.test(cell) && !/^UPFRONT$/i.test(cell) && !/^---/.test(cell)) {
+      days[day].push(cell);
+    }
+  }
+
+  for (let i = sectionStart + 1; i < rows.length; i++) {
+    const row = rows[i] ?? [];
+    const firstCell = (row[0] ?? "").trim();
+    if (/^[A-Z]+ - MONDAY$/i.test(firstCell) && i !== sectionStart) break;
+    if (!firstCell && row.every(c => !c?.trim())) break;
+    for (const [colStr, day] of Object.entries(colToDay)) {
+      const raw = (row[Number(colStr)] ?? "").trim();
+      if (!raw || /^CLIENT NAME$/i.test(raw) || /^UPFRONT$/i.test(raw) || /^---/.test(raw)) continue;
+      days[day].push(raw);
+    }
+  }
+
+  return days;
+}

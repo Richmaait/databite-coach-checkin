@@ -823,23 +823,23 @@ export default function ClientCheckins() {
                                 <div className={`w-2 h-2 rounded-full shrink-0 ${dotClass}`}></div>
 
                                 {/* Client name */}
-                                <div className="min-w-0 flex-1">
-                                  <span className={`text-sm font-medium ${nameClass} truncate flex items-center gap-1.5`}>
-                                    {displayName}
-                                    {isExcused && (
-                                      <span className="shrink-0" title={excuseEntry?.reason}>
-                                        <svg className="w-4 h-4 text-white/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                                          <line x1="12" y1="8" x2="12" y2="12"/>
-                                          <line x1="12" y1="16" x2="12.01" y2="16"/>
-                                        </svg>
-                                      </span>
-                                    )}
-                                  </span>
-                                  {isCancellation && dateTag && (
-                                    <span className="text-[10px] text-white/30 block mt-0.5">Finishes {dateTag}</span>
+                                <span className={`text-sm font-medium ${nameClass} truncate flex items-center gap-1.5`}>
+                                  {displayName}
+                                  {isExcused && (
+                                    <span className="shrink-0" title={excuseEntry?.reason}>
+                                      <svg className="w-4 h-4 text-white/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                        <line x1="12" y1="8" x2="12" y2="12"/>
+                                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                                      </svg>
+                                    </span>
                                   )}
-                                </div>
+                                  {isCancellation && dateTag && (
+                                    <span className="shrink-0 w-4 h-4 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-[8px] font-bold text-red-400" title={`Finishes ${dateTag}`}>
+                                      C
+                                    </span>
+                                  )}
+                                </span>
                               </div>
 
                               {/* Right: resume/undo buttons */}

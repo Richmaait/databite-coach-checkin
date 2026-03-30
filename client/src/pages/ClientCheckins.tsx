@@ -787,7 +787,8 @@ export default function ClientCheckins() {
                           const dateMatch = rawName?.match(/\(([^)]+)\)/);
                           const dateTag = dateMatch?.[1]?.trim() ?? null;
                           const isUpfrontOrDec = dateTag && /UPFRONT|DEC.OFFER/i.test(dateTag);
-                          const isCancellation = dateTag && !isUpfrontOrDec;
+                          // Only treat as cancellation if the tag looks like a date (has a number)
+                          const isCancellation = dateTag && !isUpfrontOrDec && /\d/.test(dateTag);
 
                           return (
                             <div

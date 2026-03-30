@@ -835,13 +835,11 @@ export default function ClientCheckins() {
                                     </span>
                                   )}
                                   {isCancellation && dateTag && (
-                                    <span className="shrink-0 relative [&:hover>span:last-child]:flex">
-                                      <span className="w-5 h-5 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-[9px] font-bold text-red-400 cursor-default">
-                                        C
-                                      </span>
-                                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden items-center px-2.5 py-1 rounded-lg bg-zinc-900 border border-red-500/30 text-[11px] font-semibold text-red-300 whitespace-nowrap z-50 shadow-xl">
-                                        Finishes {dateTag}
-                                      </span>
+                                    <span
+                                      className="shrink-0 w-5 h-5 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-[9px] font-bold text-red-400 cursor-pointer"
+                                      onClick={(e) => { e.stopPropagation(); toast(`Finishes ${dateTag}`, { duration: 3000 }); }}
+                                    >
+                                      C
                                     </span>
                                   )}
                                 </span>

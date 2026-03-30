@@ -835,8 +835,13 @@ export default function ClientCheckins() {
                                     </span>
                                   )}
                                   {isCancellation && dateTag && (
-                                    <span className="shrink-0 w-4 h-4 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-[8px] font-bold text-red-400" title={`Finishes ${dateTag}`}>
-                                      C
+                                    <span className="shrink-0 relative group/cancel">
+                                      <span className="w-5 h-5 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-[9px] font-bold text-red-400 cursor-default">
+                                        C
+                                      </span>
+                                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/cancel:flex items-center px-2.5 py-1 rounded-lg bg-red-500/20 border border-red-500/30 text-[11px] font-semibold text-red-300 whitespace-nowrap z-50">
+                                        Finishes {dateTag}
+                                      </span>
                                     </span>
                                   )}
                                 </span>

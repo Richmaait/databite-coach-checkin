@@ -937,7 +937,7 @@ init_db();
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { z } from "zod";
-import { eq as eq4, and as and2, gte as gte2, lte as lte2, desc, sql, asc, isNull } from "drizzle-orm";
+import { eq as eq4, and as and2, gte as gte2, lte as lte2, desc, sql, inArray as inArray2, asc, isNull } from "drizzle-orm";
 
 // server/rosterUtils.ts
 init_env();
@@ -1811,6 +1811,11 @@ var clientCheckinsRouter = t.router({
       coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq4(coaches.isActive, 1));
     }
     const results = [];
+    const todayMelb = getTodayMelbourne();
+    const currentWeekMon = getMonday2(todayMelb);
+    const allSnapshots = await db2.select().from(rosterWeeklySnapshots).where(inArray2(rosterWeeklySnapshots.weekStart, weekStartList));
+    const snapshotMap = /* @__PURE__ */ new Map();
+    for (const s of allSnapshots) snapshotMap.set(`${s.coachId}|${s.weekStart}`, s);
     const coachData = await Promise.all(coachList.map(async (coach) => {
       const roster = await fetchRosterForCoach(coach.name);
       const paused = await db2.select().from(pausedClients).where(and2(eq4(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
@@ -1822,28 +1827,44 @@ var clientCheckinsRouter = t.router({
       return { coach, scheduled };
     }));
     for (const ws of weekStartList) {
-      for (const { coach, scheduled } of coachData) {
-        const completions = await db2.select().from(clientCheckIns).where(and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, ws)));
-        const completed = completions.filter((c) => c.completedAt != null).length;
-        const clientSubmittedCount = completions.filter((c) => c.clientSubmitted === 1).length;
-        const excuses = await db2.select().from(excusedClients).where(and2(
-          eq4(excusedClients.coachId, coach.id),
-          eq4(excusedClients.weekStart, ws),
-          eq4(excusedClients.status, "approved")
-        ));
-        const excusedCount = excuses.length;
-        const effectiveScheduled = Math.max(scheduled - excusedCount, 0);
-        const pct = effectiveScheduled > 0 ? Math.round(completed / effectiveScheduled * 100) : 0;
-        results.push({
-          coachId: coach.id,
-          coachName: coach.name,
-          weekStart: ws,
-          scheduled,
-          completed,
-          excused: excusedCount,
-          clientSubmitted: clientSubmittedCount,
-          pct
-        });
+      const isPastWeek = ws < currentWeekMon;
+      for (const { coach, scheduled: liveScheduled } of coachData) {
+        const snapshot = snapshotMap.get(`${coach.id}|${ws}`);
+        const snapStats = snapshot?.snapshotJson;
+        if (isPastWeek && snapStats?.scheduled != null) {
+          results.push({
+            coachId: coach.id,
+            coachName: coach.name,
+            weekStart: ws,
+            scheduled: snapStats.scheduled,
+            completed: snapStats.completed ?? 0,
+            excused: snapStats.excused ?? 0,
+            clientSubmitted: snapStats.clientSubmitted ?? 0,
+            pct: snapStats.engagementPct != null ? Math.round(snapStats.engagementPct) : 0
+          });
+        } else {
+          const completions = await db2.select().from(clientCheckIns).where(and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, ws)));
+          const completed = completions.filter((c) => c.completedAt != null).length;
+          const clientSubmittedCount = completions.filter((c) => c.clientSubmitted === 1).length;
+          const excuses = await db2.select().from(excusedClients).where(and2(
+            eq4(excusedClients.coachId, coach.id),
+            eq4(excusedClients.weekStart, ws),
+            eq4(excusedClients.status, "approved")
+          ));
+          const excusedCount = excuses.length;
+          const effectiveScheduled = Math.max(liveScheduled - excusedCount, 0);
+          const pct = effectiveScheduled > 0 ? Math.round(completed / effectiveScheduled * 100) : 0;
+          results.push({
+            coachId: coach.id,
+            coachName: coach.name,
+            weekStart: ws,
+            scheduled: liveScheduled,
+            completed,
+            excused: excusedCount,
+            clientSubmitted: clientSubmittedCount,
+            pct
+          });
+        }
       }
     }
     return results;
@@ -2599,6 +2620,29 @@ var clientCheckinsRouter = t.router({
     return rows;
   }),
   /** Get clients with upcoming UPFRONT end dates (parsed from client names). */
+  /** Import weekly stats snapshots (admin only — for importing Manus historical data). */
+  importWeeklySnapshots: adminProcedure.input(z.array(z.object({
+    coachId: z.number(),
+    coachName: z.string(),
+    weekStart: z.string(),
+    scheduled: z.number(),
+    completed: z.number(),
+    engagementPct: z.number()
+  }))).mutation(async ({ input }) => {
+    const db2 = await requireDb();
+    let imported = 0;
+    for (const r of input) {
+      const snap = { scheduled: r.scheduled, completed: r.completed, missed: r.scheduled - r.completed, engagementPct: r.engagementPct, source: "manus" };
+      const existing = await db2.select().from(rosterWeeklySnapshots).where(and2(eq4(rosterWeeklySnapshots.coachId, r.coachId), eq4(rosterWeeklySnapshots.weekStart, r.weekStart))).limit(1);
+      if (existing.length > 0) {
+        await db2.update(rosterWeeklySnapshots).set({ snapshotJson: snap }).where(eq4(rosterWeeklySnapshots.id, existing[0].id));
+      } else {
+        await db2.insert(rosterWeeklySnapshots).values({ coachId: r.coachId, coachName: r.coachName, weekStart: r.weekStart, snapshotJson: snap });
+      }
+      imported++;
+    }
+    return { imported };
+  }),
   getUpfrontAlertsAll: protectedProcedure.query(async () => {
     const db2 = await requireDb();
     const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq4(coaches.isActive, 1));
@@ -4631,6 +4675,71 @@ function registerWeeklySummaryPdfRoute(app) {
   });
 }
 
+// server/weeklySnapshot.ts
+init_db();
+init_schema();
+import { eq as eq6, and as and4, isNull as isNull2 } from "drizzle-orm";
+function getMonday3(dateStr) {
+  const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function getTodayMelbourne2() {
+  const now = /* @__PURE__ */ new Date();
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Melbourne" }).format(now);
+}
+async function snapshotCurrentWeek() {
+  const db2 = await getDb();
+  if (!db2) {
+    console.warn("[Snapshot] Database not available \u2014 skipping");
+    return;
+  }
+  const today = getTodayMelbourne2();
+  const weekStart = getMonday3(today);
+  console.log(`[Snapshot] Snapshotting week ${weekStart}...`);
+  const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq6(coaches.isActive, 1));
+  for (const coach of coachList) {
+    const roster = await fetchRosterForCoach(coach.name);
+    const paused = await db2.select().from(pausedClients).where(and4(eq6(pausedClients.coachId, coach.id), isNull2(pausedClients.resumedAt)));
+    const pausedSet = new Set(paused.map((p) => p.clientName));
+    let scheduled = 0;
+    for (const day of DAYS2) {
+      scheduled += (roster[day] ?? []).filter((c) => !pausedSet.has(c)).length;
+    }
+    const completions = await db2.select().from(clientCheckIns).where(and4(eq6(clientCheckIns.coachId, coach.id), eq6(clientCheckIns.weekStart, weekStart)));
+    const completed = completions.filter((c) => c.completedAt != null).length;
+    const clientSubmitted = completions.filter((c) => c.clientSubmitted === 1).length;
+    const excuses = await db2.select().from(excusedClients).where(and4(eq6(excusedClients.coachId, coach.id), eq6(excusedClients.weekStart, weekStart), eq6(excusedClients.status, "approved")));
+    const excusedCount = excuses.length;
+    const effectiveScheduled = Math.max(scheduled - excusedCount, 0);
+    const engagementPct = effectiveScheduled > 0 ? Math.round(completed / effectiveScheduled * 1e3) / 10 : 0;
+    const snap = {
+      scheduled,
+      completed,
+      excused: excusedCount,
+      clientSubmitted,
+      missed: scheduled - completed,
+      engagementPct,
+      source: "auto-snapshot"
+    };
+    const existing = await db2.select().from(rosterWeeklySnapshots).where(and4(eq6(rosterWeeklySnapshots.coachId, coach.id), eq6(rosterWeeklySnapshots.weekStart, weekStart))).limit(1);
+    if (existing.length > 0) {
+      await db2.update(rosterWeeklySnapshots).set({ snapshotJson: snap }).where(eq6(rosterWeeklySnapshots.id, existing[0].id));
+    } else {
+      await db2.insert(rosterWeeklySnapshots).values({
+        coachId: coach.id,
+        coachName: coach.name,
+        weekStart,
+        snapshotJson: snap
+      });
+    }
+    console.log(`[Snapshot] ${coach.name}: ${completed}/${scheduled} (${engagementPct}%)`);
+  }
+  console.log(`[Snapshot] Week ${weekStart} snapshot complete.`);
+}
+
 // server/_core/index.ts
 function isPortAvailable(port) {
   return new Promise((resolve) => {
@@ -4703,6 +4812,9 @@ async function startServer() {
     }
     if (weekday === "Fri" && hour === "20" && minuteInt < 5) {
       sendFridayWeeklySummary().catch((err) => console.error("[Slack Friday Summary] error:", err));
+    }
+    if (weekday === "Sun" && hour === "23" && minuteInt >= 55) {
+      snapshotCurrentWeek().catch((err) => console.error("[Snapshot] error:", err));
     }
   }, 5 * 60 * 1e3);
 }

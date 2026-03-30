@@ -803,7 +803,17 @@ const clientCheckinsRouter = t.router({
         pct: number;
       }> = [];
 
-      // Pre-fetch roster and paused data per coach (same across all weeks)
+      // Determine the current week Monday
+      const todayMelb = getTodayMelbourne();
+      const currentWeekMon = getMonday(todayMelb);
+
+      // Check for snapshots for past weeks
+      const allSnapshots = await db.select().from(rosterWeeklySnapshots)
+        .where(inArray(rosterWeeklySnapshots.weekStart, weekStartList));
+      const snapshotMap = new Map<string, typeof allSnapshots[0]>();
+      for (const s of allSnapshots) snapshotMap.set(`${s.coachId}|${s.weekStart}`, s);
+
+      // Pre-fetch roster and paused data per coach (for current week live calculation)
       const coachData = await Promise.all(coachList.map(async (coach) => {
         const roster = await fetchRosterForCoach(coach.name);
         const paused = await db.select().from(pausedClients)
@@ -817,38 +827,59 @@ const clientCheckinsRouter = t.router({
       }));
 
       for (const ws of weekStartList) {
-        for (const { coach, scheduled } of coachData) {
-          const completions = await db
-            .select()
-            .from(clientCheckIns)
-            .where(and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, ws)));
+        const isPastWeek = ws < currentWeekMon;
 
-          const completed = completions.filter((c) => c.completedAt != null).length;
-          const clientSubmittedCount = completions.filter((c) => c.clientSubmitted === 1).length;
+        for (const { coach, scheduled: liveScheduled } of coachData) {
+          // Check if we have a snapshot for this coach/week
+          const snapshot = snapshotMap.get(`${coach.id}|${ws}`);
+          const snapStats = snapshot?.snapshotJson as any;
 
-          const excuses = await db
-            .select()
-            .from(excusedClients)
-            .where(and(
-              eq(excusedClients.coachId, coach.id),
-              eq(excusedClients.weekStart, ws),
-              eq(excusedClients.status, "approved"),
-            ));
+          if (isPastWeek && snapStats?.scheduled != null) {
+            // Use snapshot data for past weeks
+            results.push({
+              coachId: coach.id,
+              coachName: coach.name,
+              weekStart: ws,
+              scheduled: snapStats.scheduled,
+              completed: snapStats.completed ?? 0,
+              excused: snapStats.excused ?? 0,
+              clientSubmitted: snapStats.clientSubmitted ?? 0,
+              pct: snapStats.engagementPct != null ? Math.round(snapStats.engagementPct) : 0,
+            });
+          } else {
+            // Calculate from live data (current week or no snapshot available)
+            const completions = await db
+              .select()
+              .from(clientCheckIns)
+              .where(and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, ws)));
 
-          const excusedCount = excuses.length;
-          const effectiveScheduled = Math.max(scheduled - excusedCount, 0);
-          const pct = effectiveScheduled > 0 ? Math.round((completed / effectiveScheduled) * 100) : 0;
+            const completed = completions.filter((c) => c.completedAt != null).length;
+            const clientSubmittedCount = completions.filter((c) => c.clientSubmitted === 1).length;
 
-          results.push({
-            coachId: coach.id,
-            coachName: coach.name,
-            weekStart: ws,
-            scheduled,
-            completed,
-            excused: excusedCount,
-            clientSubmitted: clientSubmittedCount,
-            pct,
-          });
+            const excuses = await db
+              .select()
+              .from(excusedClients)
+              .where(and(
+                eq(excusedClients.coachId, coach.id),
+                eq(excusedClients.weekStart, ws),
+                eq(excusedClients.status, "approved"),
+              ));
+
+            const excusedCount = excuses.length;
+            const effectiveScheduled = Math.max(liveScheduled - excusedCount, 0);
+            const pct = effectiveScheduled > 0 ? Math.round((completed / effectiveScheduled) * 100) : 0;
+
+            results.push({
+              coachId: coach.id,
+              coachName: coach.name,
+              weekStart: ws,
+              scheduled: liveScheduled,
+              completed,
+              excused: excusedCount,
+              clientSubmitted: clientSubmittedCount,
+              pct,
+            });
+          }
         }
       }
 
@@ -1991,6 +2022,34 @@ const clientCheckinsRouter = t.router({
     }),
 
   /** Get clients with upcoming UPFRONT end dates (parsed from client names). */
+  /** Import weekly stats snapshots (admin only — for importing Manus historical data). */
+  importWeeklySnapshots: adminProcedure
+    .input(z.array(z.object({
+      coachId: z.number(),
+      coachName: z.string(),
+      weekStart: z.string(),
+      scheduled: z.number(),
+      completed: z.number(),
+      engagementPct: z.number(),
+    })))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      let imported = 0;
+      for (const r of input) {
+        const snap = { scheduled: r.scheduled, completed: r.completed, missed: r.scheduled - r.completed, engagementPct: r.engagementPct, source: "manus" };
+        const existing = await db.select().from(rosterWeeklySnapshots)
+          .where(and(eq(rosterWeeklySnapshots.coachId, r.coachId), eq(rosterWeeklySnapshots.weekStart, r.weekStart)))
+          .limit(1);
+        if (existing.length > 0) {
+          await db.update(rosterWeeklySnapshots).set({ snapshotJson: snap as any }).where(eq(rosterWeeklySnapshots.id, existing[0].id));
+        } else {
+          await db.insert(rosterWeeklySnapshots).values({ coachId: r.coachId, coachName: r.coachName, weekStart: r.weekStart, snapshotJson: snap as any });
+        }
+        imported++;
+      }
+      return { imported };
+    }),
+
   getUpfrontAlertsAll: protectedProcedure.query(async () => {
     const db = await requireDb();
     const coachList = await db

@@ -13,6 +13,7 @@ import { sendDisengagementAlert } from "../slackDisengagementAlert";
 import { sendFridayWeeklySummary } from "../slackFridaySummary";
 import { registerTypeformWebhook } from "../typeformWebhook";
 import { registerWeeklySummaryPdfRoute } from "../weeklySummaryPdfRoute";
+import { snapshotCurrentWeek } from "../weeklySnapshot";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -112,6 +113,11 @@ async function startServer() {
     // Friday 20:00 AEST — current-week client check-in summary
     if (weekday === "Fri" && hour === "20" && minuteInt < 5) {
       sendFridayWeeklySummary().catch(err => console.error("[Slack Friday Summary] error:", err));
+    }
+
+    // Sunday 23:59 AEST — snapshot the current week's roster stats
+    if (weekday === "Sun" && hour === "23" && minuteInt >= 55) {
+      snapshotCurrentWeek().catch(err => console.error("[Snapshot] error:", err));
     }
   }, 5 * 60 * 1000);
 }

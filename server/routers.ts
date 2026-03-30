@@ -224,6 +224,46 @@ const adminProcedure = t.procedure.use(async ({ ctx, next }) => {
   return next({ ctx: { ...ctx, user: ctx.user } });
 });
 
+// ─── Coach submission notification to manager ─────────────────────────────────
+
+async function notifyManagerOfSubmission(coachId: number, submissionType: string, details: Record<string, unknown>) {
+  const managerSlackId = ENV.managerSlackId;
+  if (!managerSlackId || !ENV.slackBotToken) return;
+  try {
+    const db = await requireDb();
+    const [coach] = await db.select().from(coaches).where(eq(coaches.id, coachId)).limit(1);
+    if (!coach) return;
+
+    const appUrl = ENV.appUrl || "https://coach.databite.com.au";
+    const emojis: Record<string, string> = { morning: "🌅", followup: "📨", disengagement: "🔍" };
+    const labels: Record<string, string> = { morning: "Morning Review", followup: "Follow-Up Outreach", disengagement: "Disengagement Outreach" };
+    const emoji = emojis[submissionType] ?? "📋";
+    const label = labels[submissionType] ?? submissionType;
+
+    let summary = "";
+    if (submissionType === "morning") {
+      const mood = details.moodScore ? `Mood: ${"⭐".repeat(details.moodScore as number)}` : "";
+      const sched = details.scheduledCount != null ? `Scheduled: ${details.scheduledCount}` : "";
+      const comp = details.completedCount != null ? `Completed: ${details.completedCount}` : "";
+      const notes = details.morningNotes ? `\n> ${details.morningNotes}` : "";
+      summary = [mood, sched, comp].filter(Boolean).join(" · ") + notes;
+    } else if (submissionType === "followup") {
+      summary = details.followupMessagesSent != null ? `${details.followupMessagesSent} follow-up messages sent` : "";
+      if (details.notes) summary += `\n> ${details.notes}`;
+    } else if (submissionType === "disengagement") {
+      summary = details.disengagementMessagesSent != null ? `${details.disengagementMessagesSent} disengagement messages sent` : "";
+      if (details.notes) summary += `\n> ${details.notes}`;
+    }
+
+    const message = `${emoji} *${coach.name}* submitted their *${label}*\n${summary}\n\n👉 <${appUrl}/dashboard|View Dashboard>`;
+
+    const { sendSlackDM } = await import("./slackReminders");
+    await sendSlackDM(managerSlackId, message);
+  } catch (err) {
+    console.error("[Slack Notify] Error notifying manager:", err);
+  }
+}
+
 // ─── Checkins Router ───────────────────────────────────────────────────────────
 
 const checkinsRouter = t.router({
@@ -262,6 +302,7 @@ const checkinsRouter = t.router({
             morningSubmittedAt: new Date(),
           })
           .where(eq(checkinRecords.id, existing[0].id));
+        notifyManagerOfSubmission(input.coachId, "morning", input).catch(() => {});
         return { id: existing[0].id, updated: true };
       }
 
@@ -276,6 +317,7 @@ const checkinsRouter = t.router({
         morningNotes: input.morningNotes,
         morningSubmittedAt: new Date(),
       });
+      notifyManagerOfSubmission(input.coachId, "morning", input).catch(() => {});
       return { id: result.insertId, updated: false };
     }),
 
@@ -306,6 +348,7 @@ const checkinsRouter = t.router({
             followupSubmittedAt: new Date(),
           })
           .where(eq(checkinRecords.id, existing[0].id));
+        notifyManagerOfSubmission(input.coachId, "followup", input).catch(() => {});
         return { id: existing[0].id, updated: true };
       }
 
@@ -316,6 +359,7 @@ const checkinsRouter = t.router({
         followupNotes: input.notes,
         followupSubmittedAt: new Date(),
       });
+      notifyManagerOfSubmission(input.coachId, "followup", input).catch(() => {});
       return { id: result.insertId, updated: false };
     }),
 
@@ -346,6 +390,7 @@ const checkinsRouter = t.router({
             disengagementSubmittedAt: new Date(),
           })
           .where(eq(checkinRecords.id, existing[0].id));
+        notifyManagerOfSubmission(input.coachId, "disengagement", input).catch(() => {});
         return { id: existing[0].id, updated: true };
       }
 
@@ -356,6 +401,7 @@ const checkinsRouter = t.router({
         disengagementNotes: input.notes,
         disengagementSubmittedAt: new Date(),
       });
+      notifyManagerOfSubmission(input.coachId, "disengagement", input).catch(() => {});
       return { id: result.insertId, updated: false };
     }),
 

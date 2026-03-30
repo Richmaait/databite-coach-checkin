@@ -1,45 +1,39 @@
 var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// server/_core/index.ts
-import "dotenv/config";
-import express from "express";
-import { createServer } from "http";
-import net from "net";
-import { createExpressMiddleware } from "@trpc/server/adapters/express";
-
-// server/_core/auth.ts
-import { SignJWT, jwtVerify } from "jose";
-import { eq as eq2 } from "drizzle-orm";
-
-// server/db.ts
-import { drizzle } from "drizzle-orm/mysql2";
-import mysql from "mysql2/promise";
-import { eq, and, gte, lte, inArray } from "drizzle-orm";
-
 // server/env.ts
-var ENV = {
-  appId: process.env.VITE_APP_ID ?? "",
-  cookieSecret: process.env.JWT_SECRET ?? "",
-  databaseUrl: process.env.DATABASE_URL ?? "",
-  oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
-  ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
-  isProduction: process.env.NODE_ENV === "production",
-  forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
-  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
-  typeformApiToken: process.env.TYPEFORM_API_TOKEN ?? "",
-  typeformWebhookSecret: process.env.TYPEFORM_WEBHOOK_SECRET ?? "",
-  appUrl: process.env.APP_URL ?? "https://databitecoach.com",
-  slackBotToken: process.env.SLACK_BOT_TOKEN ?? "",
-  googleSheetsApiKey: process.env.GOOGLE_SHEETS_API_KEY ?? "",
-  managerSlackId: process.env.MANAGER_SLACK_ID ?? "",
-  port: parseInt(process.env.PORT ?? "3000", 10),
-  googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
-  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? ""
-};
+var ENV;
+var init_env = __esm({
+  "server/env.ts"() {
+    "use strict";
+    ENV = {
+      appId: process.env.VITE_APP_ID ?? "",
+      cookieSecret: process.env.JWT_SECRET ?? "",
+      databaseUrl: process.env.DATABASE_URL ?? "",
+      oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
+      ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
+      isProduction: process.env.NODE_ENV === "production",
+      forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
+      forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+      typeformApiToken: process.env.TYPEFORM_API_TOKEN ?? "",
+      typeformWebhookSecret: process.env.TYPEFORM_WEBHOOK_SECRET ?? "",
+      appUrl: process.env.APP_URL ?? "https://databitecoach.com",
+      slackBotToken: process.env.SLACK_BOT_TOKEN ?? "",
+      googleSheetsApiKey: process.env.GOOGLE_SHEETS_API_KEY ?? "",
+      managerSlackId: process.env.MANAGER_SLACK_ID ?? "",
+      port: parseInt(process.env.PORT ?? "3000", 10),
+      googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
+      googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? ""
+    };
+  }
+});
 
 // drizzle/schema.ts
 var schema_exports = {};
@@ -58,167 +52,175 @@ __export(schema_exports, {
   users: () => users
 });
 import { mysqlTable, int, varchar, text, timestamp, datetime, mysqlEnum, uniqueIndex, json, tinyint } from "drizzle-orm/mysql-core";
-var users = mysqlTable("users", {
-  id: int("id").autoincrement().primaryKey(),
-  name: varchar("name", { length: 256 }),
-  email: varchar("email", { length: 256 }),
-  role: varchar("role", { length: 32 }).default("coach").notNull(),
-  openId: varchar("openId", { length: 256 }),
-  profileImageUrl: varchar("profileImageUrl", { length: 512 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
-});
-var coaches = mysqlTable("coaches", {
-  id: int("id").autoincrement().primaryKey(),
-  name: varchar("name", { length: 128 }).notNull(),
-  email: varchar("email", { length: 256 }),
-  userId: int("userId"),
-  slackUserId: varchar("slackUserId", { length: 64 }),
-  timezone: varchar("timezone", { length: 64 }).default("Australia/Melbourne"),
-  reminderTimes: json("reminderTimes").$type(),
-  workdays: json("workdays").$type(),
-  remindersEnabled: tinyint("remindersEnabled").default(1),
-  leaveStartDate: varchar("leaveStartDate", { length: 10 }),
-  leaveEndDate: varchar("leaveEndDate", { length: 10 }),
-  isActive: tinyint("isActive").default(1).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
-});
-var checkinRecords = mysqlTable("checkin_records", {
-  id: int("id").autoincrement().primaryKey(),
-  coachId: int("coachId").notNull(),
-  recordDate: varchar("recordDate", { length: 10 }).notNull(),
-  // YYYY-MM-DD
-  // Morning review fields
-  scheduledCount: int("scheduledCount"),
-  completedCount: int("completedCount"),
-  moodScore: int("moodScore"),
-  // 1-5
-  actionPlan: text("actionPlan"),
-  workingHours: varchar("workingHours", { length: 256 }),
-  morningNotes: text("morningNotes"),
-  morningSubmittedAt: timestamp("morningSubmittedAt"),
-  // Follow-up outreach fields
-  followupCount: int("followupCount"),
-  followupNotes: text("followupNotes"),
-  followupSubmittedAt: timestamp("followupSubmittedAt"),
-  // Disengagement outreach fields
-  disengagementCount: int("disengagementCount"),
-  disengagementNotes: text("disengagementNotes"),
-  disengagementSubmittedAt: timestamp("disengagementSubmittedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
-}, (t2) => ({
-  uqCoachDate: uniqueIndex("uq_coach_date").on(t2.coachId, t2.recordDate)
-}));
-var clientCheckIns = mysqlTable("client_check_ins", {
-  id: int("id").autoincrement().primaryKey(),
-  coachId: int("coachId").notNull(),
-  coachName: varchar("coachName", { length: 128 }).notNull(),
-  clientName: varchar("clientName", { length: 256 }).notNull(),
-  dayOfWeek: mysqlEnum("dayOfWeek", ["monday", "tuesday", "wednesday", "thursday", "friday"]).notNull(),
-  weekStart: varchar("weekStart", { length: 10 }).notNull(),
-  // YYYY-MM-DD (Monday)
-  completedByUserId: int("completedByUserId").default(0),
-  completedAt: timestamp("completedAt"),
-  clientSubmitted: tinyint("clientSubmitted").default(0),
-  clientSubmittedAt: timestamp("clientSubmittedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
-}, (t2) => ({
-  uqClientWeekDay: uniqueIndex("uq_client_week_day").on(t2.coachId, t2.clientName, t2.dayOfWeek, t2.weekStart)
-}));
-var excusedClients = mysqlTable("excused_clients", {
-  id: int("id").autoincrement().primaryKey(),
-  coachId: int("coachId").notNull(),
-  coachName: varchar("coachName", { length: 128 }).notNull(),
-  clientName: varchar("clientName", { length: 256 }).notNull(),
-  dayOfWeek: mysqlEnum("dayOfWeek", ["monday", "tuesday", "wednesday", "thursday", "friday"]).notNull(),
-  weekStart: varchar("weekStart", { length: 10 }).notNull(),
-  reason: text("reason").notNull(),
-  status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
-  submittedByUserId: int("submittedByUserId").notNull(),
-  submittedAt: timestamp("submittedAt").defaultNow().notNull(),
-  reviewedByUserId: int("reviewedByUserId"),
-  reviewedAt: timestamp("reviewedAt"),
-  slackMessageTs: varchar("slackMessageTs", { length: 64 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
-}, (t2) => ({
-  uqCoachClientDayWeek: uniqueIndex("uq_excused_client").on(t2.coachId, t2.clientName, t2.dayOfWeek, t2.weekStart)
-}));
-var rosterClientStarts = mysqlTable("roster_client_starts", {
-  id: int("id").autoincrement().primaryKey(),
-  coachId: int("coachId").notNull(),
-  coachName: varchar("coachName", { length: 128 }).notNull(),
-  clientName: varchar("clientName", { length: 256 }).notNull(),
-  dayOfWeek: mysqlEnum("dayOfWeek", ["monday", "tuesday", "wednesday", "thursday", "friday"]).notNull(),
-  firstWeekStart: varchar("firstWeekStart", { length: 10 }).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
-}, (t2) => ({
-  uqRosterClient: uniqueIndex("uq_roster_client").on(t2.coachId, t2.clientName, t2.dayOfWeek)
-}));
-var rosterWeeklySnapshots = mysqlTable("roster_weekly_snapshots", {
-  id: int("id").autoincrement().primaryKey(),
-  coachId: int("coachId").notNull(),
-  coachName: varchar("coachName", { length: 128 }).notNull(),
-  weekStart: varchar("weekStart", { length: 10 }).notNull(),
-  snapshotJson: json("snapshotJson").$type().notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-}, (t2) => ({
-  uqCoachWeek: uniqueIndex("uq_roster_snapshot").on(t2.coachId, t2.weekStart)
-}));
-var kudos = mysqlTable("kudos", {
-  id: int("id").autoincrement().primaryKey(),
-  fromUserId: int("fromUserId").notNull(),
-  coachId: int("coachId").notNull(),
-  message: text("message").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-});
-var sweepReports = mysqlTable("sweep_reports", {
-  id: int("id").autoincrement().primaryKey(),
-  title: varchar("title", { length: 256 }).notNull(),
-  createdByUserId: int("createdByUserId").notNull(),
-  createdByName: varchar("createdByName", { length: 256 }).notNull(),
-  snapshotJson: json("snapshotJson").notNull(),
-  weekStart: varchar("weekStart", { length: 10 }).notNull(),
-  isSaved: tinyint("isSaved").default(0).notNull(),
-  scopeType: varchar("scopeType", { length: 16 }).default("all").notNull(),
-  scopeCoachId: int("scopeCoachId"),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-});
-var clientRatings = mysqlTable("client_ratings", {
-  id: int("id").autoincrement().primaryKey(),
-  coachId: int("coachId").notNull(),
-  clientName: varchar("clientName", { length: 256 }).notNull(),
-  rating: mysqlEnum("rating", ["green", "yellow", "red"]).notNull(),
-  notes: text("notes"),
-  ratedAt: timestamp("ratedAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
-}, (t2) => ({
-  uqCoachClient: uniqueIndex("uq_client_rating").on(t2.coachId, t2.clientName)
-}));
-var slackReminderLog = mysqlTable("slack_reminder_log", {
-  id: int("id").autoincrement().primaryKey(),
-  coachId: int("coachId").notNull(),
-  reminderDate: varchar("reminderDate", { length: 10 }).notNull(),
-  reminderIndex: int("reminderIndex").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-}, (t2) => ({
-  uqReminderSlot: uniqueIndex("uq_reminder_slot").on(t2.coachId, t2.reminderDate, t2.reminderIndex)
-}));
-var pausedClients = mysqlTable("paused_clients", {
-  id: int("id").primaryKey().autoincrement(),
-  coachId: int("coachId").notNull(),
-  clientName: varchar("clientName", { length: 255 }).notNull(),
-  pausedByUserId: int("pausedByUserId"),
-  pausedAt: datetime("pausedAt"),
-  resumedAt: datetime("resumedAt")
+var users, coaches, checkinRecords, clientCheckIns, excusedClients, rosterClientStarts, rosterWeeklySnapshots, kudos, sweepReports, clientRatings, slackReminderLog, pausedClients;
+var init_schema = __esm({
+  "drizzle/schema.ts"() {
+    "use strict";
+    users = mysqlTable("users", {
+      id: int("id").autoincrement().primaryKey(),
+      name: varchar("name", { length: 256 }),
+      email: varchar("email", { length: 256 }),
+      role: varchar("role", { length: 32 }).default("coach").notNull(),
+      openId: varchar("openId", { length: 256 }),
+      profileImageUrl: varchar("profileImageUrl", { length: 512 }),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    });
+    coaches = mysqlTable("coaches", {
+      id: int("id").autoincrement().primaryKey(),
+      name: varchar("name", { length: 128 }).notNull(),
+      email: varchar("email", { length: 256 }),
+      userId: int("userId"),
+      slackUserId: varchar("slackUserId", { length: 64 }),
+      timezone: varchar("timezone", { length: 64 }).default("Australia/Melbourne"),
+      reminderTimes: json("reminderTimes").$type(),
+      workdays: json("workdays").$type(),
+      remindersEnabled: tinyint("remindersEnabled").default(1),
+      leaveStartDate: varchar("leaveStartDate", { length: 10 }),
+      leaveEndDate: varchar("leaveEndDate", { length: 10 }),
+      isActive: tinyint("isActive").default(1).notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    });
+    checkinRecords = mysqlTable("checkin_records", {
+      id: int("id").autoincrement().primaryKey(),
+      coachId: int("coachId").notNull(),
+      recordDate: varchar("recordDate", { length: 10 }).notNull(),
+      // YYYY-MM-DD
+      // Morning review fields
+      scheduledCount: int("scheduledCount"),
+      completedCount: int("completedCount"),
+      moodScore: int("moodScore"),
+      // 1-5
+      actionPlan: text("actionPlan"),
+      workingHours: varchar("workingHours", { length: 256 }),
+      morningNotes: text("morningNotes"),
+      morningSubmittedAt: timestamp("morningSubmittedAt"),
+      // Follow-up outreach fields
+      followupCount: int("followupCount"),
+      followupNotes: text("followupNotes"),
+      followupSubmittedAt: timestamp("followupSubmittedAt"),
+      // Disengagement outreach fields
+      disengagementCount: int("disengagementCount"),
+      disengagementNotes: text("disengagementNotes"),
+      disengagementSubmittedAt: timestamp("disengagementSubmittedAt"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    }, (t2) => ({
+      uqCoachDate: uniqueIndex("uq_coach_date").on(t2.coachId, t2.recordDate)
+    }));
+    clientCheckIns = mysqlTable("client_check_ins", {
+      id: int("id").autoincrement().primaryKey(),
+      coachId: int("coachId").notNull(),
+      coachName: varchar("coachName", { length: 128 }).notNull(),
+      clientName: varchar("clientName", { length: 256 }).notNull(),
+      dayOfWeek: mysqlEnum("dayOfWeek", ["monday", "tuesday", "wednesday", "thursday", "friday"]).notNull(),
+      weekStart: varchar("weekStart", { length: 10 }).notNull(),
+      // YYYY-MM-DD (Monday)
+      completedByUserId: int("completedByUserId").default(0),
+      completedAt: timestamp("completedAt"),
+      clientSubmitted: tinyint("clientSubmitted").default(0),
+      clientSubmittedAt: timestamp("clientSubmittedAt"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    }, (t2) => ({
+      uqClientWeekDay: uniqueIndex("uq_client_week_day").on(t2.coachId, t2.clientName, t2.dayOfWeek, t2.weekStart)
+    }));
+    excusedClients = mysqlTable("excused_clients", {
+      id: int("id").autoincrement().primaryKey(),
+      coachId: int("coachId").notNull(),
+      coachName: varchar("coachName", { length: 128 }).notNull(),
+      clientName: varchar("clientName", { length: 256 }).notNull(),
+      dayOfWeek: mysqlEnum("dayOfWeek", ["monday", "tuesday", "wednesday", "thursday", "friday"]).notNull(),
+      weekStart: varchar("weekStart", { length: 10 }).notNull(),
+      reason: text("reason").notNull(),
+      status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
+      submittedByUserId: int("submittedByUserId").notNull(),
+      submittedAt: timestamp("submittedAt").defaultNow().notNull(),
+      reviewedByUserId: int("reviewedByUserId"),
+      reviewedAt: timestamp("reviewedAt"),
+      slackMessageTs: varchar("slackMessageTs", { length: 64 }),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    }, (t2) => ({
+      uqCoachClientDayWeek: uniqueIndex("uq_excused_client").on(t2.coachId, t2.clientName, t2.dayOfWeek, t2.weekStart)
+    }));
+    rosterClientStarts = mysqlTable("roster_client_starts", {
+      id: int("id").autoincrement().primaryKey(),
+      coachId: int("coachId").notNull(),
+      coachName: varchar("coachName", { length: 128 }).notNull(),
+      clientName: varchar("clientName", { length: 256 }).notNull(),
+      dayOfWeek: mysqlEnum("dayOfWeek", ["monday", "tuesday", "wednesday", "thursday", "friday"]).notNull(),
+      firstWeekStart: varchar("firstWeekStart", { length: 10 }).notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    }, (t2) => ({
+      uqRosterClient: uniqueIndex("uq_roster_client").on(t2.coachId, t2.clientName, t2.dayOfWeek)
+    }));
+    rosterWeeklySnapshots = mysqlTable("roster_weekly_snapshots", {
+      id: int("id").autoincrement().primaryKey(),
+      coachId: int("coachId").notNull(),
+      coachName: varchar("coachName", { length: 128 }).notNull(),
+      weekStart: varchar("weekStart", { length: 10 }).notNull(),
+      snapshotJson: json("snapshotJson").$type().notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    }, (t2) => ({
+      uqCoachWeek: uniqueIndex("uq_roster_snapshot").on(t2.coachId, t2.weekStart)
+    }));
+    kudos = mysqlTable("kudos", {
+      id: int("id").autoincrement().primaryKey(),
+      fromUserId: int("fromUserId").notNull(),
+      coachId: int("coachId").notNull(),
+      message: text("message").notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    sweepReports = mysqlTable("sweep_reports", {
+      id: int("id").autoincrement().primaryKey(),
+      title: varchar("title", { length: 256 }).notNull(),
+      createdByUserId: int("createdByUserId").notNull(),
+      createdByName: varchar("createdByName", { length: 256 }).notNull(),
+      snapshotJson: json("snapshotJson").notNull(),
+      weekStart: varchar("weekStart", { length: 10 }).notNull(),
+      isSaved: tinyint("isSaved").default(0).notNull(),
+      scopeType: varchar("scopeType", { length: 16 }).default("all").notNull(),
+      scopeCoachId: int("scopeCoachId"),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    clientRatings = mysqlTable("client_ratings", {
+      id: int("id").autoincrement().primaryKey(),
+      coachId: int("coachId").notNull(),
+      clientName: varchar("clientName", { length: 256 }).notNull(),
+      rating: mysqlEnum("rating", ["green", "yellow", "red"]).notNull(),
+      notes: text("notes"),
+      ratedAt: timestamp("ratedAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    }, (t2) => ({
+      uqCoachClient: uniqueIndex("uq_client_rating").on(t2.coachId, t2.clientName)
+    }));
+    slackReminderLog = mysqlTable("slack_reminder_log", {
+      id: int("id").autoincrement().primaryKey(),
+      coachId: int("coachId").notNull(),
+      reminderDate: varchar("reminderDate", { length: 10 }).notNull(),
+      reminderIndex: int("reminderIndex").notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    }, (t2) => ({
+      uqReminderSlot: uniqueIndex("uq_reminder_slot").on(t2.coachId, t2.reminderDate, t2.reminderIndex)
+    }));
+    pausedClients = mysqlTable("paused_clients", {
+      id: int("id").primaryKey().autoincrement(),
+      coachId: int("coachId").notNull(),
+      clientName: varchar("clientName", { length: 255 }).notNull(),
+      pausedByUserId: int("pausedByUserId"),
+      pausedAt: datetime("pausedAt"),
+      resumedAt: datetime("resumedAt")
+    });
+  }
 });
 
 // server/db.ts
-var db = null;
+import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
+import { eq, and, gte, lte, inArray } from "drizzle-orm";
 async function getDb() {
   if (db) return db;
   if (!ENV.databaseUrl) {
@@ -394,6 +396,267 @@ async function toggleClientSubmitted(params) {
     });
   }
 }
+var db;
+var init_db = __esm({
+  "server/db.ts"() {
+    "use strict";
+    init_env();
+    init_schema();
+    init_schema();
+    db = null;
+  }
+});
+
+// server/slackReminders.ts
+var slackReminders_exports = {};
+__export(slackReminders_exports, {
+  runReminderTick: () => runReminderTick,
+  sendFortnightlyPerformanceReviewReminder: () => sendFortnightlyPerformanceReviewReminder,
+  sendFortnightlySweepReportReminder: () => sendFortnightlySweepReportReminder,
+  sendSlackDM: () => sendSlackDM
+});
+import { eq as eq3 } from "drizzle-orm";
+async function sendSlackDM(slackUserId, text2) {
+  if (!SLACK_BOT_TOKEN) {
+    console.warn("[Slack] SLACK_BOT_TOKEN not set \u2014 skipping DM");
+    return false;
+  }
+  try {
+    const response = await fetch("https://slack.com/api/chat.postMessage", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        Authorization: `Bearer ${SLACK_BOT_TOKEN}`
+      },
+      body: JSON.stringify({
+        channel: slackUserId,
+        text: text2,
+        unfurl_links: false
+      })
+    });
+    const data = await response.json();
+    if (!data.ok) {
+      console.error(`[Slack] Failed to send DM to ${slackUserId}: ${data.error}`);
+      return false;
+    }
+    console.log(`[Slack] DM sent to ${slackUserId}`);
+    return true;
+  } catch (err) {
+    console.error(`[Slack] Error sending DM to ${slackUserId}:`, err);
+    return false;
+  }
+}
+function getLocalHHMM(timezone) {
+  const now = /* @__PURE__ */ new Date();
+  const parts = new Intl.DateTimeFormat("en-AU", {
+    timeZone: timezone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).formatToParts(now);
+  const hour = parts.find((p) => p.type === "hour")?.value ?? "00";
+  const minute = parts.find((p) => p.type === "minute")?.value ?? "00";
+  return `${hour}:${minute}`;
+}
+function getLocalDateString(timezone) {
+  const now = /* @__PURE__ */ new Date();
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(now);
+}
+function getLocalDayOfWeek(timezone) {
+  const now = /* @__PURE__ */ new Date();
+  const formatter = new Intl.DateTimeFormat("en-AU", {
+    timeZone: timezone,
+    weekday: "short"
+  });
+  const day = formatter.format(now);
+  const map = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return map[day] ?? (/* @__PURE__ */ new Date()).getDay();
+}
+function parseJSON(value, fallback) {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+async function claimReminderSlot(coachId, reminderDate, reminderIndex) {
+  const db2 = await getDb();
+  if (!db2) return false;
+  try {
+    await db2.insert(slackReminderLog).values({ coachId, reminderDate, reminderIndex });
+    return true;
+  } catch (err) {
+    const anyErr = err;
+    const causeCode = anyErr?.cause?.code;
+    const causeErrno = anyErr?.cause?.errno;
+    const causeMsg = anyErr?.cause?.message ?? "";
+    const topMsg = anyErr?.message ?? "";
+    const isDuplicate = causeCode === "ER_DUP_ENTRY" || causeErrno === 1062 || causeMsg.includes("Duplicate entry") || topMsg.includes("Duplicate entry");
+    if (isDuplicate) {
+      console.log(`[Slack Reminders] Slot already claimed for coach ${coachId} on ${reminderDate} index ${reminderIndex} \u2014 skipping duplicate`);
+      return false;
+    }
+    console.error("[Slack Reminders] claimReminderSlot unexpected error:", err);
+    return false;
+  }
+}
+async function runReminderTick() {
+  const db2 = await getDb();
+  if (!db2) return;
+  const allCoaches = await db2.select().from(coaches).where(eq3(coaches.isActive, 1));
+  for (const coach of allCoaches) {
+    if (!coach.slackUserId || !coach.remindersEnabled) continue;
+    const timezone = coach.timezone ?? "Australia/Melbourne";
+    const workdays = parseJSON(coach.workdays, DEFAULT_WORKDAYS);
+    const reminderTimes = parseJSON(coach.reminderTimes, DEFAULT_TIMES);
+    const localDay = getLocalDayOfWeek(timezone);
+    const localTime = getLocalHHMM(timezone);
+    const localDate = getLocalDateString(timezone);
+    if (coach.leaveStartDate && coach.leaveEndDate) {
+      if (localDate >= coach.leaveStartDate && localDate <= coach.leaveEndDate) {
+        console.log(`[Slack Reminders] Coach ${coach.id} is on scheduled leave (${coach.leaveStartDate} \u2013 ${coach.leaveEndDate}) \u2014 skipping`);
+        continue;
+      }
+    } else if (coach.leaveStartDate && !coach.leaveEndDate) {
+      if (localDate >= coach.leaveStartDate) {
+        console.log(`[Slack Reminders] Coach ${coach.id} is on open-ended leave from ${coach.leaveStartDate} \u2014 skipping`);
+        continue;
+      }
+    }
+    if (!workdays.includes(localDay)) continue;
+    const matchIndex = reminderTimes.indexOf(localTime);
+    if (matchIndex === -1) continue;
+    const reminder = REMINDER_LABELS[matchIndex];
+    if (!reminder) continue;
+    const claimed = await claimReminderSlot(coach.id, localDate, matchIndex);
+    if (!claimed) continue;
+    const desc2 = REMINDER_DESCRIPTIONS[matchIndex] ?? "";
+    const url = `${APP_URL}${reminder.path}`;
+    const message = `${reminder.emoji} *Coach Check-In Reminder \u2014 ${reminder.label}*
+${desc2}
+
+\u{1F449} <${url}|Open the form here>`;
+    await sendSlackDM(coach.slackUserId, message);
+  }
+}
+async function sendFortnightlyPerformanceReviewReminder() {
+  const MANAGER_SLACK_ID4 = ENV.managerSlackId;
+  if (!SLACK_BOT_TOKEN || !MANAGER_SLACK_ID4) {
+    console.warn("[Slack Fortnightly] SLACK_BOT_TOKEN or MANAGER_SLACK_ID not set \u2014 skipping");
+    return;
+  }
+  const now = /* @__PURE__ */ new Date();
+  const aestDateStr = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Australia/Melbourne",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(now);
+  const aestDate = /* @__PURE__ */ new Date(aestDateStr + "T00:00:00Z");
+  const dayOfWeek = aestDate.getUTCDay() || 7;
+  const thursday = new Date(aestDate);
+  thursday.setUTCDate(aestDate.getUTCDate() + (4 - dayOfWeek));
+  const yearStart = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 1));
+  const isoWeek = Math.ceil(((thursday.getTime() - yearStart.getTime()) / 864e5 + 1) / 7);
+  if (isoWeek % 2 !== 0) {
+    console.log(`[Slack Fortnightly] ISO week ${isoWeek} is odd \u2014 coach review week, no manager reminder`);
+    return;
+  }
+  const APP_URL_LOCAL = ENV.appUrl || "https://databitecoach.com";
+  const url = `${APP_URL_LOCAL}/client-progress`;
+  const message = `\u{1F4CA} *Fortnightly Client Progress Review*
+It's your fortnightly check-in to review and update client ratings in the performance tracker.
+
+*What to do:*
+\u2022 Review each coach's roster and update the traffic light ratings (\u{1F7E2} On Track / \u{1F7E1} Neutral / \u{1F534} Off Track)
+\u2022 Add notes for any clients who have changed status since the last review
+\u2022 Check the KPI summary \u2014 target is *70% On Track* across the business
+
+\u{1F449} <${url}|Open Client Progress Tracker>`;
+  await sendSlackDM(MANAGER_SLACK_ID4, message);
+  console.log("[Slack Fortnightly] Performance review reminder sent to manager");
+}
+async function sendFortnightlySweepReportReminder() {
+  const MANAGER_SLACK_ID4 = ENV.managerSlackId;
+  if (!SLACK_BOT_TOKEN || !MANAGER_SLACK_ID4) {
+    console.warn("[Slack Sweep Reminder] SLACK_BOT_TOKEN or MANAGER_SLACK_ID not set \u2014 skipping");
+    return;
+  }
+  const now = /* @__PURE__ */ new Date();
+  const aestDateStr = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Australia/Melbourne",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(now);
+  const aestDate = /* @__PURE__ */ new Date(aestDateStr + "T00:00:00Z");
+  const dayOfWeek = aestDate.getUTCDay() || 7;
+  const thursday = new Date(aestDate);
+  thursday.setUTCDate(aestDate.getUTCDate() + (4 - dayOfWeek));
+  const yearStart = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 1));
+  const isoWeek = Math.ceil(((thursday.getTime() - yearStart.getTime()) / 864e5 + 1) / 7);
+  if (isoWeek % 2 === 0) {
+    console.log(`[Slack Sweep Reminder] ISO week ${isoWeek} is even \u2014 performance review week, no sweep reminder`);
+    return;
+  }
+  const APP_URL_LOCAL = ENV.appUrl || "https://databitecoach.com";
+  const url = `${APP_URL_LOCAL}/client-progress`;
+  const message = `\u{1F4CB} *Fortnightly Post-Sweep Report*
+Time to generate and save this fortnight's sweep report.
+
+*What to do:*
+\u2022 Head to Client Progress and click *Generate Post-Sweep Report*
+\u2022 Give the report a title (e.g. "Sweep \u2014 Week ${isoWeek}, ${(/* @__PURE__ */ new Date()).getFullYear()}")
+\u2022 Review the report, then click *Save Report* to add it to the history
+\u2022 Use *Compare to Previous* to see what changed since the last sweep
+
+\u{1F449} <${url}|Open Client Progress Tracker>`;
+  await sendSlackDM(MANAGER_SLACK_ID4, message);
+  console.log("[Slack Sweep Reminder] Fortnightly sweep report reminder sent to manager");
+}
+var SLACK_BOT_TOKEN, APP_URL, REMINDER_LABELS, REMINDER_DESCRIPTIONS, DEFAULT_WORKDAYS, DEFAULT_TIMES;
+var init_slackReminders = __esm({
+  "server/slackReminders.ts"() {
+    "use strict";
+    init_db();
+    init_env();
+    init_schema();
+    SLACK_BOT_TOKEN = ENV.slackBotToken;
+    APP_URL = ENV.appUrl || "https://databitecoach.com";
+    REMINDER_LABELS = [
+      { index: 0, label: "Morning Review", path: "/coach?form=morning", emoji: "\u{1F305}" },
+      { index: 1, label: "Follow-Up Outreach", path: "/coach?form=followup", emoji: "\u{1F4E8}" },
+      { index: 2, label: "Disengagement Outreach", path: "/coach?form=disengagement", emoji: "\u{1F50D}" }
+    ];
+    REMINDER_DESCRIPTIONS = [
+      "Time to submit your morning review \u2014 log last work day's scheduled vs completed check-ins.",
+      "Check-in cut-off has passed \u2014 log how many follow-up messages you've sent to clients who missed their check-in.",
+      "Time to log your disengagement outreach \u2014 how many clients haven't logged weight/nutrition for 3+ days did you reach out to?"
+    ];
+    DEFAULT_WORKDAYS = [1, 2, 3, 4, 5];
+    DEFAULT_TIMES = ["08:30", "11:00", "14:00"];
+  }
+});
+
+// server/_core/index.ts
+import "dotenv/config";
+import express from "express";
+import { createServer } from "http";
+import net from "net";
+import { createExpressMiddleware } from "@trpc/server/adapters/express";
+
+// server/_core/auth.ts
+init_db();
+init_schema();
+init_env();
+import { SignJWT, jwtVerify } from "jose";
+import { eq as eq2 } from "drizzle-orm";
 
 // shared/const.ts
 var UNAUTHED_ERR_MSG = "UNAUTHORIZED";
@@ -670,12 +933,14 @@ async function registerAuthRoutes(app) {
 }
 
 // server/routers.ts
+init_db();
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { z } from "zod";
 import { eq as eq4, and as and2, gte as gte2, lte as lte2, desc, sql, asc, isNull } from "drizzle-orm";
 
 // server/rosterUtils.ts
+init_env();
 var SHEET_ID = "1puu4oLAmC5jV_GEmRrMxvXuTak_dl6pOJ6iWC44Nfl4";
 var SHEET_TAB = "CLIENT ROSTER";
 var DAYS2 = ["monday", "tuesday", "wednesday", "thursday", "friday"];
@@ -820,7 +1085,13 @@ async function fetchRawRosterForCoach(coachName) {
   return days;
 }
 
+// server/routers.ts
+init_env();
+init_schema();
+
 // server/typeformBackfill.ts
+init_db();
+init_env();
 var SHEET_ID2 = "1puu4oLAmC5jV_GEmRrMxvXuTak_dl6pOJ6iWC44Nfl4";
 var SHEET_TAB2 = "CLIENT ROSTER";
 async function fetchCoachRoster(coachName) {
@@ -995,228 +1266,8 @@ async function runTypeformBackfill() {
   return results;
 }
 
-// server/slackReminders.ts
-import { eq as eq3 } from "drizzle-orm";
-var SLACK_BOT_TOKEN = ENV.slackBotToken;
-var APP_URL = ENV.appUrl || "https://databitecoach.com";
-var REMINDER_LABELS = [
-  { index: 0, label: "Morning Review", path: "/coach?form=morning", emoji: "\u{1F305}" },
-  { index: 1, label: "Follow-Up Outreach", path: "/coach?form=followup", emoji: "\u{1F4E8}" },
-  { index: 2, label: "Disengagement Outreach", path: "/coach?form=disengagement", emoji: "\u{1F50D}" }
-];
-var REMINDER_DESCRIPTIONS = [
-  "Time to submit your morning review \u2014 log last work day's scheduled vs completed check-ins.",
-  "Check-in cut-off has passed \u2014 log how many follow-up messages you've sent to clients who missed their check-in.",
-  "Time to log your disengagement outreach \u2014 how many clients haven't logged weight/nutrition for 3+ days did you reach out to?"
-];
-async function sendSlackDM(slackUserId, text2) {
-  if (!SLACK_BOT_TOKEN) {
-    console.warn("[Slack] SLACK_BOT_TOKEN not set \u2014 skipping DM");
-    return false;
-  }
-  try {
-    const response = await fetch("https://slack.com/api/chat.postMessage", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        Authorization: `Bearer ${SLACK_BOT_TOKEN}`
-      },
-      body: JSON.stringify({
-        channel: slackUserId,
-        text: text2,
-        unfurl_links: false
-      })
-    });
-    const data = await response.json();
-    if (!data.ok) {
-      console.error(`[Slack] Failed to send DM to ${slackUserId}: ${data.error}`);
-      return false;
-    }
-    console.log(`[Slack] DM sent to ${slackUserId}`);
-    return true;
-  } catch (err) {
-    console.error(`[Slack] Error sending DM to ${slackUserId}:`, err);
-    return false;
-  }
-}
-function getLocalHHMM(timezone) {
-  const now = /* @__PURE__ */ new Date();
-  const parts = new Intl.DateTimeFormat("en-AU", {
-    timeZone: timezone,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).formatToParts(now);
-  const hour = parts.find((p) => p.type === "hour")?.value ?? "00";
-  const minute = parts.find((p) => p.type === "minute")?.value ?? "00";
-  return `${hour}:${minute}`;
-}
-function getLocalDateString(timezone) {
-  const now = /* @__PURE__ */ new Date();
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).format(now);
-}
-function getLocalDayOfWeek(timezone) {
-  const now = /* @__PURE__ */ new Date();
-  const formatter = new Intl.DateTimeFormat("en-AU", {
-    timeZone: timezone,
-    weekday: "short"
-  });
-  const day = formatter.format(now);
-  const map = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-  return map[day] ?? (/* @__PURE__ */ new Date()).getDay();
-}
-function parseJSON(value, fallback) {
-  if (!value) return fallback;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return fallback;
-  }
-}
-var DEFAULT_WORKDAYS = [1, 2, 3, 4, 5];
-var DEFAULT_TIMES = ["08:30", "11:00", "14:00"];
-async function claimReminderSlot(coachId, reminderDate, reminderIndex) {
-  const db2 = await getDb();
-  if (!db2) return false;
-  try {
-    await db2.insert(slackReminderLog).values({ coachId, reminderDate, reminderIndex });
-    return true;
-  } catch (err) {
-    const anyErr = err;
-    const causeCode = anyErr?.cause?.code;
-    const causeErrno = anyErr?.cause?.errno;
-    const causeMsg = anyErr?.cause?.message ?? "";
-    const topMsg = anyErr?.message ?? "";
-    const isDuplicate = causeCode === "ER_DUP_ENTRY" || causeErrno === 1062 || causeMsg.includes("Duplicate entry") || topMsg.includes("Duplicate entry");
-    if (isDuplicate) {
-      console.log(`[Slack Reminders] Slot already claimed for coach ${coachId} on ${reminderDate} index ${reminderIndex} \u2014 skipping duplicate`);
-      return false;
-    }
-    console.error("[Slack Reminders] claimReminderSlot unexpected error:", err);
-    return false;
-  }
-}
-async function runReminderTick() {
-  const db2 = await getDb();
-  if (!db2) return;
-  const allCoaches = await db2.select().from(coaches).where(eq3(coaches.isActive, 1));
-  for (const coach of allCoaches) {
-    if (!coach.slackUserId || !coach.remindersEnabled) continue;
-    const timezone = coach.timezone ?? "Australia/Melbourne";
-    const workdays = parseJSON(coach.workdays, DEFAULT_WORKDAYS);
-    const reminderTimes = parseJSON(coach.reminderTimes, DEFAULT_TIMES);
-    const localDay = getLocalDayOfWeek(timezone);
-    const localTime = getLocalHHMM(timezone);
-    const localDate = getLocalDateString(timezone);
-    if (coach.leaveStartDate && coach.leaveEndDate) {
-      if (localDate >= coach.leaveStartDate && localDate <= coach.leaveEndDate) {
-        console.log(`[Slack Reminders] Coach ${coach.id} is on scheduled leave (${coach.leaveStartDate} \u2013 ${coach.leaveEndDate}) \u2014 skipping`);
-        continue;
-      }
-    } else if (coach.leaveStartDate && !coach.leaveEndDate) {
-      if (localDate >= coach.leaveStartDate) {
-        console.log(`[Slack Reminders] Coach ${coach.id} is on open-ended leave from ${coach.leaveStartDate} \u2014 skipping`);
-        continue;
-      }
-    }
-    if (!workdays.includes(localDay)) continue;
-    const matchIndex = reminderTimes.indexOf(localTime);
-    if (matchIndex === -1) continue;
-    const reminder = REMINDER_LABELS[matchIndex];
-    if (!reminder) continue;
-    const claimed = await claimReminderSlot(coach.id, localDate, matchIndex);
-    if (!claimed) continue;
-    const desc2 = REMINDER_DESCRIPTIONS[matchIndex] ?? "";
-    const url = `${APP_URL}${reminder.path}`;
-    const message = `${reminder.emoji} *Coach Check-In Reminder \u2014 ${reminder.label}*
-${desc2}
-
-\u{1F449} <${url}|Open the form here>`;
-    await sendSlackDM(coach.slackUserId, message);
-  }
-}
-async function sendFortnightlyPerformanceReviewReminder() {
-  const MANAGER_SLACK_ID4 = ENV.managerSlackId;
-  if (!SLACK_BOT_TOKEN || !MANAGER_SLACK_ID4) {
-    console.warn("[Slack Fortnightly] SLACK_BOT_TOKEN or MANAGER_SLACK_ID not set \u2014 skipping");
-    return;
-  }
-  const now = /* @__PURE__ */ new Date();
-  const aestDateStr = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Australia/Melbourne",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).format(now);
-  const aestDate = /* @__PURE__ */ new Date(aestDateStr + "T00:00:00Z");
-  const dayOfWeek = aestDate.getUTCDay() || 7;
-  const thursday = new Date(aestDate);
-  thursday.setUTCDate(aestDate.getUTCDate() + (4 - dayOfWeek));
-  const yearStart = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 1));
-  const isoWeek = Math.ceil(((thursday.getTime() - yearStart.getTime()) / 864e5 + 1) / 7);
-  if (isoWeek % 2 !== 0) {
-    console.log(`[Slack Fortnightly] ISO week ${isoWeek} is odd \u2014 coach review week, no manager reminder`);
-    return;
-  }
-  const APP_URL_LOCAL = ENV.appUrl || "https://databitecoach.com";
-  const url = `${APP_URL_LOCAL}/client-progress`;
-  const message = `\u{1F4CA} *Fortnightly Client Progress Review*
-It's your fortnightly check-in to review and update client ratings in the performance tracker.
-
-*What to do:*
-\u2022 Review each coach's roster and update the traffic light ratings (\u{1F7E2} On Track / \u{1F7E1} Neutral / \u{1F534} Off Track)
-\u2022 Add notes for any clients who have changed status since the last review
-\u2022 Check the KPI summary \u2014 target is *70% On Track* across the business
-
-\u{1F449} <${url}|Open Client Progress Tracker>`;
-  await sendSlackDM(MANAGER_SLACK_ID4, message);
-  console.log("[Slack Fortnightly] Performance review reminder sent to manager");
-}
-async function sendFortnightlySweepReportReminder() {
-  const MANAGER_SLACK_ID4 = ENV.managerSlackId;
-  if (!SLACK_BOT_TOKEN || !MANAGER_SLACK_ID4) {
-    console.warn("[Slack Sweep Reminder] SLACK_BOT_TOKEN or MANAGER_SLACK_ID not set \u2014 skipping");
-    return;
-  }
-  const now = /* @__PURE__ */ new Date();
-  const aestDateStr = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Australia/Melbourne",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).format(now);
-  const aestDate = /* @__PURE__ */ new Date(aestDateStr + "T00:00:00Z");
-  const dayOfWeek = aestDate.getUTCDay() || 7;
-  const thursday = new Date(aestDate);
-  thursday.setUTCDate(aestDate.getUTCDate() + (4 - dayOfWeek));
-  const yearStart = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 1));
-  const isoWeek = Math.ceil(((thursday.getTime() - yearStart.getTime()) / 864e5 + 1) / 7);
-  if (isoWeek % 2 === 0) {
-    console.log(`[Slack Sweep Reminder] ISO week ${isoWeek} is even \u2014 performance review week, no sweep reminder`);
-    return;
-  }
-  const APP_URL_LOCAL = ENV.appUrl || "https://databitecoach.com";
-  const url = `${APP_URL_LOCAL}/client-progress`;
-  const message = `\u{1F4CB} *Fortnightly Post-Sweep Report*
-Time to generate and save this fortnight's sweep report.
-
-*What to do:*
-\u2022 Head to Client Progress and click *Generate Post-Sweep Report*
-\u2022 Give the report a title (e.g. "Sweep \u2014 Week ${isoWeek}, ${(/* @__PURE__ */ new Date()).getFullYear()}")
-\u2022 Review the report, then click *Save Report* to add it to the history
-\u2022 Use *Compare to Previous* to see what changed since the last sweep
-
-\u{1F449} <${url}|Open Client Progress Tracker>`;
-  await sendSlackDM(MANAGER_SLACK_ID4, message);
-  console.log("[Slack Sweep Reminder] Fortnightly sweep report reminder sent to manager");
-}
-
 // server/routers.ts
+init_slackReminders();
 function getTodayMelbourne() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Australia/Melbourne",
@@ -1332,6 +1383,45 @@ var adminProcedure = t.procedure.use(async ({ ctx, next }) => {
   }
   return next({ ctx: { ...ctx, user: ctx.user } });
 });
+async function notifyManagerOfSubmission(coachId, submissionType, details) {
+  const managerSlackId = ENV.managerSlackId;
+  if (!managerSlackId || !ENV.slackBotToken) return;
+  try {
+    const db2 = await requireDb();
+    const [coach] = await db2.select().from(coaches).where(eq4(coaches.id, coachId)).limit(1);
+    if (!coach) return;
+    const appUrl = ENV.appUrl || "https://coach.databite.com.au";
+    const emojis = { morning: "\u{1F305}", followup: "\u{1F4E8}", disengagement: "\u{1F50D}" };
+    const labels = { morning: "Morning Review", followup: "Follow-Up Outreach", disengagement: "Disengagement Outreach" };
+    const emoji = emojis[submissionType] ?? "\u{1F4CB}";
+    const label = labels[submissionType] ?? submissionType;
+    let summary = "";
+    if (submissionType === "morning") {
+      const mood = details.moodScore ? `Mood: ${"\u2B50".repeat(details.moodScore)}` : "";
+      const sched = details.scheduledCount != null ? `Scheduled: ${details.scheduledCount}` : "";
+      const comp = details.completedCount != null ? `Completed: ${details.completedCount}` : "";
+      const notes = details.morningNotes ? `
+> ${details.morningNotes}` : "";
+      summary = [mood, sched, comp].filter(Boolean).join(" \xB7 ") + notes;
+    } else if (submissionType === "followup") {
+      summary = details.followupMessagesSent != null ? `${details.followupMessagesSent} follow-up messages sent` : "";
+      if (details.notes) summary += `
+> ${details.notes}`;
+    } else if (submissionType === "disengagement") {
+      summary = details.disengagementMessagesSent != null ? `${details.disengagementMessagesSent} disengagement messages sent` : "";
+      if (details.notes) summary += `
+> ${details.notes}`;
+    }
+    const message = `${emoji} *${coach.name}* submitted their *${label}*
+${summary}
+
+\u{1F449} <${appUrl}/dashboard|View Dashboard>`;
+    const { sendSlackDM: sendSlackDM2 } = await Promise.resolve().then(() => (init_slackReminders(), slackReminders_exports));
+    await sendSlackDM2(managerSlackId, message);
+  } catch (err) {
+    console.error("[Slack Notify] Error notifying manager:", err);
+  }
+}
 var checkinsRouter = t.router({
   /** Upsert morning check-in for today. */
   submitMorning: protectedProcedure.input(
@@ -1358,6 +1448,8 @@ var checkinsRouter = t.router({
         morningNotes: input.morningNotes ?? existing[0].morningNotes,
         morningSubmittedAt: /* @__PURE__ */ new Date()
       }).where(eq4(checkinRecords.id, existing[0].id));
+      notifyManagerOfSubmission(input.coachId, "morning", input).catch(() => {
+      });
       return { id: existing[0].id, updated: true };
     }
     const [result] = await db2.insert(checkinRecords).values({
@@ -1370,6 +1462,8 @@ var checkinsRouter = t.router({
       workingHours: input.workingHours,
       morningNotes: input.morningNotes,
       morningSubmittedAt: /* @__PURE__ */ new Date()
+    });
+    notifyManagerOfSubmission(input.coachId, "morning", input).catch(() => {
     });
     return { id: result.insertId, updated: false };
   }),
@@ -1390,6 +1484,8 @@ var checkinsRouter = t.router({
         followupNotes: input.notes ?? existing[0].followupNotes,
         followupSubmittedAt: /* @__PURE__ */ new Date()
       }).where(eq4(checkinRecords.id, existing[0].id));
+      notifyManagerOfSubmission(input.coachId, "followup", input).catch(() => {
+      });
       return { id: existing[0].id, updated: true };
     }
     const [result] = await db2.insert(checkinRecords).values({
@@ -1398,6 +1494,8 @@ var checkinsRouter = t.router({
       followupCount: input.followupMessagesSent,
       followupNotes: input.notes,
       followupSubmittedAt: /* @__PURE__ */ new Date()
+    });
+    notifyManagerOfSubmission(input.coachId, "followup", input).catch(() => {
     });
     return { id: result.insertId, updated: false };
   }),
@@ -1418,6 +1516,8 @@ var checkinsRouter = t.router({
         disengagementNotes: input.notes ?? existing[0].disengagementNotes,
         disengagementSubmittedAt: /* @__PURE__ */ new Date()
       }).where(eq4(checkinRecords.id, existing[0].id));
+      notifyManagerOfSubmission(input.coachId, "disengagement", input).catch(() => {
+      });
       return { id: existing[0].id, updated: true };
     }
     const [result] = await db2.insert(checkinRecords).values({
@@ -1426,6 +1526,8 @@ var checkinsRouter = t.router({
       disengagementCount: input.disengagementMessagesSent,
       disengagementNotes: input.notes,
       disengagementSubmittedAt: /* @__PURE__ */ new Date()
+    });
+    notifyManagerOfSubmission(input.coachId, "disengagement", input).catch(() => {
     });
     return { id: result.insertId, updated: false };
   }),
@@ -3358,7 +3460,13 @@ async function serveStatic(app) {
   });
 }
 
+// server/_core/index.ts
+init_slackReminders();
+
 // server/slackWeeklySummary.ts
+init_db();
+init_env();
+init_slackReminders();
 var MANAGER_SLACK_ID = ENV.managerSlackId;
 var APP_URL2 = ENV.appUrl || "https://databitecoach.com";
 function formatDate(dateStr) {
@@ -3451,6 +3559,8 @@ async function screenshotDisengagementCard() {
 }
 
 // server/slackDisengagementAlert.ts
+init_env();
+init_slackReminders();
 var MANAGER_SLACK_ID2 = ENV.managerSlackId;
 var SLACK_BOT_TOKEN2 = ENV.slackBotToken;
 var APP_URL3 = ENV.appUrl || "https://databitecoach.com";
@@ -3572,6 +3682,9 @@ _(PNG screenshot failed \u2014 check server logs)_
 }
 
 // server/slackFridaySummary.ts
+init_db();
+init_env();
+init_slackReminders();
 var MANAGER_SLACK_ID3 = ENV.managerSlackId;
 var APP_URL4 = ENV.appUrl || "https://databitecoach.com";
 function getMondayLocal2(date2) {
@@ -3707,6 +3820,9 @@ async function sendFridayWeeklySummary() {
 }
 
 // server/typeformWebhook.ts
+init_db();
+init_env();
+init_schema();
 import crypto from "crypto";
 import { and as and3, eq as eq5 } from "drizzle-orm";
 var FORM_TO_COACH = {
@@ -4311,6 +4427,7 @@ async function generateWeeklySummaryPdf(data, weekLabel) {
 }
 
 // server/weeklySummaryPdfRoute.ts
+init_db();
 function registerWeeklySummaryPdfRoute(app) {
   app.get("/api/weekly-summary-pdf", async (req, res) => {
     try {

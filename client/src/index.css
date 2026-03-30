@@ -4,18 +4,20 @@
 @custom-variant dark (&:is(.dark *));
 
 /* Cancellation tooltip */
-.cancel-tip { position: relative; display: inline-flex; }
-.cancel-tip .cancel-tip-text {
-  visibility: hidden; opacity: 0;
-  position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
-  margin-bottom: 8px; padding: 4px 12px;
-  background: #18181b; border: 1px solid rgba(248,113,113,0.4);
-  border-radius: 8px; font-size: 12px; font-weight: 600; color: #fca5a5;
-  white-space: nowrap; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-  transition: visibility 0.15s, opacity 0.15s;
-  pointer-events: none;
+@layer base {
+  .cancel-tip { position: relative; display: inline-flex; }
+  .cancel-tip .cancel-tip-text {
+    visibility: hidden; opacity: 0;
+    position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+    margin-bottom: 8px; padding: 4px 12px;
+    background: #18181b; border: 1px solid rgba(248,113,113,0.4);
+    border-radius: 8px; font-size: 12px; font-weight: 600; color: #fca5a5;
+    white-space: nowrap; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    transition: visibility 0.15s, opacity 0.15s;
+    pointer-events: none;
+  }
+  .cancel-tip:hover .cancel-tip-text { visibility: visible; opacity: 1; }
 }
-.cancel-tip:hover .cancel-tip-text { visibility: visible; opacity: 1; }
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);

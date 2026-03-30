@@ -207,6 +207,11 @@ export default function ClientCheckins() {
       staleTime: 5 * 60 * 1000,
     });
 
+  // Upfront/DEC OFFER renewal alerts (server-parsed from roster names)
+  const { data: upfrontAlerts } = trpc.clientCheckins.getUpfrontAlertsAll.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Missed streaks for red highlighting
   const { data: allMissedStreaks } =
     trpc.clientCheckins.getAllMissedStreaks.useQuery(undefined, {
@@ -237,59 +242,19 @@ export default function ClientCheckins() {
     onError: (e) => toast.error(e.message),
   });
 
-  // Upfront alerts are now handled by the unified renewalAlerts below
-
-  // Renewal alerts — clients with DEC OFFER or UPFRONT ending within 30/60 days
+  // Renewal alerts from server (parsed from Google Sheets roster names)
   const renewalAlerts = useMemo(() => {
-    if (!roster) return [];
-    const alerts: Array<{ name: string; coach: string; day: string; offerType: string; daysLeft: number; dateLabel: string }> = [];
-    const now = new Date();
-    const months: Record<string, number> = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 };
-    for (const day of DAYS) {
-      for (const name of ((roster as Record<string, string[]>)[day] ?? [])) {
-        // Match UPFRONT - 12 Apr 2026, DEC OFFER - 5 May, UPFRONT 12/04/2026, etc.
-        const matchUpfront = name.match(/UPFRONT\s*[-–—]\s*(\d{1,2}[\s/.-]+\w+[\s/.-]*\d{0,4})/i);
-        const matchDec = name.match(/DEC\s*OFFER\s*[-–—]\s*(\d{1,2}[\s/.-]+\w+[\s/.-]*\d{0,4})/i);
-        const match = matchUpfront || matchDec;
-        const offerType = matchUpfront ? "UPFRONT" : matchDec ? "DEC OFFER" : null;
-        if (match && offerType) {
-          const raw = match[1].trim();
-          let parsed: Date | null = null;
-          // Try "12 Apr 2026" or "12 Apr"
-          const namedMonth = raw.match(/^(\d{1,2})\s+(\w{3,})\s*(\d{4})?$/i);
-          if (namedMonth) {
-            const d = parseInt(namedMonth[1]);
-            const m = months[namedMonth[2].toLowerCase().slice(0, 3)];
-            const y = namedMonth[3] ? parseInt(namedMonth[3]) : now.getFullYear();
-            if (m !== undefined) parsed = new Date(y, m, d);
-          }
-          // Try "12/04/2026" or "12/04" (DD/MM)
-          if (!parsed) {
-            const slashed = raw.match(/^(\d{1,2})[/.-](\d{1,2})[/.-]?(\d{2,4})?$/);
-            if (slashed) {
-              const d = parseInt(slashed[1]);
-              const m = parseInt(slashed[2]) - 1;
-              const y = slashed[3] ? (slashed[3].length === 2 ? 2000 + parseInt(slashed[3]) : parseInt(slashed[3])) : now.getFullYear();
-              parsed = new Date(y, m, d);
-            }
-          }
-          if (parsed && !isNaN(parsed.getTime())) {
-            // If parsed date is in the past and no year was specified, try next year
-            if (parsed < now && !raw.match(/\d{4}/)) {
-              parsed.setFullYear(parsed.getFullYear() + 1);
-            }
-            const daysLeft = Math.ceil((parsed.getTime() - now.getTime()) / 86400000);
-            const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-            const dateLabel = `${parsed.getDate()} ${monthNames[parsed.getMonth()]} ${parsed.getFullYear()}`;
-            if (daysLeft <= 60 && daysLeft >= -7) {
-              alerts.push({ name, coach: effectiveCoachName ?? "", day, offerType, daysLeft, dateLabel });
-            }
-          }
-        }
-      }
-    }
-    return alerts.sort((a, b) => a.daysLeft - b.daysLeft);
-  }, [roster, effectiveCoachName]);
+    if (!upfrontAlerts || !effectiveCoachId) return [];
+    const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return upfrontAlerts
+      .filter((a) => a.coachId === effectiveCoachId)
+      .map((a) => {
+        const d = new Date(a.endDate + "T00:00:00");
+        const dateLabel = `${d.getDate()} ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+        const displayName = a.clientName.replace(/\s*(UPFRONT|DEC\s*OFFER)\s*[-–—]?\s*\d{1,2}[\s/.-]+\w+[\s/.-]*\d{0,4}/gi, "").replace(/\s*\(.*\)\s*$/, "").trim();
+        return { name: displayName, coach: a.coachName, day: a.dayOfWeek, offerType: a.offerType, daysLeft: a.daysLeft, dateLabel };
+      });
+  }, [upfrontAlerts, effectiveCoachId]);
 
   // Clients missing 2+ consecutive weeks (for the section below the roster)
   const clientsMissing2Plus = useMemo(() => {

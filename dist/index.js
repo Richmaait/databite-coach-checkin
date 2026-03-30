@@ -2448,30 +2448,49 @@ var clientCheckinsRouter = t.router({
   getUpfrontAlertsAll: protectedProcedure.query(async () => {
     const db2 = await requireDb();
     const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq4(coaches.isActive, 1));
+    const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+    const now = /* @__PURE__ */ new Date();
     const alerts = [];
-    const upfrontRegex = /UPFRONT\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/i;
     for (const coach of coachList) {
       const roster = await fetchRosterForCoach(coach.name);
       for (const day of DAYS) {
         const clients = roster[day] ?? [];
         for (const clientName of clients) {
-          const match = clientName.match(upfrontRegex);
-          if (match) {
-            const [, dd, mm, yyyy] = match;
-            const fullYear = yyyy.length === 2 ? `20${yyyy}` : yyyy;
-            const endDate = `${fullYear}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
-            alerts.push({
-              coachId: coach.id,
-              coachName: coach.name,
-              clientName,
-              dayOfWeek: day,
-              endDate
-            });
+          const matchUpfront = clientName.match(/UPFRONT\s*[-–—]\s*(\d{1,2}[\s/.-]+\w+[\s/.-]*\d{0,4})/i);
+          const matchDec = clientName.match(/DEC\s*OFFER\s*[-–—]?\s*(\d{1,2}[\s/.-]+\w+[\s/.-]*\d{0,4})/i);
+          const match = matchUpfront || matchDec;
+          const offerType = matchUpfront ? "UPFRONT" : matchDec ? "DEC OFFER" : null;
+          if (!match || !offerType) continue;
+          const raw = match[1].trim();
+          let parsed = null;
+          const namedMonth = raw.match(/^(\d{1,2})\s+(\w{3,})\s*(\d{2,4})?$/i);
+          if (namedMonth) {
+            const d = parseInt(namedMonth[1]);
+            const m = months[namedMonth[2].toLowerCase().slice(0, 3)];
+            const y = namedMonth[3] ? namedMonth[3].length === 2 ? 2e3 + parseInt(namedMonth[3]) : parseInt(namedMonth[3]) : now.getFullYear();
+            if (m !== void 0) parsed = new Date(y, m, d);
+          }
+          if (!parsed) {
+            const slashed = raw.match(/^(\d{1,2})[/.-](\d{1,2})[/.-]?(\d{2,4})?$/);
+            if (slashed) {
+              const d = parseInt(slashed[1]);
+              const m = parseInt(slashed[2]) - 1;
+              const y = slashed[3] ? slashed[3].length === 2 ? 2e3 + parseInt(slashed[3]) : parseInt(slashed[3]) : now.getFullYear();
+              parsed = new Date(y, m, d);
+            }
+          }
+          if (parsed && !isNaN(parsed.getTime())) {
+            if (parsed < now && !raw.match(/\d{4}/)) parsed.setFullYear(parsed.getFullYear() + 1);
+            const daysLeft = Math.ceil((parsed.getTime() - now.getTime()) / 864e5);
+            const endDate = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-${String(parsed.getDate()).padStart(2, "0")}`;
+            if (daysLeft <= 14 && daysLeft >= -7) {
+              alerts.push({ coachId: coach.id, coachName: coach.name, clientName, dayOfWeek: day, offerType, endDate, daysLeft });
+            }
           }
         }
       }
     }
-    return alerts;
+    return alerts.sort((a, b) => a.daysLeft - b.daysLeft);
   }),
   /** Public: client self-check-in. Finds the client by name (case-insensitive) and marks submitted. */
   clientSelfCheckin: publicProcedure.input(

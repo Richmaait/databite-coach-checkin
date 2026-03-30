@@ -1952,40 +1952,67 @@ const clientCheckinsRouter = t.router({
       .from(coaches)
       .where(eq(coaches.isActive, 1));
 
+    const months: Record<string, number> = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 };
+    const now = new Date();
+
     const alerts: Array<{
       coachId: number;
       coachName: string;
       clientName: string;
       dayOfWeek: string;
+      offerType: string;
       endDate: string;
+      daysLeft: number;
     }> = [];
-
-    // Match patterns like "UPFRONT 01/04/2026" or "UPFRONT 1/4/26" in client names
-    const upfrontRegex = /UPFRONT\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/i;
 
     for (const coach of coachList) {
       const roster = await fetchRosterForCoach(coach.name);
       for (const day of DAYS) {
         const clients = roster[day] ?? [];
         for (const clientName of clients) {
-          const match = clientName.match(upfrontRegex);
-          if (match) {
-            const [, dd, mm, yyyy] = match;
-            const fullYear = yyyy.length === 2 ? `20${yyyy}` : yyyy;
-            const endDate = `${fullYear}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
-            alerts.push({
-              coachId: coach.id,
-              coachName: coach.name,
-              clientName,
-              dayOfWeek: day,
-              endDate,
-            });
+          // Match UPFRONT or DEC OFFER followed by a date
+          const matchUpfront = clientName.match(/UPFRONT\s*[-–—]\s*(\d{1,2}[\s/.-]+\w+[\s/.-]*\d{0,4})/i);
+          const matchDec = clientName.match(/DEC\s*OFFER\s*[-–—]?\s*(\d{1,2}[\s/.-]+\w+[\s/.-]*\d{0,4})/i);
+          const match = matchUpfront || matchDec;
+          const offerType = matchUpfront ? "UPFRONT" : matchDec ? "DEC OFFER" : null;
+          if (!match || !offerType) continue;
+
+          const raw = match[1].trim();
+          let parsed: Date | null = null;
+
+          // Try "12 Apr 2026" or "12 Apr" or "12 APRIL 26"
+          const namedMonth = raw.match(/^(\d{1,2})\s+(\w{3,})\s*(\d{2,4})?$/i);
+          if (namedMonth) {
+            const d = parseInt(namedMonth[1]);
+            const m = months[namedMonth[2].toLowerCase().slice(0, 3)];
+            const y = namedMonth[3] ? (namedMonth[3].length === 2 ? 2000 + parseInt(namedMonth[3]) : parseInt(namedMonth[3])) : now.getFullYear();
+            if (m !== undefined) parsed = new Date(y, m, d);
+          }
+          // Try "12/04/2026" or "12/04"
+          if (!parsed) {
+            const slashed = raw.match(/^(\d{1,2})[/.-](\d{1,2})[/.-]?(\d{2,4})?$/);
+            if (slashed) {
+              const d = parseInt(slashed[1]);
+              const m = parseInt(slashed[2]) - 1;
+              const y = slashed[3] ? (slashed[3].length === 2 ? 2000 + parseInt(slashed[3]) : parseInt(slashed[3])) : now.getFullYear();
+              parsed = new Date(y, m, d);
+            }
+          }
+
+          if (parsed && !isNaN(parsed.getTime())) {
+            if (parsed < now && !raw.match(/\d{4}/)) parsed.setFullYear(parsed.getFullYear() + 1);
+            const daysLeft = Math.ceil((parsed.getTime() - now.getTime()) / 86400000);
+            const endDate = `${parsed.getFullYear()}-${String(parsed.getMonth()+1).padStart(2,"0")}-${String(parsed.getDate()).padStart(2,"0")}`;
+            // Show alerts from 14 days before to 7 days after
+            if (daysLeft <= 14 && daysLeft >= -7) {
+              alerts.push({ coachId: coach.id, coachName: coach.name, clientName, dayOfWeek: day, offerType, endDate, daysLeft });
+            }
           }
         }
       }
     }
 
-    return alerts;
+    return alerts.sort((a, b) => a.daysLeft - b.daysLeft);
   }),
 
   /** Public: client self-check-in. Finds the client by name (case-insensitive) and marks submitted. */

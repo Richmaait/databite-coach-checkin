@@ -3014,21 +3014,38 @@ var performanceRouter = t.router({
     const db2 = await requireDb();
     const coachList = await db2.select({ id: coaches.id, name: coaches.name, workdays: coaches.workdays }).from(coaches).where(eq4(coaches.isActive, 1));
     const coachSummaries = [];
+    const todayMelb = getTodayMelbourne();
+    const currentWeekMon = getMonday2(todayMelb);
+    const isPastWeek = input.weekStart < currentWeekMon;
+    const snapshots = isPastWeek ? await db2.select().from(rosterWeeklySnapshots).where(eq4(rosterWeeklySnapshots.weekStart, input.weekStart)) : [];
+    const snapMap = new Map(snapshots.map((s) => [s.coachId, s.snapshotJson]));
     for (const coach of coachList) {
-      const roster = await fetchRosterForCoach(coach.name);
-      let scheduled = 0;
-      for (const day of DAYS) scheduled += (roster[day] ?? []).length;
-      const completions = await db2.select().from(clientCheckIns).where(and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, input.weekStart)));
-      const completed = completions.filter((c) => c.completedAt != null).length;
-      const excuses = await db2.select().from(excusedClients).where(
-        and2(
-          eq4(excusedClients.coachId, coach.id),
-          eq4(excusedClients.weekStart, input.weekStart),
-          eq4(excusedClients.status, "approved")
-        )
-      );
-      const excusedCount = excuses.length;
-      const effectiveScheduled = Math.max(scheduled - excusedCount, 0);
+      const snap = snapMap.get(coach.id);
+      let scheduled;
+      let completed;
+      let excusedCount;
+      let effectiveScheduled;
+      if (isPastWeek && snap?.scheduled != null) {
+        scheduled = snap.scheduled;
+        completed = snap.completed ?? 0;
+        excusedCount = snap.excused ?? 0;
+        effectiveScheduled = Math.max(scheduled - excusedCount, 0);
+      } else {
+        const roster = await fetchRosterForCoach(coach.name);
+        scheduled = 0;
+        for (const day of DAYS) scheduled += (roster[day] ?? []).length;
+        const completions = await db2.select().from(clientCheckIns).where(and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, input.weekStart)));
+        completed = completions.filter((c) => c.completedAt != null).length;
+        const excuses = await db2.select().from(excusedClients).where(
+          and2(
+            eq4(excusedClients.coachId, coach.id),
+            eq4(excusedClients.weekStart, input.weekStart),
+            eq4(excusedClients.status, "approved")
+          )
+        );
+        excusedCount = excuses.length;
+        effectiveScheduled = Math.max(scheduled - excusedCount, 0);
+      }
       const pct = effectiveScheduled > 0 ? Math.round(completed / effectiveScheduled * 100) : 0;
       const weekEnd2 = addDays(input.weekStart, 4);
       const records = await db2.select().from(checkinRecords).where(

@@ -2578,29 +2578,54 @@ const performanceRouter = t.router({
         disengagementSubmitted: boolean;
       }> = [];
 
+      // Check if this is a past week with snapshots
+      const todayMelb = getTodayMelbourne();
+      const currentWeekMon = getMonday(todayMelb);
+      const isPastWeek = input.weekStart < currentWeekMon;
+
+      const snapshots = isPastWeek
+        ? await db.select().from(rosterWeeklySnapshots).where(eq(rosterWeeklySnapshots.weekStart, input.weekStart))
+        : [];
+      const snapMap = new Map(snapshots.map(s => [s.coachId, s.snapshotJson as any]));
+
       for (const coach of coachList) {
-        const roster = await fetchRosterForCoach(coach.name);
-        let scheduled = 0;
-        for (const day of DAYS) scheduled += (roster[day] ?? []).length;
+        const snap = snapMap.get(coach.id);
+        let scheduled: number;
+        let completed: number;
+        let excusedCount: number;
+        let effectiveScheduled: number;
 
-        const completions = await db
-          .select()
-          .from(clientCheckIns)
-          .where(and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, input.weekStart)));
-        const completed = completions.filter((c) => c.completedAt != null).length;
+        if (isPastWeek && snap?.scheduled != null) {
+          // Use snapshot for past weeks
+          scheduled = snap.scheduled;
+          completed = snap.completed ?? 0;
+          excusedCount = snap.excused ?? 0;
+          effectiveScheduled = Math.max(scheduled - excusedCount, 0);
+        } else {
+          // Live calculation for current week
+          const roster = await fetchRosterForCoach(coach.name);
+          scheduled = 0;
+          for (const day of DAYS) scheduled += (roster[day] ?? []).length;
 
-        const excuses = await db
-          .select()
-          .from(excusedClients)
-          .where(
-            and(
-              eq(excusedClients.coachId, coach.id),
-              eq(excusedClients.weekStart, input.weekStart),
-              eq(excusedClients.status, "approved"),
-            ),
-          );
-        const excusedCount = excuses.length;
-        const effectiveScheduled = Math.max(scheduled - excusedCount, 0);
+          const completions = await db
+            .select()
+            .from(clientCheckIns)
+            .where(and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, input.weekStart)));
+          completed = completions.filter((c) => c.completedAt != null).length;
+
+          const excuses = await db
+            .select()
+            .from(excusedClients)
+            .where(
+              and(
+                eq(excusedClients.coachId, coach.id),
+                eq(excusedClients.weekStart, input.weekStart),
+                eq(excusedClients.status, "approved"),
+              ),
+            );
+          excusedCount = excuses.length;
+          effectiveScheduled = Math.max(scheduled - excusedCount, 0);
+        }
         const pct = effectiveScheduled > 0 ? Math.round((completed / effectiveScheduled) * 100) : 0;
 
         // Get checkin records for the week (Monday to Friday)

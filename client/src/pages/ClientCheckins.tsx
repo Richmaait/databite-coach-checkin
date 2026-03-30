@@ -839,11 +839,7 @@ export default function ClientCheckins() {
                                       Finishes {dateTag}
                                     </span>
                                   )}
-                                  {isUpfrontOrDec && dateTag && (
-                                    <span className="shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-300">
-                                      {dateTag}
-                                    </span>
-                                  )}
+                                  {/* UPFRONT/DEC OFFER badges hidden on roster — shown in renewal banner instead */}
                                 </span>
                               </div>
 

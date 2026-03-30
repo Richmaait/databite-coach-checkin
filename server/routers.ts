@@ -959,6 +959,8 @@ const clientCheckinsRouter = t.router({
     const db = await requireDb();
     const today = getTodayMelbourne();
     const currentWeek = getMonday(today);
+    // Only count PRIOR completed weeks — current week is still in progress
+    const lastWeek = (() => { const d = new Date(currentWeek + "T00:00:00"); d.setDate(d.getDate() - 7); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })();
     const epochWeek = getMonday(CLIENT_CHECKINS_EPOCH);
 
     const coachList = await db
@@ -966,7 +968,7 @@ const clientCheckinsRouter = t.router({
       .from(coaches)
       .where(eq(coaches.isActive, 1));
 
-    const allWeeks = getWeeksBetween(epochWeek, currentWeek); // newest first
+    const allWeeks = getWeeksBetween(epochWeek, lastWeek); // newest first, excludes current week
 
     type DisengagedClient = {
       coachId: number;
@@ -1071,6 +1073,8 @@ const clientCheckinsRouter = t.router({
     const db = await requireDb();
     const today = getTodayMelbourne();
     const currentWeek = getMonday(today);
+    // Only count PRIOR completed weeks — current week is still in progress
+    const lastWeek = (() => { const d = new Date(currentWeek + "T00:00:00"); d.setDate(d.getDate() - 7); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })();
     const epochWeek = getMonday(CLIENT_CHECKINS_EPOCH);
 
     const coachList = await db
@@ -1078,7 +1082,7 @@ const clientCheckinsRouter = t.router({
       .from(coaches)
       .where(eq(coaches.isActive, 1));
 
-    const allWeeks = getWeeksBetween(epochWeek, currentWeek);
+    const allWeeks = getWeeksBetween(epochWeek, lastWeek);
 
     type MissedStreak = {
       coachId: number;

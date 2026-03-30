@@ -1799,9 +1799,14 @@ var clientCheckinsRouter = t.router({
     const db2 = await requireDb();
     const today = getTodayMelbourne();
     const currentWeek = getMonday2(today);
+    const lastWeek = (() => {
+      const d = /* @__PURE__ */ new Date(currentWeek + "T00:00:00");
+      d.setDate(d.getDate() - 7);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    })();
     const epochWeek = getMonday2(CLIENT_CHECKINS_EPOCH);
     const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq4(coaches.isActive, 1));
-    const allWeeks = getWeeksBetween(epochWeek, currentWeek);
+    const allWeeks = getWeeksBetween(epochWeek, lastWeek);
     const disengaged = [];
     for (const coach of coachList) {
       const roster = await fetchRosterForCoach(coach.name);
@@ -1862,9 +1867,14 @@ var clientCheckinsRouter = t.router({
     const db2 = await requireDb();
     const today = getTodayMelbourne();
     const currentWeek = getMonday2(today);
+    const lastWeek = (() => {
+      const d = /* @__PURE__ */ new Date(currentWeek + "T00:00:00");
+      d.setDate(d.getDate() - 7);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    })();
     const epochWeek = getMonday2(CLIENT_CHECKINS_EPOCH);
     const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq4(coaches.isActive, 1));
-    const allWeeks = getWeeksBetween(epochWeek, currentWeek);
+    const allWeeks = getWeeksBetween(epochWeek, lastWeek);
     const streaks = [];
     for (const coach of coachList) {
       const roster = await fetchRosterForCoach(coach.name);

@@ -1009,11 +1009,14 @@ const clientCheckinsRouter = t.router({
         .from(rosterClientStarts)
         .where(eq(rosterClientStarts.coachId, coach.id));
 
-      const completionSet = new Set(
-        completions
-          .filter((c) => c.completedAt != null)
-          .map((c) => `${c.clientName}|${c.dayOfWeek}|${c.weekStart}`),
-      );
+      // Build completion set with fuzzy name matching (DB may have suffixes like "(UPFRONT - 6 May)")
+      const completionSet = new Set<string>();
+      for (const c of completions) {
+        if (c.completedAt == null) continue;
+        completionSet.add(`${c.clientName}|${c.dayOfWeek}|${c.weekStart}`);
+        const baseName = c.clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+        if (baseName !== c.clientName) completionSet.add(`${baseName}|${c.dayOfWeek}|${c.weekStart}`);
+      }
       // Build excuse set — day-independent (excuse covers the whole week) + fuzzy name matching
       const excuseSet = new Set<string>();
       for (const e of approvedExcuses) {
@@ -1112,11 +1115,14 @@ const clientCheckinsRouter = t.router({
         .from(excusedClients)
         .where(and(eq(excusedClients.coachId, coach.id), eq(excusedClients.status, "approved")));
 
-      const completionSet = new Set(
-        completions
-          .filter((c) => c.completedAt != null)
-          .map((c) => `${c.clientName}|${c.dayOfWeek}|${c.weekStart}`),
-      );
+      // Build completion set with fuzzy name matching
+      const completionSet = new Set<string>();
+      for (const c of completions) {
+        if (c.completedAt == null) continue;
+        completionSet.add(`${c.clientName}|${c.dayOfWeek}|${c.weekStart}`);
+        const baseName = c.clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+        if (baseName !== c.clientName) completionSet.add(`${baseName}|${c.dayOfWeek}|${c.weekStart}`);
+      }
       // Day-independent excuse matching + fuzzy names
       const excuseSet = new Set<string>();
       for (const e of approvedExcuses) {

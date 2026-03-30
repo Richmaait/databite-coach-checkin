@@ -1815,9 +1815,13 @@ var clientCheckinsRouter = t.router({
       const paused = await db2.select().from(pausedClients).where(and2(eq4(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
       const pausedSet = new Set(paused.map((p) => p.clientName));
       const starts = await db2.select().from(rosterClientStarts).where(eq4(rosterClientStarts.coachId, coach.id));
-      const completionSet = new Set(
-        completions.filter((c) => c.completedAt != null).map((c) => `${c.clientName}|${c.dayOfWeek}|${c.weekStart}`)
-      );
+      const completionSet = /* @__PURE__ */ new Set();
+      for (const c of completions) {
+        if (c.completedAt == null) continue;
+        completionSet.add(`${c.clientName}|${c.dayOfWeek}|${c.weekStart}`);
+        const baseName = c.clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+        if (baseName !== c.clientName) completionSet.add(`${baseName}|${c.dayOfWeek}|${c.weekStart}`);
+      }
       const excuseSet = /* @__PURE__ */ new Set();
       for (const e of approvedExcuses) {
         excuseSet.add(`${e.clientName}|${e.weekStart}`);
@@ -1882,9 +1886,13 @@ var clientCheckinsRouter = t.router({
       const pausedSet = new Set(paused.map((p) => p.clientName));
       const completions = await db2.select().from(clientCheckIns).where(eq4(clientCheckIns.coachId, coach.id));
       const approvedExcuses = await db2.select().from(excusedClients).where(and2(eq4(excusedClients.coachId, coach.id), eq4(excusedClients.status, "approved")));
-      const completionSet = new Set(
-        completions.filter((c) => c.completedAt != null).map((c) => `${c.clientName}|${c.dayOfWeek}|${c.weekStart}`)
-      );
+      const completionSet = /* @__PURE__ */ new Set();
+      for (const c of completions) {
+        if (c.completedAt == null) continue;
+        completionSet.add(`${c.clientName}|${c.dayOfWeek}|${c.weekStart}`);
+        const baseName = c.clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+        if (baseName !== c.clientName) completionSet.add(`${baseName}|${c.dayOfWeek}|${c.weekStart}`);
+      }
       const excuseSet = /* @__PURE__ */ new Set();
       for (const e of approvedExcuses) {
         excuseSet.add(`${e.clientName}|${e.weekStart}`);

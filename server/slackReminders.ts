@@ -231,7 +231,7 @@ export async function runReminderTick(): Promise<void> {
  * Sends morning and evening reminders to sales team members.
  */
 const SALES_TEAM = [
-  { name: "Yaman", slackUserId: "U0AN8E2RE5S", timezone: "Australia/Melbourne", workdays: [1, 2, 3, 4, 5], morningTime: "08:30", eveningTime: "17:00" },
+  { name: "Yaman", slackUserId: "U0AN8E2RE5S", timezone: "Australia/Melbourne", workdays: [1, 2, 3, 4, 5], morningTime: "08:30", eveningTime: "18:00" },
 ];
 
 const SALES_REMINDERS = [

@@ -199,7 +199,7 @@ export default function Sales() {
             <div className="space-y-2">
               {todayRecord?.howDayWent && <div className="text-sm"><span className="text-white/40">How day went:</span> <span className="text-white/80">{todayRecord.howDayWent}</span></div>}
               <div className="text-sm"><span className="text-white/40">Sales made:</span> <span className="text-white/80 font-semibold">{todayRecord?.salesMade ?? 0}</span></div>
-              {todayRecord?.intendedHoursNextDay && <div className="text-sm"><span className="text-white/40">Tomorrow's hours:</span> <span className="text-white/80">{todayRecord.intendedHoursNextDay}</span></div>}
+              {todayRecord?.intendedHoursNextDay && <div className="text-sm"><span className="text-white/40">Start tomorrow:</span> <span className="text-white/80">{todayRecord.intendedHoursNextDay}</span></div>}
             </div>
           ) : (
             <div className="space-y-4">
@@ -214,12 +214,14 @@ export default function Sales() {
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 placeholder-white/20 outline-none focus:border-violet-500/40 transition-all" />
               </div>
               <div>
-                <label className="block text-xs text-white/40 uppercase tracking-wider font-medium mb-2">Intended working hours tomorrow</label>
-                <TimeBlockSelector block1Start={e1Start} setBlock1Start={setE1Start} block1End={e1End} setBlock1End={setE1End}
-                  hasSplitDay={eSplit} setHasSplitDay={setESplit} block2Start={e2Start} setBlock2Start={setE2Start} block2End={e2End} setBlock2End={setE2End} />
+                <label className="block text-xs text-white/40 uppercase tracking-wider font-medium mb-2">Intended start time tomorrow</label>
+                <Select value={e1Start} onValueChange={setE1Start}>
+                  <SelectTrigger className="bg-white/5 border-white/10 text-sm w-full"><SelectValue placeholder="Select start time" /></SelectTrigger>
+                  <SelectContent>{TIME_OPTIONS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
               </div>
               <button
-                onClick={() => submitEveningMutation.mutate({ recordDate: today, howDayWent: howDayWent || undefined, salesMade: salesMade ? parseInt(salesMade) : undefined, intendedHoursNextDay: buildWorkingHours(e1Start, e1End, eSplit, e2Start, e2End) || undefined })}
+                onClick={() => submitEveningMutation.mutate({ recordDate: today, howDayWent: howDayWent || undefined, salesMade: salesMade ? parseInt(salesMade) : undefined, intendedHoursNextDay: e1Start || undefined })}
                 disabled={submitEveningMutation.isPending}
                 className="w-full py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-400 hover:to-fuchsia-400 disabled:opacity-40 text-white shadow-lg shadow-violet-500/20 transition-all">
                 {submitEveningMutation.isPending ? "Submitting..." : "Submit Evening Check-In"}

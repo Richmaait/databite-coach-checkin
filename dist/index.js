@@ -686,7 +686,7 @@ var init_slackReminders = __esm({
     DEFAULT_WORKDAYS = [1, 2, 3, 4, 5];
     DEFAULT_TIMES = ["08:30", "11:00", "14:00"];
     SALES_TEAM = [
-      { name: "Yaman", slackUserId: "U0AN8E2RE5S", timezone: "Australia/Melbourne", workdays: [1, 2, 3, 4, 5], morningTime: "08:30", eveningTime: "17:00" }
+      { name: "Yaman", slackUserId: "U0AN8E2RE5S", timezone: "Australia/Melbourne", workdays: [1, 2, 3, 4, 5], morningTime: "08:30", eveningTime: "18:00" }
     ];
     SALES_REMINDERS = [
       { index: 10, time: "morningTime", label: "Morning Check-In", emoji: "\u{1F305}", desc: "Time to submit your morning check-in \u2014 how are you feeling and what are your planned hours?", path: "/sales" },

@@ -12,6 +12,7 @@
 
 import { getAllCoaches, toggleClientSubmitted } from "./db";
 import { ENV } from "./env";
+import { fetchRosterForCoach, DAYS as ROSTER_DAYS } from "./rosterUtils";
 
 const SHEET_ID = "1puu4oLAmC5jV_GEmRrMxvXuTak_dl6pOJ6iWC44Nfl4";
 const SHEET_TAB = "CLIENT ROSTER";
@@ -170,11 +171,11 @@ async function backfillForm(config: FormConfig, weekStart: string): Promise<Back
     return result;
   }
 
-  // Fetch roster for this coach to get client names
-  const roster = await fetchCoachRoster(config.coachName);
+  // Fetch roster for this coach using the shared roster parser
+  const roster = await fetchRosterForCoach(config.coachName);
   const allClients: string[] = [];
-  for (const day of ["monday", "tuesday", "wednesday", "thursday", "friday"] as const) {
-    allClients.push(...(roster.days[day] ?? []));
+  for (const day of ROSTER_DAYS) {
+    allClients.push(...(roster[day] ?? []));
   }
   const uniqueClients = Array.from(new Set(allClients));
 

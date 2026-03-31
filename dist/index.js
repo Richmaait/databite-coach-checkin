@@ -1092,42 +1092,6 @@ init_schema();
 // server/typeformBackfill.ts
 init_db();
 init_env();
-var SHEET_ID2 = "1puu4oLAmC5jV_GEmRrMxvXuTak_dl6pOJ6iWC44Nfl4";
-var SHEET_TAB2 = "CLIENT ROSTER";
-async function fetchCoachRoster(coachName) {
-  const empty = { days: { monday: [], tuesday: [], wednesday: [], thursday: [], friday: [] } };
-  const API_KEY = ENV.googleSheetsApiKey;
-  if (!API_KEY) return empty;
-  const range = encodeURIComponent(`${SHEET_TAB2}!A1:F130`);
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID2}/values/${range}?key=${API_KEY}`;
-  const resp = await fetch(url);
-  if (!resp.ok) return empty;
-  const data = await resp.json();
-  const rows = data.values ?? [];
-  const result = { days: { monday: [], tuesday: [], wednesday: [], thursday: [], friday: [] } };
-  const DAYS4 = ["monday", "tuesday", "wednesday", "thursday", "friday"];
-  let inSection = false;
-  let dayIndex = 0;
-  for (const row of rows) {
-    const cell = (row[0] ?? "").trim();
-    if (!cell) continue;
-    if (cell.toUpperCase().includes(coachName.toUpperCase()) && cell.toUpperCase().includes("ROSTER")) {
-      inSection = true;
-      dayIndex = 0;
-      continue;
-    }
-    if (inSection) {
-      if (cell.toUpperCase().includes("ROSTER") && !cell.toUpperCase().includes(coachName.toUpperCase())) break;
-      const lower = cell.toLowerCase();
-      if (["monday", "tuesday", "wednesday", "thursday", "friday"].includes(lower)) {
-        dayIndex = DAYS4.indexOf(lower);
-      } else if (dayIndex >= 0 && dayIndex < 5) {
-        result.days[DAYS4[dayIndex]].push(cell);
-      }
-    }
-  }
-  return result;
-}
 var TYPEFORM_API_TOKEN = ENV.typeformApiToken ?? "";
 var FORM_CONFIGS = [
   {
@@ -1205,10 +1169,10 @@ async function backfillForm(config, weekStart) {
     result.errors.push(`No coach record found for ${config.coachName}`);
     return result;
   }
-  const roster = await fetchCoachRoster(config.coachName);
+  const roster = await fetchRosterForCoach(config.coachName);
   const allClients = [];
-  for (const day of ["monday", "tuesday", "wednesday", "thursday", "friday"]) {
-    allClients.push(...roster.days[day] ?? []);
+  for (const day of DAYS2) {
+    allClients.push(...roster[day] ?? []);
   }
   const uniqueClients = Array.from(new Set(allClients));
   const sundayBeforeWeek = /* @__PURE__ */ new Date(`${weekStart}T00:00:00+10:00`);
@@ -3900,8 +3864,8 @@ var FORM_TO_COACH = {
   lRvWjdgl: "Steve"
   // Rich's form is excluded — he is the founder, not a tracked coach
 };
-var SHEET_ID3 = "1puu4oLAmC5jV_GEmRrMxvXuTak_dl6pOJ6iWC44Nfl4";
-var SHEET_TAB3 = "CLIENT ROSTER";
+var SHEET_ID2 = "1puu4oLAmC5jV_GEmRrMxvXuTak_dl6pOJ6iWC44Nfl4";
+var SHEET_TAB2 = "CLIENT ROSTER";
 var DAYS3 = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 function getAESTWeekStart(date2) {
   const aest = new Date(date2.getTime() + 10 * 60 * 60 * 1e3);
@@ -4045,8 +4009,8 @@ function matchScore(submitted, rosterName) {
 async function fetchRosterClients(coachName) {
   const API_KEY = ENV.googleSheetsApiKey;
   if (!API_KEY) return [];
-  const range = encodeURIComponent(`${SHEET_TAB3}!A1:J200`);
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID3}/values/${range}?key=${API_KEY}`;
+  const range = encodeURIComponent(`${SHEET_TAB2}!A1:J200`);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID2}/values/${range}?key=${API_KEY}`;
   let rows = [];
   try {
     const res = await fetch(url);

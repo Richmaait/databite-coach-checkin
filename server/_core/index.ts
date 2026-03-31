@@ -7,7 +7,7 @@ import { registerAuthRoutes } from "./auth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { runReminderTick, sendFortnightlyPerformanceReviewReminder, sendFortnightlySweepReportReminder } from "../slackReminders";
+import { runReminderTick, runSalesReminderTick, sendFortnightlyPerformanceReviewReminder, sendFortnightlySweepReportReminder } from "../slackReminders";
 import { sendWeeklySummary } from "../slackWeeklySummary";
 import { sendDisengagementAlert } from "../slackDisengagementAlert";
 import { sendFridayWeeklySummary } from "../slackFridaySummary";
@@ -81,6 +81,7 @@ async function startServer() {
   // Slack reminder cron — fires every minute, checks per-coach timezone + workday + time
   setInterval(() => {
     runReminderTick().catch(err => console.error("[Slack Reminders] tick error:", err));
+    runSalesReminderTick().catch(err => console.error("[Slack Sales Reminders] tick error:", err));
   }, 60 * 1000);
 
   // Monday / Friday Slack alerts — fires every 5 minutes, checks AEST day + time

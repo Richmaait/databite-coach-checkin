@@ -434,6 +434,7 @@ var init_db = __esm({
 var slackReminders_exports = {};
 __export(slackReminders_exports, {
   runReminderTick: () => runReminderTick,
+  runSalesReminderTick: () => runSalesReminderTick,
   sendFortnightlyPerformanceReviewReminder: () => sendFortnightlyPerformanceReviewReminder,
   sendFortnightlySweepReportReminder: () => sendFortnightlySweepReportReminder,
   sendSlackDM: () => sendSlackDM
@@ -568,6 +569,26 @@ ${desc2}
     await sendSlackDM(coach.slackUserId, message);
   }
 }
+async function runSalesReminderTick() {
+  for (const person of SALES_TEAM) {
+    const localDay = getLocalDayOfWeek(person.timezone);
+    const localTime = getLocalHHMM(person.timezone);
+    const localDate = getLocalDateString(person.timezone);
+    if (!person.workdays.includes(localDay)) continue;
+    for (const reminder of SALES_REMINDERS) {
+      const targetTime = person[reminder.time];
+      if (localTime !== targetTime) continue;
+      const claimed = await claimReminderSlot(9e3 + SALES_TEAM.indexOf(person), localDate, reminder.index);
+      if (!claimed) continue;
+      const url = `${APP_URL}${reminder.path}`;
+      const message = `${reminder.emoji} *Sales Check-In Reminder \u2014 ${reminder.label}*
+${reminder.desc}
+
+\u{1F449} <${url}|Open the form here>`;
+      await sendSlackDM(person.slackUserId, message);
+    }
+  }
+}
 async function sendFortnightlyPerformanceReviewReminder() {
   const MANAGER_SLACK_ID4 = ENV.managerSlackId;
   if (!SLACK_BOT_TOKEN || !MANAGER_SLACK_ID4) {
@@ -643,7 +664,7 @@ Time to generate and save this fortnight's sweep report.
   await sendSlackDM(MANAGER_SLACK_ID4, message);
   console.log("[Slack Sweep Reminder] Fortnightly sweep report reminder sent to manager");
 }
-var SLACK_BOT_TOKEN, APP_URL, REMINDER_LABELS, REMINDER_DESCRIPTIONS, DEFAULT_WORKDAYS, DEFAULT_TIMES;
+var SLACK_BOT_TOKEN, APP_URL, REMINDER_LABELS, REMINDER_DESCRIPTIONS, DEFAULT_WORKDAYS, DEFAULT_TIMES, SALES_TEAM, SALES_REMINDERS;
 var init_slackReminders = __esm({
   "server/slackReminders.ts"() {
     "use strict";
@@ -664,6 +685,13 @@ var init_slackReminders = __esm({
     ];
     DEFAULT_WORKDAYS = [1, 2, 3, 4, 5];
     DEFAULT_TIMES = ["08:30", "11:00", "14:00"];
+    SALES_TEAM = [
+      { name: "Yaman", slackUserId: "U0AN8E2RE5S", timezone: "Australia/Melbourne", workdays: [1, 2, 3, 4, 5], morningTime: "08:30", eveningTime: "17:00" }
+    ];
+    SALES_REMINDERS = [
+      { index: 10, time: "morningTime", label: "Morning Check-In", emoji: "\u{1F305}", desc: "Time to submit your morning check-in \u2014 how are you feeling and what are your planned hours?", path: "/sales" },
+      { index: 11, time: "eveningTime", label: "Evening Check-In", emoji: "\u{1F319}", desc: "End of day \u2014 how did your day go, any sales, and what are your planned hours for tomorrow?", path: "/sales" }
+    ];
   }
 });
 
@@ -4940,6 +4968,7 @@ async function startServer() {
   });
   setInterval(() => {
     runReminderTick().catch((err) => console.error("[Slack Reminders] tick error:", err));
+    runSalesReminderTick().catch((err) => console.error("[Slack Sales Reminders] tick error:", err));
   }, 60 * 1e3);
   setInterval(() => {
     const now = /* @__PURE__ */ new Date();

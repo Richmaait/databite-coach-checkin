@@ -227,6 +227,45 @@ export async function runReminderTick(): Promise<void> {
 }
 
 /**
+ * Sales reminder tick — called every minute alongside the coach reminder tick.
+ * Sends morning and evening reminders to sales team members.
+ */
+const SALES_TEAM = [
+  { name: "Yaman", slackUserId: "U0AN8E2RE5S", timezone: "Australia/Melbourne", workdays: [1, 2, 3, 4, 5], morningTime: "08:30", eveningTime: "17:00" },
+];
+
+const SALES_REMINDERS = [
+  { index: 10, time: "morningTime" as const, label: "Morning Check-In", emoji: "🌅", desc: "Time to submit your morning check-in — how are you feeling and what are your planned hours?", path: "/sales" },
+  { index: 11, time: "eveningTime" as const, label: "Evening Check-In", emoji: "🌙", desc: "End of day — how did your day go, any sales, and what are your planned hours for tomorrow?", path: "/sales" },
+];
+
+export async function runSalesReminderTick(): Promise<void> {
+  for (const person of SALES_TEAM) {
+    const localDay = getLocalDayOfWeek(person.timezone);
+    const localTime = getLocalHHMM(person.timezone);
+    const localDate = getLocalDateString(person.timezone);
+
+    if (!person.workdays.includes(localDay)) continue;
+
+    for (const reminder of SALES_REMINDERS) {
+      const targetTime = person[reminder.time];
+      if (localTime !== targetTime) continue;
+
+      const claimed = await claimReminderSlot(9000 + SALES_TEAM.indexOf(person), localDate, reminder.index);
+      if (!claimed) continue;
+
+      const url = `${APP_URL}${reminder.path}`;
+      const message =
+        `${reminder.emoji} *Sales Check-In Reminder — ${reminder.label}*\n` +
+        `${reminder.desc}\n\n` +
+        `👉 <${url}|Open the form here>`;
+
+      await sendSlackDM(person.slackUserId, message);
+    }
+  }
+}
+
+/**
  * Fortnightly performance review reminder — sent to the manager on alternate Mondays.
  *
  * Review cycle (fortnightly):

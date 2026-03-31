@@ -215,10 +215,22 @@ export default function Sales() {
               </div>
               <div>
                 <label className="block text-xs text-white/40 uppercase tracking-wider font-medium mb-2">Intended start time tomorrow</label>
-                <Select value={e1Start} onValueChange={setE1Start}>
-                  <SelectTrigger className="bg-white/5 border-white/10 text-sm w-full"><SelectValue placeholder="Select start time" /></SelectTrigger>
-                  <SelectContent>{TIME_OPTIONS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <Select value={e1Start} onValueChange={setE1Start}>
+                    <SelectTrigger className="bg-white/5 border-white/10 text-sm w-full"><SelectValue placeholder="Select start time" /></SelectTrigger>
+                    <SelectContent>
+                      {TIME_OPTIONS.filter(t => {
+                        const match = t.match(/^(\d+):(\d+)(am|pm)$/);
+                        if (!match) return false;
+                        let h = parseInt(match[1]);
+                        if (match[3] === "pm" && h !== 12) h += 12;
+                        if (match[3] === "am" && h === 12) h = 0;
+                        return h >= 7 && h <= 13;
+                      }).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      <SelectItem value="not-working">Not working tomorrow</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <button
                 onClick={() => submitEveningMutation.mutate({ recordDate: today, howDayWent: howDayWent || undefined, salesMade: salesMade ? parseInt(salesMade) : undefined, intendedHoursNextDay: e1Start || undefined })}

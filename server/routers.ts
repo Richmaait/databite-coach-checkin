@@ -33,6 +33,7 @@ import {
   clientRatings,
   slackReminderLog,
   pausedClients,
+  salesCheckins,
 } from "../drizzle/schema";
 import { runTypeformBackfill } from "./typeformBackfill";
 import { sendSlackDM } from "./slackReminders";
@@ -240,8 +241,18 @@ async function notifyManagerOfSubmission(coachId: number, submissionType: string
     const emoji = emojis[submissionType] ?? "📋";
     const label = labels[submissionType] ?? submissionType;
 
+    // Sales submissions come through with _isSales flag
+    const isSales = !!(details as any)._isSales;
+    const displayName = isSales ? ((details as any)._salesUser ?? "Sales") : coach.name;
+
     let summary = "";
-    if (submissionType === "morning") {
+    if (isSales && submissionType === "morning") {
+      const moodVal = details.moodScore as number | undefined;
+      const mood = moodVal ? `${"⭐".repeat(moodVal)} (${moodVal}/5)` : "Not set";
+      const hours = details.intendedWorkingHours ?? "Not set";
+      summary = `*Mood:* ${mood}\n*Intended Hours:* ${hours}`;
+      if (details.morningNotes) summary += `\n*Notes:* ${details.morningNotes}`;
+    } else if (submissionType === "morning") {
       const moodVal = details.moodScore as number | undefined;
       const mood = moodVal ? `${"⭐".repeat(moodVal)} (${moodVal}/5)` : "Not set";
       const hours = details.workingHours ? `${details.workingHours}` : "Not set";
@@ -259,7 +270,8 @@ async function notifyManagerOfSubmission(coachId: number, submissionType: string
       if (details.notes) summary += `\n*Notes:* ${details.notes}`;
     }
 
-    const message = `${emoji} *${coach.name}* — ${label}\n\n${summary}\n\n👉 <${appUrl}/dashboard|View Dashboard>`;
+    const link = isSales ? `${appUrl}/sales` : `${appUrl}/dashboard`;
+    const message = `${emoji} *${displayName}* — ${label}\n\n${summary}\n\n👉 <${link}|${isSales ? "View Sales" : "View Dashboard"}>`;
 
     const { sendSlackDM } = await import("./slackReminders");
     await sendSlackDM(managerSlackId, message);
@@ -3204,6 +3216,130 @@ const kudosRouter = t.router({
   }),
 });
 
+// ─── Sales Router ──────────────────────────────────────────────────────────────
+
+const salesRouter = t.router({
+  /** Submit or update morning check-in. */
+  submitMorning: protectedProcedure
+    .input(z.object({
+      recordDate: z.string(),
+      moodScore: z.number().min(1).max(5).optional(),
+      intendedWorkingHours: z.string().optional(),
+      morningNotes: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const existing = await db.select().from(salesCheckins)
+        .where(and(eq(salesCheckins.userId, ctx.user.id), eq(salesCheckins.recordDate, input.recordDate)))
+        .limit(1);
+
+      if (existing.length > 0) {
+        await db.update(salesCheckins).set({
+          moodScore: input.moodScore ?? existing[0].moodScore,
+          intendedWorkingHours: input.intendedWorkingHours ?? existing[0].intendedWorkingHours,
+          morningNotes: input.morningNotes ?? existing[0].morningNotes,
+          morningSubmittedAt: new Date(),
+        }).where(eq(salesCheckins.id, existing[0].id));
+      } else {
+        await db.insert(salesCheckins).values({
+          userId: ctx.user.id,
+          userName: ctx.user.name ?? ctx.user.email ?? "Unknown",
+          recordDate: input.recordDate,
+          moodScore: input.moodScore,
+          intendedWorkingHours: input.intendedWorkingHours,
+          morningNotes: input.morningNotes,
+          morningSubmittedAt: new Date(),
+        });
+      }
+
+      // Notify manager
+      notifyManagerOfSubmission(0, "morning", {
+        ...input,
+        _salesUser: ctx.user.name ?? ctx.user.email,
+        _isSales: true,
+      }).catch(() => {});
+
+      return { success: true };
+    }),
+
+  /** Submit or update evening check-in. */
+  submitEvening: protectedProcedure
+    .input(z.object({
+      recordDate: z.string(),
+      howDayWent: z.string().optional(),
+      salesMade: z.number().optional(),
+      intendedHoursNextDay: z.string().optional(),
+      eveningNotes: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const existing = await db.select().from(salesCheckins)
+        .where(and(eq(salesCheckins.userId, ctx.user.id), eq(salesCheckins.recordDate, input.recordDate)))
+        .limit(1);
+
+      if (existing.length > 0) {
+        await db.update(salesCheckins).set({
+          howDayWent: input.howDayWent ?? existing[0].howDayWent,
+          salesMade: input.salesMade ?? existing[0].salesMade,
+          intendedHoursNextDay: input.intendedHoursNextDay ?? existing[0].intendedHoursNextDay,
+          eveningNotes: input.eveningNotes ?? existing[0].eveningNotes,
+          eveningSubmittedAt: new Date(),
+        }).where(eq(salesCheckins.id, existing[0].id));
+      } else {
+        await db.insert(salesCheckins).values({
+          userId: ctx.user.id,
+          userName: ctx.user.name ?? ctx.user.email ?? "Unknown",
+          recordDate: input.recordDate,
+          howDayWent: input.howDayWent,
+          salesMade: input.salesMade,
+          intendedHoursNextDay: input.intendedHoursNextDay,
+          eveningNotes: input.eveningNotes,
+          eveningSubmittedAt: new Date(),
+        });
+      }
+
+      // Notify manager
+      const managerSlackId = ENV.managerSlackId;
+      if (managerSlackId && ENV.slackBotToken) {
+        const appUrl = ENV.appUrl || "https://coach.databite.com.au";
+        const name = ctx.user.name ?? ctx.user.email ?? "Sales";
+        let summary = "";
+        if (input.howDayWent) summary += `*How day went:* ${input.howDayWent}\n`;
+        if (input.salesMade != null) summary += `*Sales made:* ${input.salesMade}\n`;
+        if (input.intendedHoursNextDay) summary += `*Tomorrow's hours:* ${input.intendedHoursNextDay}\n`;
+        if (input.eveningNotes) summary += `*Notes:* ${input.eveningNotes}`;
+        const message = `🌙 *${name}* — Evening Check-In\n\n${summary}\n\n👉 <${appUrl}/sales|View Sales>`;
+        import("./slackReminders").then(m => m.sendSlackDM(managerSlackId, message)).catch(() => {});
+      }
+
+      return { success: true };
+    }),
+
+  /** Get today's check-in for the current user. */
+  getToday: protectedProcedure
+    .input(z.object({ recordDate: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const [record] = await db.select().from(salesCheckins)
+        .where(and(eq(salesCheckins.userId, ctx.user.id), eq(salesCheckins.recordDate, input.recordDate)))
+        .limit(1);
+      return record ?? null;
+    }),
+
+  /** Get all check-ins (admin view). */
+  getAll: adminProcedure
+    .input(z.object({ startDate: z.string().optional(), endDate: z.string().optional() }).optional())
+    .query(async ({ input }) => {
+      const db = await requireDb();
+      const conditions = [];
+      if (input?.startDate) conditions.push(gte(salesCheckins.recordDate, input.startDate));
+      if (input?.endDate) conditions.push(lte(salesCheckins.recordDate, input.endDate));
+      return db.select().from(salesCheckins)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(desc(salesCheckins.recordDate));
+    }),
+});
+
 // ─── App Router ────────────────────────────────────────────────────────────────
 
 export const appRouter = t.router({
@@ -3214,6 +3350,7 @@ export const appRouter = t.router({
   sweepReport: sweepReportRouter,
   users: usersRouter,
   kudos: kudosRouter,
+  sales: salesRouter,
 });
 
 export type AppRouter = typeof appRouter;

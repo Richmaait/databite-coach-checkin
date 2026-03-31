@@ -47,12 +47,13 @@ __export(schema_exports, {
   pausedClients: () => pausedClients,
   rosterClientStarts: () => rosterClientStarts,
   rosterWeeklySnapshots: () => rosterWeeklySnapshots,
+  salesCheckins: () => salesCheckins,
   slackReminderLog: () => slackReminderLog,
   sweepReports: () => sweepReports,
   users: () => users
 });
 import { mysqlTable, int, varchar, text, timestamp, datetime, mysqlEnum, uniqueIndex, json, tinyint } from "drizzle-orm/mysql-core";
-var users, coaches, checkinRecords, clientCheckIns, excusedClients, rosterClientStarts, rosterWeeklySnapshots, kudos, sweepReports, clientRatings, slackReminderLog, pausedClients;
+var users, coaches, checkinRecords, clientCheckIns, excusedClients, rosterClientStarts, rosterWeeklySnapshots, kudos, sweepReports, clientRatings, slackReminderLog, pausedClients, salesCheckins;
 var init_schema = __esm({
   "drizzle/schema.ts"() {
     "use strict";
@@ -214,6 +215,28 @@ var init_schema = __esm({
       pausedAt: datetime("pausedAt"),
       resumedAt: datetime("resumedAt")
     });
+    salesCheckins = mysqlTable("sales_checkins", {
+      id: int("id").autoincrement().primaryKey(),
+      userId: int("userId").notNull(),
+      userName: varchar("userName", { length: 128 }).notNull(),
+      recordDate: varchar("recordDate", { length: 10 }).notNull(),
+      // YYYY-MM-DD
+      // Morning
+      moodScore: int("moodScore"),
+      intendedWorkingHours: varchar("intendedWorkingHours", { length: 128 }),
+      morningNotes: text("morningNotes"),
+      morningSubmittedAt: timestamp("morningSubmittedAt"),
+      // Evening
+      howDayWent: text("howDayWent"),
+      salesMade: int("salesMade"),
+      intendedHoursNextDay: varchar("intendedHoursNextDay", { length: 128 }),
+      eveningNotes: text("eveningNotes"),
+      eveningSubmittedAt: timestamp("eveningSubmittedAt"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    }, (t2) => ({
+      uqUserDate: uniqueIndex("uq_sales_user_date").on(t2.userId, t2.recordDate)
+    }));
   }
 });
 
@@ -672,9 +695,13 @@ var COACH_EMAILS = {
   "luke@databite.com.au": "Luke",
   "kyah@databite.com.au": "Kyah"
 };
+var SALES_EMAILS = {
+  "yaman@databite.com.au": "Yaman"
+};
 var ALLOWED_EMAILS = [
   ...ADMIN_EMAILS,
-  ...Object.keys(COACH_EMAILS)
+  ...Object.keys(COACH_EMAILS),
+  ...Object.keys(SALES_EMAILS)
 ];
 var JWT_SECRET = new TextEncoder().encode(ENV.cookieSecret || "dev-secret-change-me");
 var COOKIE_NAME = "session";
@@ -741,11 +768,12 @@ async function registerAuthRoutes(app) {
     if (!user) {
       const emailLc = email.toLowerCase();
       const isAdmin = ADMIN_EMAILS.includes(emailLc);
-      const knownName = isAdmin ? "Rich" : COACH_EMAILS[emailLc] || null;
+      const isSales = SALES_EMAILS[emailLc] != null;
+      const knownName = isAdmin ? "Rich" : COACH_EMAILS[emailLc] || SALES_EMAILS[emailLc] || null;
       const [result] = await db2.insert(users).values({
         email,
         name: knownName || email.split("@")[0],
-        role: isAdmin ? "admin" : "coach"
+        role: isAdmin ? "admin" : isSales ? "sales" : "coach"
       });
       [user] = await db2.select().from(users).where(eq2(users.id, result.insertId)).limit(1);
     }
@@ -1359,8 +1387,18 @@ async function notifyManagerOfSubmission(coachId, submissionType, details) {
     const labels = { morning: "Morning Review", followup: "Follow-Up Outreach", disengagement: "Disengagement Outreach" };
     const emoji = emojis[submissionType] ?? "\u{1F4CB}";
     const label = labels[submissionType] ?? submissionType;
+    const isSales = !!details._isSales;
+    const displayName = isSales ? details._salesUser ?? "Sales" : coach.name;
     let summary = "";
-    if (submissionType === "morning") {
+    if (isSales && submissionType === "morning") {
+      const moodVal = details.moodScore;
+      const mood = moodVal ? `${"\u2B50".repeat(moodVal)} (${moodVal}/5)` : "Not set";
+      const hours = details.intendedWorkingHours ?? "Not set";
+      summary = `*Mood:* ${mood}
+*Intended Hours:* ${hours}`;
+      if (details.morningNotes) summary += `
+*Notes:* ${details.morningNotes}`;
+    } else if (submissionType === "morning") {
       const moodVal = details.moodScore;
       const mood = moodVal ? `${"\u2B50".repeat(moodVal)} (${moodVal}/5)` : "Not set";
       const hours = details.workingHours ? `${details.workingHours}` : "Not set";
@@ -1382,11 +1420,12 @@ async function notifyManagerOfSubmission(coachId, submissionType, details) {
       if (details.notes) summary += `
 *Notes:* ${details.notes}`;
     }
-    const message = `${emoji} *${coach.name}* \u2014 ${label}
+    const link = isSales ? `${appUrl}/sales` : `${appUrl}/dashboard`;
+    const message = `${emoji} *${displayName}* \u2014 ${label}
 
 ${summary}
 
-\u{1F449} <${appUrl}/dashboard|View Dashboard>`;
+\u{1F449} <${link}|${isSales ? "View Sales" : "View Dashboard"}>`;
     const { sendSlackDM: sendSlackDM2 } = await Promise.resolve().then(() => (init_slackReminders(), slackReminders_exports));
     await sendSlackDM2(managerSlackId, message);
   } catch (err) {
@@ -3435,6 +3474,109 @@ ${input.message}`;
     }).from(kudos).leftJoin(coaches, eq4(kudos.coachId, coaches.id)).orderBy(desc(kudos.createdAt)).limit(50);
   })
 });
+var salesRouter = t.router({
+  /** Submit or update morning check-in. */
+  submitMorning: protectedProcedure.input(z.object({
+    recordDate: z.string(),
+    moodScore: z.number().min(1).max(5).optional(),
+    intendedWorkingHours: z.string().optional(),
+    morningNotes: z.string().optional()
+  })).mutation(async ({ input, ctx }) => {
+    const db2 = await requireDb();
+    const existing = await db2.select().from(salesCheckins).where(and2(eq4(salesCheckins.userId, ctx.user.id), eq4(salesCheckins.recordDate, input.recordDate))).limit(1);
+    if (existing.length > 0) {
+      await db2.update(salesCheckins).set({
+        moodScore: input.moodScore ?? existing[0].moodScore,
+        intendedWorkingHours: input.intendedWorkingHours ?? existing[0].intendedWorkingHours,
+        morningNotes: input.morningNotes ?? existing[0].morningNotes,
+        morningSubmittedAt: /* @__PURE__ */ new Date()
+      }).where(eq4(salesCheckins.id, existing[0].id));
+    } else {
+      await db2.insert(salesCheckins).values({
+        userId: ctx.user.id,
+        userName: ctx.user.name ?? ctx.user.email ?? "Unknown",
+        recordDate: input.recordDate,
+        moodScore: input.moodScore,
+        intendedWorkingHours: input.intendedWorkingHours,
+        morningNotes: input.morningNotes,
+        morningSubmittedAt: /* @__PURE__ */ new Date()
+      });
+    }
+    notifyManagerOfSubmission(0, "morning", {
+      ...input,
+      _salesUser: ctx.user.name ?? ctx.user.email,
+      _isSales: true
+    }).catch(() => {
+    });
+    return { success: true };
+  }),
+  /** Submit or update evening check-in. */
+  submitEvening: protectedProcedure.input(z.object({
+    recordDate: z.string(),
+    howDayWent: z.string().optional(),
+    salesMade: z.number().optional(),
+    intendedHoursNextDay: z.string().optional(),
+    eveningNotes: z.string().optional()
+  })).mutation(async ({ input, ctx }) => {
+    const db2 = await requireDb();
+    const existing = await db2.select().from(salesCheckins).where(and2(eq4(salesCheckins.userId, ctx.user.id), eq4(salesCheckins.recordDate, input.recordDate))).limit(1);
+    if (existing.length > 0) {
+      await db2.update(salesCheckins).set({
+        howDayWent: input.howDayWent ?? existing[0].howDayWent,
+        salesMade: input.salesMade ?? existing[0].salesMade,
+        intendedHoursNextDay: input.intendedHoursNextDay ?? existing[0].intendedHoursNextDay,
+        eveningNotes: input.eveningNotes ?? existing[0].eveningNotes,
+        eveningSubmittedAt: /* @__PURE__ */ new Date()
+      }).where(eq4(salesCheckins.id, existing[0].id));
+    } else {
+      await db2.insert(salesCheckins).values({
+        userId: ctx.user.id,
+        userName: ctx.user.name ?? ctx.user.email ?? "Unknown",
+        recordDate: input.recordDate,
+        howDayWent: input.howDayWent,
+        salesMade: input.salesMade,
+        intendedHoursNextDay: input.intendedHoursNextDay,
+        eveningNotes: input.eveningNotes,
+        eveningSubmittedAt: /* @__PURE__ */ new Date()
+      });
+    }
+    const managerSlackId = ENV.managerSlackId;
+    if (managerSlackId && ENV.slackBotToken) {
+      const appUrl = ENV.appUrl || "https://coach.databite.com.au";
+      const name = ctx.user.name ?? ctx.user.email ?? "Sales";
+      let summary = "";
+      if (input.howDayWent) summary += `*How day went:* ${input.howDayWent}
+`;
+      if (input.salesMade != null) summary += `*Sales made:* ${input.salesMade}
+`;
+      if (input.intendedHoursNextDay) summary += `*Tomorrow's hours:* ${input.intendedHoursNextDay}
+`;
+      if (input.eveningNotes) summary += `*Notes:* ${input.eveningNotes}`;
+      const message = `\u{1F319} *${name}* \u2014 Evening Check-In
+
+${summary}
+
+\u{1F449} <${appUrl}/sales|View Sales>`;
+      Promise.resolve().then(() => (init_slackReminders(), slackReminders_exports)).then((m) => m.sendSlackDM(managerSlackId, message)).catch(() => {
+      });
+    }
+    return { success: true };
+  }),
+  /** Get today's check-in for the current user. */
+  getToday: protectedProcedure.input(z.object({ recordDate: z.string() })).query(async ({ input, ctx }) => {
+    const db2 = await requireDb();
+    const [record] = await db2.select().from(salesCheckins).where(and2(eq4(salesCheckins.userId, ctx.user.id), eq4(salesCheckins.recordDate, input.recordDate))).limit(1);
+    return record ?? null;
+  }),
+  /** Get all check-ins (admin view). */
+  getAll: adminProcedure.input(z.object({ startDate: z.string().optional(), endDate: z.string().optional() }).optional()).query(async ({ input }) => {
+    const db2 = await requireDb();
+    const conditions = [];
+    if (input?.startDate) conditions.push(gte2(salesCheckins.recordDate, input.startDate));
+    if (input?.endDate) conditions.push(lte2(salesCheckins.recordDate, input.endDate));
+    return db2.select().from(salesCheckins).where(conditions.length > 0 ? and2(...conditions) : void 0).orderBy(desc(salesCheckins.recordDate));
+  })
+});
 var appRouter = t.router({
   checkins: checkinsRouter,
   clientCheckins: clientCheckinsRouter,
@@ -3442,7 +3584,8 @@ var appRouter = t.router({
   performance: performanceRouter,
   sweepReport: sweepReportRouter,
   users: usersRouter,
-  kudos: kudosRouter
+  kudos: kudosRouter,
+  sales: salesRouter
 });
 
 // server/_core/context.ts

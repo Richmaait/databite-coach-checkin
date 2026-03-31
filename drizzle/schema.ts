@@ -222,3 +222,29 @@ export const pausedClients = mysqlTable("paused_clients", {
 });
 
 export type PausedClient = typeof pausedClients.$inferSelect;
+
+// ─── Sales Check-Ins ────────────────────────────────────────────────────────
+// Daily morning + evening check-ins for sales team members.
+export const salesCheckins = mysqlTable("sales_checkins", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  userName: varchar("userName", { length: 128 }).notNull(),
+  recordDate: varchar("recordDate", { length: 10 }).notNull(), // YYYY-MM-DD
+  // Morning
+  moodScore: int("moodScore"),
+  intendedWorkingHours: varchar("intendedWorkingHours", { length: 128 }),
+  morningNotes: text("morningNotes"),
+  morningSubmittedAt: timestamp("morningSubmittedAt"),
+  // Evening
+  howDayWent: text("howDayWent"),
+  salesMade: int("salesMade"),
+  intendedHoursNextDay: varchar("intendedHoursNextDay", { length: 128 }),
+  eveningNotes: text("eveningNotes"),
+  eveningSubmittedAt: timestamp("eveningSubmittedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (t) => ({
+  uqUserDate: uniqueIndex("uq_sales_user_date").on(t.userId, t.recordDate),
+}));
+
+export type SalesCheckin = typeof salesCheckins.$inferSelect;

@@ -13,10 +13,16 @@ const COACH_EMAILS: Record<string, string> = {
   "kyah@databite.com.au": "Kyah",
 };
 
+/** Sales team members */
+const SALES_EMAILS: Record<string, string> = {
+  "yaman@databite.com.au": "Yaman",
+};
+
 /** All allowed login emails */
 const ALLOWED_EMAILS = [
   ...ADMIN_EMAILS,
   ...Object.keys(COACH_EMAILS),
+  ...Object.keys(SALES_EMAILS),
 ];
 
 const JWT_SECRET = new TextEncoder().encode(ENV.cookieSecret || "dev-secret-change-me");
@@ -127,11 +133,12 @@ export async function registerAuthRoutes(app: Express) {
       // Create new user
       const emailLc = email.toLowerCase();
       const isAdmin = ADMIN_EMAILS.includes(emailLc);
-      const knownName = isAdmin ? "Rich" : COACH_EMAILS[emailLc] || null;
+      const isSales = SALES_EMAILS[emailLc] != null;
+      const knownName = isAdmin ? "Rich" : COACH_EMAILS[emailLc] || SALES_EMAILS[emailLc] || null;
       const [result] = await db.insert(users).values({
         email,
         name: knownName || email.split("@")[0],
-        role: isAdmin ? "admin" : "coach",
+        role: isAdmin ? "admin" : isSales ? "sales" : "coach",
       });
       [user] = await db
         .select()

@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getLoginUrl } from "@/const";
-import { LayoutDashboard, LogOut, Users, ClipboardCheck, BarChart3, ListChecks, TrendingUp, Activity, FileBarChart2 } from "lucide-react";
+import { LayoutDashboard, LogOut, Users, ClipboardCheck, BarChart3, ListChecks, TrendingUp, Activity, FileBarChart2, DollarSign } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import DashboardLayoutSkeleton from './DashboardLayoutSkeleton';
@@ -22,6 +22,7 @@ const allMenuItems = [
   { icon: Activity, label: "Client Progress", path: "/client-progress", adminOnly: false },
   { icon: FileBarChart2, label: "Weekly Summary", path: "/weekly-summary", adminOnly: true },
   { icon: Users, label: "Team", path: "/team", adminOnly: true },
+  { icon: DollarSign, label: "Sales", path: "/sales", adminOnly: true, roles: ["admin", "sales"] },
 ];
 
 export default function DashboardLayout({
@@ -68,7 +69,10 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const [hovered, setHovered] = useState(false);
   const isAdmin = user?.role === "admin";
-  const menuItems = allMenuItems.filter(item => !item.adminOnly || isAdmin);
+  const menuItems = allMenuItems.filter(item => {
+    if ((item as any).roles) return (item as any).roles.includes(user?.role);
+    return !item.adminOnly || isAdmin;
+  });
 
   // Redirect non-admins away from admin-only pages
   useEffect(() => {

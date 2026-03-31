@@ -2747,21 +2747,31 @@ const performanceRouter = t.router({
         }
       }
 
-      // ── Engagement trend (compare to previous week) ──
+      // ── Engagement trend (compare to previous week — use snapshots if available) ──
       const prevWeekStart = addDays(input.weekStart, -7);
+      const prevSnapshots = await db.select().from(rosterWeeklySnapshots)
+        .where(eq(rosterWeeklySnapshots.weekStart, prevWeekStart));
+      const prevSnapMap = new Map(prevSnapshots.map(s => [s.coachId, s.snapshotJson as any]));
+
       let prevTotalScheduled = 0;
       let prevTotalCompleted = 0;
       for (const coach of coachList) {
-        const roster = await fetchRosterForCoach(coach.name);
-        let scheduled = 0;
-        for (const day of DAYS) scheduled += (roster[day] ?? []).length;
-        const completions = await db
-          .select()
-          .from(clientCheckIns)
-          .where(and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, prevWeekStart)));
-        const completed = completions.filter((c) => c.completedAt != null).length;
-        prevTotalScheduled += scheduled;
-        prevTotalCompleted += completed;
+        const prevSnap = prevSnapMap.get(coach.id);
+        if (prevSnap?.scheduled != null) {
+          prevTotalScheduled += prevSnap.scheduled;
+          prevTotalCompleted += prevSnap.completed ?? 0;
+        } else {
+          const roster = await fetchRosterForCoach(coach.name);
+          let scheduled = 0;
+          for (const day of DAYS) scheduled += (roster[day] ?? []).length;
+          const completions = await db
+            .select()
+            .from(clientCheckIns)
+            .where(and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, prevWeekStart)));
+          const completed = completions.filter((c) => c.completedAt != null).length;
+          prevTotalScheduled += scheduled;
+          prevTotalCompleted += completed;
+        }
       }
       const prevPct = prevTotalScheduled > 0 ? Math.round((prevTotalCompleted / prevTotalScheduled) * 100) : 0;
       const engagementTrend = overallPct - prevPct;

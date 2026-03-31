@@ -3137,16 +3137,24 @@ var performanceRouter = t.router({
       }
     }
     const prevWeekStart = addDays(input.weekStart, -7);
+    const prevSnapshots = await db2.select().from(rosterWeeklySnapshots).where(eq4(rosterWeeklySnapshots.weekStart, prevWeekStart));
+    const prevSnapMap = new Map(prevSnapshots.map((s) => [s.coachId, s.snapshotJson]));
     let prevTotalScheduled = 0;
     let prevTotalCompleted = 0;
     for (const coach of coachList) {
-      const roster = await fetchRosterForCoach(coach.name);
-      let scheduled = 0;
-      for (const day of DAYS) scheduled += (roster[day] ?? []).length;
-      const completions = await db2.select().from(clientCheckIns).where(and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, prevWeekStart)));
-      const completed = completions.filter((c) => c.completedAt != null).length;
-      prevTotalScheduled += scheduled;
-      prevTotalCompleted += completed;
+      const prevSnap = prevSnapMap.get(coach.id);
+      if (prevSnap?.scheduled != null) {
+        prevTotalScheduled += prevSnap.scheduled;
+        prevTotalCompleted += prevSnap.completed ?? 0;
+      } else {
+        const roster = await fetchRosterForCoach(coach.name);
+        let scheduled = 0;
+        for (const day of DAYS) scheduled += (roster[day] ?? []).length;
+        const completions = await db2.select().from(clientCheckIns).where(and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, prevWeekStart)));
+        const completed = completions.filter((c) => c.completedAt != null).length;
+        prevTotalScheduled += scheduled;
+        prevTotalCompleted += completed;
+      }
     }
     const prevPct = prevTotalScheduled > 0 ? Math.round(prevTotalCompleted / prevTotalScheduled * 100) : 0;
     const engagementTrend = overallPct - prevPct;

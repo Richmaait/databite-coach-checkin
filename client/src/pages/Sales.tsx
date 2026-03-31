@@ -108,7 +108,8 @@ export default function Sales() {
   const [m2Start, setM2Start] = useState(""); const [m2End, setM2End] = useState("");
 
   // Evening
-  const [howDayWent, setHowDayWent] = useState("");
+  const [eveningMood, setEveningMood] = useState<number | null>(null);
+  const [eveningNotes, setEveningNotes] = useState("");
   const [salesMade, setSalesMade] = useState("");
   const [e1Start, setE1Start] = useState(""); const [e1End, setE1End] = useState("");
   const [eSplit, setESplit] = useState(false);
@@ -199,13 +200,25 @@ export default function Sales() {
             <div className="space-y-2">
               {todayRecord?.howDayWent && <div className="text-sm"><span className="text-white/40">How day went:</span> <span className="text-white/80">{todayRecord.howDayWent}</span></div>}
               <div className="text-sm"><span className="text-white/40">Sales made:</span> <span className="text-white/80 font-semibold">{todayRecord?.salesMade ?? 0}</span></div>
-              {todayRecord?.intendedHoursNextDay && <div className="text-sm"><span className="text-white/40">Start tomorrow:</span> <span className="text-white/80">{todayRecord.intendedHoursNextDay}</span></div>}
+              {todayRecord?.intendedHoursNextDay && <div className="text-sm"><span className="text-white/40">Start tomorrow:</span> <span className="text-white/80"> {todayRecord.intendedHoursNextDay === "not-working" ? "Not working" : todayRecord.intendedHoursNextDay}</span></div>}
             </div>
           ) : (
             <div className="space-y-4">
               <div>
                 <label className="block text-xs text-white/40 uppercase tracking-wider font-medium mb-2">How did your day go?</label>
-                <textarea placeholder="How was your day..." value={howDayWent} onChange={(e) => setHowDayWent(e.target.value)} rows={2}
+                <div className="flex gap-2">
+                  {MOOD_OPTIONS.map(({ score, emoji, label }) => (
+                    <button key={score} onClick={() => setEveningMood(eveningMood === score ? null : score)} title={label}
+                      className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-xl border transition-all duration-150 ${eveningMood === score ? "bg-violet-500/20 border-violet-500/40 scale-105" : "bg-white/5 border-white/10 hover:bg-white/[0.08]"}`}>
+                      <span className="text-2xl leading-none">{emoji}</span>
+                      <span className="text-[10px] text-white/50 leading-tight text-center">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-white/40 uppercase tracking-wider font-medium mb-2">Notes (optional)</label>
+                <textarea placeholder="Anything to add about your day..." value={eveningNotes} onChange={(e) => setEveningNotes(e.target.value)} rows={2}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white/90 placeholder-white/20 outline-none focus:border-violet-500/40 transition-all resize-none" />
               </div>
               <div>
@@ -233,7 +246,11 @@ export default function Sales() {
                 </div>
               </div>
               <button
-                onClick={() => submitEveningMutation.mutate({ recordDate: today, howDayWent: howDayWent || undefined, salesMade: salesMade ? parseInt(salesMade) : undefined, intendedHoursNextDay: e1Start || undefined })}
+                onClick={() => {
+                  const moodLabel = eveningMood ? `${MOOD_OPTIONS[eveningMood - 1].emoji} ${MOOD_OPTIONS[eveningMood - 1].label}` : undefined;
+                  const notes = eveningNotes.trim() ? `${moodLabel ? moodLabel + " — " : ""}${eveningNotes.trim()}` : moodLabel;
+                  submitEveningMutation.mutate({ recordDate: today, howDayWent: notes || undefined, salesMade: salesMade ? parseInt(salesMade) : undefined, intendedHoursNextDay: e1Start || undefined });
+                }}
                 disabled={submitEveningMutation.isPending}
                 className="w-full py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-400 hover:to-fuchsia-400 disabled:opacity-40 text-white shadow-lg shadow-violet-500/20 transition-all">
                 {submitEveningMutation.isPending ? "Submitting..." : "Submit Evening Check-In"}

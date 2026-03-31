@@ -242,20 +242,24 @@ async function notifyManagerOfSubmission(coachId: number, submissionType: string
 
     let summary = "";
     if (submissionType === "morning") {
-      const mood = details.moodScore ? `Mood: ${"⭐".repeat(details.moodScore as number)}` : "";
-      const sched = details.scheduledCount != null ? `Scheduled: ${details.scheduledCount}` : "";
-      const comp = details.completedCount != null ? `Completed: ${details.completedCount}` : "";
-      const notes = details.morningNotes ? `\n> ${details.morningNotes}` : "";
-      summary = [mood, sched, comp].filter(Boolean).join(" · ") + notes;
+      const moodVal = details.moodScore as number | undefined;
+      const mood = moodVal ? `${"⭐".repeat(moodVal)} (${moodVal}/5)` : "Not set";
+      const hours = details.workingHours ? `${details.workingHours}` : "Not set";
+      const notes = details.morningNotes ? `${details.morningNotes}` : "";
+      summary = `*Mood:* ${mood}\n*Working Hours:* ${hours}`;
+      if (details.actionPlan) summary += `\n*Action Plan:* ${details.actionPlan}`;
+      if (notes) summary += `\n*Notes:* ${notes}`;
     } else if (submissionType === "followup") {
-      summary = details.followupMessagesSent != null ? `${details.followupMessagesSent} follow-up messages sent` : "";
-      if (details.notes) summary += `\n> ${details.notes}`;
+      const count = details.followupMessagesSent ?? 0;
+      summary = `*Messages Sent:* ${count}`;
+      if (details.notes) summary += `\n*Notes:* ${details.notes}`;
     } else if (submissionType === "disengagement") {
-      summary = details.disengagementMessagesSent != null ? `${details.disengagementMessagesSent} disengagement messages sent` : "";
-      if (details.notes) summary += `\n> ${details.notes}`;
+      const count = details.disengagementMessagesSent ?? 0;
+      summary = `*Outreach Sent:* ${count}`;
+      if (details.notes) summary += `\n*Notes:* ${details.notes}`;
     }
 
-    const message = `${emoji} *${coach.name}* submitted their *${label}*\n${summary}\n\n👉 <${appUrl}/dashboard|View Dashboard>`;
+    const message = `${emoji} *${coach.name}* — ${label}\n\n${summary}\n\n👉 <${appUrl}/dashboard|View Dashboard>`;
 
     const { sendSlackDM } = await import("./slackReminders");
     await sendSlackDM(managerSlackId, message);
@@ -1888,6 +1892,20 @@ const clientCheckinsRouter = t.router({
         status: "pending",
         submittedByUserId: ctx.user.id,
       });
+
+      // Notify manager via Slack
+      const managerSlackId = ENV.managerSlackId;
+      if (managerSlackId && ENV.slackBotToken) {
+        const appUrl = ENV.appUrl || "https://coach.databite.com.au";
+        const message =
+          `⚠️ *Valid Excuse Request*\n` +
+          `*Coach:* ${input.coachName}\n` +
+          `*Client:* ${input.clientName}\n` +
+          `*Day:* ${input.dayOfWeek}\n` +
+          `*Reason:* ${input.reason}\n\n` +
+          `👉 <${appUrl}/client-checkins|Approve or reject>`;
+        import("./slackReminders").then(m => m.sendSlackDM(managerSlackId, message)).catch(() => {});
+      }
 
       return { id: result.insertId };
     }),

@@ -219,6 +219,22 @@ export default function ClientCheckins() {
     });
 
   // Paused clients
+  // Pending excuses (admin only — for approval)
+  const { data: pendingExcuses, refetch: refetchPendingExcuses } =
+    trpc.clientCheckins.getPendingExcuses.useQuery(undefined, {
+      enabled: isAdmin,
+      staleTime: 30 * 1000,
+    });
+  const reviewExcuseMutation = trpc.clientCheckins.reviewExcuse.useMutation({
+    onSuccess: () => {
+      refetchPendingExcuses();
+      utils.clientCheckins.getExcusesForWeek.invalidate();
+      utils.clientCheckins.getRosterWeeklyStats.invalidate();
+      toast.success("Excuse reviewed");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const { data: pausedClientNames, refetch: refetchPaused } =
     trpc.clientCheckins.getActivePauses.useQuery(
       { coachId: effectiveCoachId! },
@@ -927,6 +943,54 @@ export default function ClientCheckins() {
                 ))}
               </div>
             </div>
+        </div>
+        )}
+
+        {/* ── Pending Excuse Approvals (admin only) ── */}
+        {isAdmin && pendingExcuses && pendingExcuses.length > 0 && (
+        <div className="max-w-[1600px] mx-auto px-8 mt-6">
+          <div className="glass rounded-2xl p-6" style={{ borderColor: "rgba(139,92,246,0.2)" }}>
+            <div className="flex items-center gap-2.5 mb-4">
+              <svg className="h-5 w-5 text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <h3 className="text-base font-bold text-violet-300">
+                {pendingExcuses.length} Pending Excuse{pendingExcuses.length !== 1 ? "s" : ""} to Review
+              </h3>
+            </div>
+            <div className="space-y-2.5">
+              {pendingExcuses.map((e: any) => (
+                <div key={e.id} className="rounded-xl px-4 py-3 flex items-center justify-between border border-violet-500/10 bg-violet-500/[0.04]">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-1">
+                      <span className="text-sm font-medium text-white/80">{e.clientName}</span>
+                      <span className="text-xs text-white/40">{e.coachName}</span>
+                      <span className="text-xs text-white/40 capitalize">{e.dayOfWeek}</span>
+                    </div>
+                    <p className="text-xs text-white/50">{e.reason}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 ml-4">
+                    <button
+                      onClick={() => reviewExcuseMutation.mutate({ id: e.id, status: "approved" })}
+                      disabled={reviewExcuseMutation.isPending}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 transition-colors"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => reviewExcuseMutation.mutate({ id: e.id, status: "rejected" })}
+                      disabled={reviewExcuseMutation.isPending}
+                      className="px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-300 text-xs font-semibold hover:bg-red-500/30 transition-colors"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
         )}
 

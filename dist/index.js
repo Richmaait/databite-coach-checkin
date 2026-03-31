@@ -1361,22 +1361,29 @@ async function notifyManagerOfSubmission(coachId, submissionType, details) {
     const label = labels[submissionType] ?? submissionType;
     let summary = "";
     if (submissionType === "morning") {
-      const mood = details.moodScore ? `Mood: ${"\u2B50".repeat(details.moodScore)}` : "";
-      const sched = details.scheduledCount != null ? `Scheduled: ${details.scheduledCount}` : "";
-      const comp = details.completedCount != null ? `Completed: ${details.completedCount}` : "";
-      const notes = details.morningNotes ? `
-> ${details.morningNotes}` : "";
-      summary = [mood, sched, comp].filter(Boolean).join(" \xB7 ") + notes;
+      const moodVal = details.moodScore;
+      const mood = moodVal ? `${"\u2B50".repeat(moodVal)} (${moodVal}/5)` : "Not set";
+      const hours = details.workingHours ? `${details.workingHours}` : "Not set";
+      const notes = details.morningNotes ? `${details.morningNotes}` : "";
+      summary = `*Mood:* ${mood}
+*Working Hours:* ${hours}`;
+      if (details.actionPlan) summary += `
+*Action Plan:* ${details.actionPlan}`;
+      if (notes) summary += `
+*Notes:* ${notes}`;
     } else if (submissionType === "followup") {
-      summary = details.followupMessagesSent != null ? `${details.followupMessagesSent} follow-up messages sent` : "";
+      const count = details.followupMessagesSent ?? 0;
+      summary = `*Messages Sent:* ${count}`;
       if (details.notes) summary += `
-> ${details.notes}`;
+*Notes:* ${details.notes}`;
     } else if (submissionType === "disengagement") {
-      summary = details.disengagementMessagesSent != null ? `${details.disengagementMessagesSent} disengagement messages sent` : "";
+      const count = details.disengagementMessagesSent ?? 0;
+      summary = `*Outreach Sent:* ${count}`;
       if (details.notes) summary += `
-> ${details.notes}`;
+*Notes:* ${details.notes}`;
     }
-    const message = `${emoji} *${coach.name}* submitted their *${label}*
+    const message = `${emoji} *${coach.name}* \u2014 ${label}
+
 ${summary}
 
 \u{1F449} <${appUrl}/dashboard|View Dashboard>`;
@@ -2500,6 +2507,19 @@ var clientCheckinsRouter = t.router({
       status: "pending",
       submittedByUserId: ctx.user.id
     });
+    const managerSlackId = ENV.managerSlackId;
+    if (managerSlackId && ENV.slackBotToken) {
+      const appUrl = ENV.appUrl || "https://coach.databite.com.au";
+      const message = `\u26A0\uFE0F *Valid Excuse Request*
+*Coach:* ${input.coachName}
+*Client:* ${input.clientName}
+*Day:* ${input.dayOfWeek}
+*Reason:* ${input.reason}
+
+\u{1F449} <${appUrl}/client-checkins|Approve or reject>`;
+      Promise.resolve().then(() => (init_slackReminders(), slackReminders_exports)).then((m) => m.sendSlackDM(managerSlackId, message)).catch(() => {
+      });
+    }
     return { id: result.insertId };
   }),
   /** Approve or reject an excuse. */

@@ -273,8 +273,8 @@ async function notifyManagerOfSubmission(coachId: number, submissionType: string
     const link = isSales ? `${appUrl}/sales` : `${appUrl}/dashboard`;
     const message = `${emoji} *${displayName}* — ${label}\n\n${summary}\n\n👉 <${link}|${isSales ? "View Sales" : "View Dashboard"}>`;
 
-    const { sendSlackDM } = await import("./slackReminders");
     await sendSlackDM(managerSlackId, message);
+    console.log(`[Slack Notify] Sent ${submissionType} notification for ${displayName}`);
   } catch (err) {
     console.error("[Slack Notify] Error notifying manager:", err);
   }
@@ -1916,7 +1916,7 @@ const clientCheckinsRouter = t.router({
           `*Day:* ${input.dayOfWeek}\n` +
           `*Reason:* ${input.reason}\n\n` +
           `👉 <${appUrl}/client-checkins|Approve or reject>`;
-        import("./slackReminders").then(m => m.sendSlackDM(managerSlackId, message)).catch(() => {});
+        sendSlackDM(managerSlackId, message).catch(err => console.error("[Slack Notify] DM error:", err));
       }
 
       return { id: result.insertId };
@@ -3309,7 +3309,7 @@ const salesRouter = t.router({
         if (input.intendedHoursNextDay) summary += `*Tomorrow's hours:* ${input.intendedHoursNextDay}\n`;
         if (input.eveningNotes) summary += `*Notes:* ${input.eveningNotes}`;
         const message = `🌙 *${name}* — Evening Check-In\n\n${summary}\n\n👉 <${appUrl}/sales|View Sales>`;
-        import("./slackReminders").then(m => m.sendSlackDM(managerSlackId, message)).catch(() => {});
+        sendSlackDM(managerSlackId, message).catch(err => console.error("[Slack Notify] DM error:", err));
       }
 
       return { success: true };

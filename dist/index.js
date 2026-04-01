@@ -909,6 +909,12 @@ function matchClientName(firstName, lastName, rosterClients) {
     const cn = normaliseName(c);
     if (cn.includes(lastNorm) && cn.includes(firstInitial)) return c;
   }
+  const first3 = normaliseName(firstName).slice(0, 3);
+  const last3 = normaliseName(lastName).slice(0, 3);
+  for (const c of rosterClients) {
+    const cn = normaliseName(c);
+    if (cn.includes(first3) && cn.includes(last3)) return c;
+  }
   return null;
 }
 async function backfillForm(config, weekStart) {
@@ -4899,6 +4905,12 @@ async function startServer() {
     runReminderTick().catch((err) => console.error("[Slack Reminders] tick error:", err));
     runSalesReminderTick().catch((err) => console.error("[Slack Sales Reminders] tick error:", err));
   }, 60 * 1e3);
+  setInterval(() => {
+    runTypeformBackfill().catch((err) => console.error("[Typeform Sync] error:", err));
+  }, 5 * 60 * 1e3);
+  setTimeout(() => {
+    runTypeformBackfill().catch((err) => console.error("[Typeform Sync] startup error:", err));
+  }, 10 * 1e3);
   setInterval(() => {
     const now = /* @__PURE__ */ new Date();
     const aestParts = new Intl.DateTimeFormat("en-AU", {

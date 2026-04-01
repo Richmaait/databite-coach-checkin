@@ -140,6 +140,13 @@ function matchClientName(
     const cn = normaliseName(c);
     if (cn.includes(lastNorm) && cn.includes(firstInitial)) return c;
   }
+  // Fuzzy: first 3 chars of first name + first 3 chars of last name
+  const first3 = normaliseName(firstName).slice(0, 3);
+  const last3 = normaliseName(lastName).slice(0, 3);
+  for (const c of rosterClients) {
+    const cn = normaliseName(c);
+    if (cn.includes(first3) && cn.includes(last3)) return c;
+  }
   return null;
 }
 

@@ -12,6 +12,7 @@ import { sendWeeklySummary } from "../slackWeeklySummary";
 import { sendDisengagementAlert } from "../slackDisengagementAlert";
 import { sendFridayWeeklySummary } from "../slackFridaySummary";
 import { registerTypeformWebhook } from "../typeformWebhook";
+import { runTypeformBackfill } from "../typeformBackfill";
 import { registerWeeklySummaryPdfRoute } from "../weeklySummaryPdfRoute";
 import { snapshotCurrentWeek } from "../weeklySnapshot";
 
@@ -83,6 +84,15 @@ async function startServer() {
     runReminderTick().catch(err => console.error("[Slack Reminders] tick error:", err));
     runSalesReminderTick().catch(err => console.error("[Slack Sales Reminders] tick error:", err));
   }, 60 * 1000);
+
+  // Typeform sync — runs every 5 minutes to pick up client submissions
+  setInterval(() => {
+    runTypeformBackfill().catch(err => console.error("[Typeform Sync] error:", err));
+  }, 5 * 60 * 1000);
+  // Also run once on startup
+  setTimeout(() => {
+    runTypeformBackfill().catch(err => console.error("[Typeform Sync] startup error:", err));
+  }, 10 * 1000);
 
   // Monday / Friday Slack alerts — fires every 5 minutes, checks AEST day + time
   setInterval(() => {

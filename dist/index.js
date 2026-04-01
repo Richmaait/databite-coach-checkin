@@ -4907,7 +4907,7 @@ async function startServer() {
   }, 60 * 1e3);
   setInterval(() => {
     runTypeformBackfill().catch((err) => console.error("[Typeform Sync] error:", err));
-  }, 5 * 60 * 1e3);
+  }, 60 * 1e3);
   setTimeout(() => {
     runTypeformBackfill().catch((err) => console.error("[Typeform Sync] startup error:", err));
   }, 10 * 1e3);

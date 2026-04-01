@@ -85,10 +85,10 @@ async function startServer() {
     runSalesReminderTick().catch(err => console.error("[Slack Sales Reminders] tick error:", err));
   }, 60 * 1000);
 
-  // Typeform sync — runs every 5 minutes to pick up client submissions
+  // Typeform sync — runs every minute to pick up client submissions
   setInterval(() => {
     runTypeformBackfill().catch(err => console.error("[Typeform Sync] error:", err));
-  }, 5 * 60 * 1000);
+  }, 60 * 1000);
   // Also run once on startup
   setTimeout(() => {
     runTypeformBackfill().catch(err => console.error("[Typeform Sync] startup error:", err));

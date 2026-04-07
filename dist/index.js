@@ -1828,15 +1828,25 @@ var clientCheckinsRouter = t.router({
         const snapshot = snapshotMap.get(`${coach.id}|${ws}`);
         const snapStats = snapshot?.snapshotJson;
         if (isPastWeek && snapStats?.scheduled != null) {
+          const liveExcuses = await db2.select().from(excusedClients).where(and2(
+            eq4(excusedClients.coachId, coach.id),
+            eq4(excusedClients.weekStart, ws),
+            eq4(excusedClients.status, "approved")
+          ));
+          const liveExcusedCount = liveExcuses.length;
+          const snapScheduled = snapStats.scheduled;
+          const snapCompleted = snapStats.completed ?? 0;
+          const effSched = Math.max(snapScheduled - liveExcusedCount, 1);
+          const recalcPct = effSched > 0 ? Math.round(snapCompleted / effSched * 1e3) / 10 : 0;
           results.push({
             coachId: coach.id,
             coachName: coach.name,
             weekStart: ws,
-            scheduled: snapStats.scheduled,
-            completed: snapStats.completed ?? 0,
-            excused: snapStats.excused ?? 0,
+            scheduled: snapScheduled,
+            completed: snapCompleted,
+            excused: liveExcusedCount,
             clientSubmitted: snapStats.clientSubmitted ?? 0,
-            pct: snapStats.engagementPct != null ? Math.round(snapStats.engagementPct) : 0
+            pct: Math.round(recalcPct)
           });
         } else {
           const completions = await db2.select().from(clientCheckIns).where(and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, ws)));
@@ -3051,7 +3061,12 @@ var performanceRouter = t.router({
       if (isPastWeek && snap?.scheduled != null) {
         scheduled = snap.scheduled;
         completed = snap.completed ?? 0;
-        excusedCount = snap.excused ?? 0;
+        const liveExcuses = await db2.select().from(excusedClients).where(and2(
+          eq4(excusedClients.coachId, coach.id),
+          eq4(excusedClients.weekStart, input.weekStart),
+          eq4(excusedClients.status, "approved")
+        ));
+        excusedCount = liveExcuses.length;
         effectiveScheduled = Math.max(scheduled - excusedCount, 0);
       } else {
         const roster = await fetchRosterForCoach(coach.name);

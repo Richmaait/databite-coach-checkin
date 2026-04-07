@@ -854,16 +854,24 @@ const clientCheckinsRouter = t.router({
           const snapStats = snapshot?.snapshotJson as any;
 
           if (isPastWeek && snapStats?.scheduled != null) {
-            // Use snapshot data for past weeks
+            // Use snapshot for scheduled/completed but LIVE excuse count (excuses can be approved retroactively)
+            const liveExcuses = await db.select().from(excusedClients).where(and(
+              eq(excusedClients.coachId, coach.id), eq(excusedClients.weekStart, ws), eq(excusedClients.status, "approved"),
+            ));
+            const liveExcusedCount = liveExcuses.length;
+            const snapScheduled = snapStats.scheduled as number;
+            const snapCompleted = snapStats.completed as number ?? 0;
+            const effSched = Math.max(snapScheduled - liveExcusedCount, 1);
+            const recalcPct = effSched > 0 ? Math.round((snapCompleted / effSched) * 1000) / 10 : 0;
             results.push({
               coachId: coach.id,
               coachName: coach.name,
               weekStart: ws,
-              scheduled: snapStats.scheduled,
-              completed: snapStats.completed ?? 0,
-              excused: snapStats.excused ?? 0,
+              scheduled: snapScheduled,
+              completed: snapCompleted,
+              excused: liveExcusedCount,
               clientSubmitted: snapStats.clientSubmitted ?? 0,
-              pct: snapStats.engagementPct != null ? Math.round(snapStats.engagementPct) : 0,
+              pct: Math.round(recalcPct),
             });
           } else {
             // Calculate from live data (current week or no snapshot available)
@@ -2645,10 +2653,13 @@ const performanceRouter = t.router({
         let effectiveScheduled: number;
 
         if (isPastWeek && snap?.scheduled != null) {
-          // Use snapshot for past weeks
+          // Use snapshot for scheduled/completed but LIVE excuse count
           scheduled = snap.scheduled;
           completed = snap.completed ?? 0;
-          excusedCount = snap.excused ?? 0;
+          const liveExcuses = await db.select().from(excusedClients).where(and(
+            eq(excusedClients.coachId, coach.id), eq(excusedClients.weekStart, input.weekStart), eq(excusedClients.status, "approved"),
+          ));
+          excusedCount = liveExcuses.length;
           effectiveScheduled = Math.max(scheduled - excusedCount, 0);
         } else {
           // Live calculation for current week

@@ -493,12 +493,9 @@ export default function Dashboard() {
   // Prior 6 weeks for KPI tracker (always fetched regardless of range)
   const kpiTrackerWeekStarts = useMemo(() => {
     const starts: string[] = [];
-    const today = melbourneNow();
-    const dow = today.getDay();
-    const daysToMon = dow === 0 ? 6 : dow - 1;
-    const d = new Date(today);
-    d.setDate(d.getDate() - daysToMon); // Monday of current week
-    // Go back 6 weeks from current Monday
+    const mon = currentMonday(melbourneNow());
+    // Start from LAST week's Monday (current week is incomplete), go back 6 weeks
+    const d = subDays(mon, 7);
     for (let i = 0; i < 6; i++) {
       starts.push(format(d, "yyyy-MM-dd"));
       d.setDate(d.getDate() - 7);
@@ -1017,11 +1014,10 @@ export default function Dashboard() {
               return { weekStart, label, pct, achieved };
             });
 
-          // For "This Week" show current week; for "Last Week" show last complete week
-          // rosterWeekStarts is newest-first, so [0] is the week we're viewing
-          const viewingWeekStart = rosterWeekStarts.length > 0 ? rosterWeekStarts[0] : null;
-          const currentWeek = allWeeks.find(w => w.weekStart === viewingWeekStart) ?? allWeeks[allWeeks.length - 1];
-          // Prior weeks = all weeks except the one we're viewing, newest first, max 5
+          // All weeks are completed (we only fetch past weeks now)
+          // Most recent week is the hero display
+          const currentWeek = allWeeks.length > 0 ? allWeeks[allWeeks.length - 1] : null;
+          // Prior weeks = all except the hero, newest first, max 5
           const priorWeeks = allWeeks
             .filter(w => currentWeek && w.weekStart !== currentWeek.weekStart)
             .reverse()
@@ -1039,7 +1035,7 @@ export default function Dashboard() {
                 </div>
                 <span className="text-sm font-bold text-emerald-400">{achievedCount}/{allTracked.length} weeks</span>
               </div>
-              {/* Current week — big bar with centered percentage */}
+              {/* Most recent completed week — big bar with centered percentage */}
               <div className="mb-4">
                 <div className="flex flex-col items-center gap-1 mb-2">
                   <span className={`text-2xl font-bold ${currentWeek.achieved ? "text-emerald-400" : "text-red-400"}`}>

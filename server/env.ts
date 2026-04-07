@@ -16,4 +16,6 @@ export const ENV = {
   port: parseInt(process.env.PORT ?? "3000", 10),
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+  telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? "",
+  telegramManagerChatId: process.env.TELEGRAM_MANAGER_CHAT_ID ?? "",
 };

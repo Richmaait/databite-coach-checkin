@@ -1922,6 +1922,22 @@ const clientCheckinsRouter = t.router({
         sendSlackDM(managerSlackId, message).catch(err => console.error("[Slack Notify] DM error:", err));
       }
 
+      // Notify manager via Telegram
+      if (ENV.telegramBotToken && ENV.telegramManagerChatId) {
+        const tgMessage =
+          `⚠️ Valid Excuse Request\n\n` +
+          `Coach: ${input.coachName}\n` +
+          `Client: ${input.clientName}\n` +
+          `Day: ${input.dayOfWeek}\n` +
+          `Reason: ${input.reason}\n\n` +
+          `Open the app to approve or reject.`;
+        fetch(`https://api.telegram.org/bot${ENV.telegramBotToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: ENV.telegramManagerChatId, text: tgMessage }),
+        }).catch(err => console.error("[Telegram Notify] error:", err));
+      }
+
       return { id: result.insertId };
     }),
 

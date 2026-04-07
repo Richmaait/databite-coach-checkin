@@ -38,7 +38,9 @@ var ENV = {
   managerSlackId: process.env.MANAGER_SLACK_ID ?? "",
   port: parseInt(process.env.PORT ?? "3000", 10),
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
-  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? ""
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+  telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? "",
+  telegramManagerChatId: process.env.TELEGRAM_MANAGER_CHAT_ID ?? ""
 };
 
 // drizzle/schema.ts
@@ -2541,6 +2543,21 @@ var clientCheckinsRouter = t.router({
 
 \u{1F449} <${appUrl}/client-checkins|Approve or reject>`;
       sendSlackDM(managerSlackId, message).catch((err) => console.error("[Slack Notify] DM error:", err));
+    }
+    if (ENV.telegramBotToken && ENV.telegramManagerChatId) {
+      const tgMessage = `\u26A0\uFE0F Valid Excuse Request
+
+Coach: ${input.coachName}
+Client: ${input.clientName}
+Day: ${input.dayOfWeek}
+Reason: ${input.reason}
+
+Open the app to approve or reject.`;
+      fetch(`https://api.telegram.org/bot${ENV.telegramBotToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: ENV.telegramManagerChatId, text: tgMessage })
+      }).catch((err) => console.error("[Telegram Notify] error:", err));
     }
     return { id: result.insertId };
   }),

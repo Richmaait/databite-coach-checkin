@@ -245,16 +245,19 @@ async function notifyManagerOfSubmission(coachId: number, submissionType: string
     const isSales = !!(details as any)._isSales;
     const displayName = isSales ? ((details as any)._salesUser ?? "Sales") : coach.name;
 
+    const MOOD_EMOJIS = ["😔", "😕", "😐", "🙂", "🤩"];
+    const MOOD_LABELS = ["Not good", "Below average", "Okay", "Good", "Amazing"];
+
     let summary = "";
     if (isSales && submissionType === "morning") {
       const moodVal = details.moodScore as number | undefined;
-      const mood = moodVal ? `${"⭐".repeat(moodVal)} (${moodVal}/5)` : "Not set";
+      const mood = moodVal ? `${MOOD_EMOJIS[moodVal - 1]} ${MOOD_LABELS[moodVal - 1]}` : "Not set";
       const hours = details.intendedWorkingHours ?? "Not set";
       summary = `*Mood:* ${mood}\n*Intended Hours:* ${hours}`;
       if (details.morningNotes) summary += `\n*Notes:* ${details.morningNotes}`;
     } else if (submissionType === "morning") {
       const moodVal = details.moodScore as number | undefined;
-      const mood = moodVal ? `${"⭐".repeat(moodVal)} (${moodVal}/5)` : "Not set";
+      const mood = moodVal ? `${MOOD_EMOJIS[moodVal - 1]} ${MOOD_LABELS[moodVal - 1]}` : "Not set";
       const hours = details.workingHours ? `${details.workingHours}` : "Not set";
       const notes = details.morningNotes ? `${details.morningNotes}` : "";
       summary = `*Mood:* ${mood}\n*Working Hours:* ${hours}`;

@@ -2016,11 +2016,19 @@ var clientCheckinsRouter = t.router({
         const clients = roster[day] ?? [];
         for (const clientName of clients) {
           if (pausedSet.has(clientName)) continue;
-          const clientStart = startMap.get(`${clientName}|${day}`) ?? epochWeek;
+          const clientStartKey = `${clientName}|${day}`;
+          const clientStart = startMap.get(clientStartKey);
+          if (!clientStart) {
+            const hasAnyCompletion = Array.from(completionSet).some((k) => k.startsWith(`${clientName}|${day}|`));
+            const baseName = clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+            const hasBaseCompletion = baseName !== clientName && Array.from(completionSet).some((k) => k.startsWith(`${baseName}|${day}|`));
+            if (!hasAnyCompletion && !hasBaseCompletion) continue;
+          }
+          const effectiveStart = clientStart ?? epochWeek;
           let missed = 0;
           let lastCompleted = null;
           for (const week of allWeeks) {
-            if (week < clientStart) break;
+            if (week < effectiveStart) break;
             if (week > currentWeek) continue;
             const compKey = `${clientName}|${day}|${week}`;
             const excKey = `${clientName}|${week}`;
@@ -2084,11 +2092,14 @@ var clientCheckinsRouter = t.router({
         const clients = roster[day] ?? [];
         for (const clientName of clients) {
           if (pausedSet.has(clientName)) continue;
+          const hasAnyComp = Array.from(completionSet).some((k) => k.startsWith(`${clientName}|${day}|`));
+          const baseName = clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+          const hasBaseComp = baseName !== clientName && Array.from(completionSet).some((k) => k.startsWith(`${baseName}|${day}|`));
+          if (!hasAnyComp && !hasBaseComp) continue;
           let missed = 0;
           for (const week of allWeeks) {
             const compKey = `${clientName}|${day}|${week}`;
             const excKey = `${clientName}|${week}`;
-            const baseName = clientName.replace(/\s*\(.*\)\s*$/, "").trim();
             const baseExcKey = baseName !== clientName ? `${baseName}|${week}` : null;
             if (completionSet.has(compKey) || excuseSet.has(excKey) || baseExcKey && excuseSet.has(baseExcKey)) break;
             missed++;

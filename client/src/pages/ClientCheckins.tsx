@@ -374,6 +374,48 @@ export default function ClientCheckins() {
   const completedSet = localCompleted;
 
   // Per-day completed/total counts for day column headers
+  // Cancellation stats from rawNameMap
+  const cancellationStats = useMemo(() => {
+    if (!roster) return { count: 0, total: 0, pct: 0 };
+    const rawMap = (roster as any)?.rawNameMap as Record<string, string> | undefined;
+    if (!rawMap) return { count: 0, total: 0, pct: 0 };
+    let total = 0;
+    let cancelled = 0;
+    for (const day of DAYS) {
+      const clients = (roster as Record<string, string[]>)[day] ?? [];
+      for (const name of clients) {
+        total++;
+        const raw = rawMap[name];
+        if (raw) {
+          const match = raw.match(/\(([^)]+)\)/);
+          const tag = match?.[1]?.trim();
+          if (tag && !/UPFRONT|DEC.OFFER/i.test(tag) && /\d/.test(tag)) {
+            cancelled++;
+          }
+        }
+      }
+    }
+    // Deduplicate — clients appear once per day but we want unique count
+    const uniqueClients = new Set<string>();
+    const uniqueCancelled = new Set<string>();
+    for (const day of DAYS) {
+      for (const name of ((roster as Record<string, string[]>)[day] ?? [])) {
+        uniqueClients.add(name);
+        const raw = rawMap[name];
+        if (raw) {
+          const match = raw.match(/\(([^)]+)\)/);
+          const tag = match?.[1]?.trim();
+          if (tag && !/UPFRONT|DEC.OFFER/i.test(tag) && /\d/.test(tag)) {
+            uniqueCancelled.add(name);
+          }
+        }
+      }
+    }
+    const uTotal = uniqueClients.size;
+    const uCancelled = uniqueCancelled.size;
+    return { count: uCancelled, total: uTotal, pct: uTotal > 0 ? Math.round((uCancelled / uTotal) * 1000) / 10 : 0 };
+  }, [roster]);
+
   const dayStats = useMemo(() => {
     const stats: Record<DayKey, { completed: number; total: number }> = {
       monday: { completed: 0, total: 0 },
@@ -907,6 +949,19 @@ export default function ClientCheckins() {
             </div>
           )}
         </div>
+
+        {/* ── Cancellation Rate ── */}
+        {cancellationStats.count > 0 && (
+        <div className="max-w-[1600px] mx-auto px-8 mt-4">
+          <div className="glass rounded-xl px-5 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-[9px] font-bold text-red-400">C</span>
+              <span className="text-sm text-white/60">{cancellationStats.count} cancelled of {cancellationStats.total} clients</span>
+            </div>
+            <span className="text-sm font-bold text-red-400">{cancellationStats.pct}% cancellation rate</span>
+          </div>
+        </div>
+        )}
 
         {/* ── Renewal Alerts banner ── */}
         {renewalAlerts.length > 0 && (

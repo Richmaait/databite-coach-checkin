@@ -1138,13 +1138,23 @@ const clientCheckinsRouter = t.router({
           // Skip paused clients
           if (pausedSet.has(clientName)) continue;
 
-          const clientStart = startMap.get(`${clientName}|${day}`) ?? epochWeek;
+          // If client has no start date, check if they have ANY completion — if not, they're brand new, skip them
+          const clientStartKey = `${clientName}|${day}`;
+          const clientStart = startMap.get(clientStartKey);
+          if (!clientStart) {
+            // No start record — check if this client has ever had a completion
+            const hasAnyCompletion = Array.from(completionSet).some(k => k.startsWith(`${clientName}|${day}|`));
+            const baseName = clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+            const hasBaseCompletion = baseName !== clientName && Array.from(completionSet).some(k => k.startsWith(`${baseName}|${day}|`));
+            if (!hasAnyCompletion && !hasBaseCompletion) continue; // brand new client, skip
+          }
+          const effectiveStart = clientStart ?? epochWeek;
           let missed = 0;
           let lastCompleted: string | null = null;
 
           // Iterate weeks newest to oldest
           for (const week of allWeeks) {
-            if (week < clientStart) break; // client wasn't on roster yet
+            if (week < effectiveStart) break; // client wasn't on roster yet
             if (week > currentWeek) continue;
 
             const compKey = `${clientName}|${day}|${week}`;
@@ -1239,11 +1249,15 @@ const clientCheckinsRouter = t.router({
         const clients = roster[day] ?? [];
         for (const clientName of clients) {
           if (pausedSet.has(clientName)) continue;
+          // Skip brand new clients with no completion history
+          const hasAnyComp = Array.from(completionSet).some(k => k.startsWith(`${clientName}|${day}|`));
+          const baseName = clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+          const hasBaseComp = baseName !== clientName && Array.from(completionSet).some(k => k.startsWith(`${baseName}|${day}|`));
+          if (!hasAnyComp && !hasBaseComp) continue;
           let missed = 0;
           for (const week of allWeeks) {
             const compKey = `${clientName}|${day}|${week}`;
             const excKey = `${clientName}|${week}`;
-            const baseName = clientName.replace(/\s*\(.*\)\s*$/, "").trim();
             const baseExcKey = baseName !== clientName ? `${baseName}|${week}` : null;
             if (completionSet.has(compKey) || excuseSet.has(excKey) || (baseExcKey && excuseSet.has(baseExcKey))) break;
             missed++;

@@ -129,6 +129,26 @@ export default function CoachPerformanceReport() {
   );
   const { data: allCoaches } = trpc.coaches.list.useQuery();
 
+  // Last 6 completed weeks for per-coach engagement tracker
+  const kpiWeekStarts = useMemo(() => {
+    const starts: string[] = [];
+    const now = melbourneNow();
+    const dow = now.getDay();
+    const diff = dow === 0 ? 6 : dow - 1;
+    const mon = new Date(now); mon.setDate(mon.getDate() - diff); // current Monday
+    const d = new Date(mon); d.setDate(d.getDate() - 7); // last completed week
+    for (let i = 0; i < 6; i++) {
+      const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,"0"); const dd = String(d.getDate()).padStart(2,"0");
+      starts.push(`${y}-${m}-${dd}`);
+      d.setDate(d.getDate() - 7);
+    }
+    return starts;
+  }, []);
+  const { data: kpiWeeklyStats } = trpc.clientCheckins.getRosterWeeklyStats.useQuery(
+    { weekStarts: kpiWeekStarts },
+    { enabled: kpiWeekStarts.length > 0, staleTime: 5 * 60 * 1000 },
+  );
+
   // Weekly multi-week query
   const { data: weeklyData, isLoading: weeklyLoading } = trpc.clientCheckins.getPerformanceReport.useQuery(
     { startDate, endDate },
@@ -293,6 +313,46 @@ export default function CoachPerformanceReport() {
               ))}
             </div>
 
+
+            {/* Per-coach weekly engagement tracker */}
+            {kpiWeeklyStats && coaches.length > 0 && (() => {
+              const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+              // Group by coach
+              const byCoach = new Map<number, Array<{ weekStart: string; pct: number }>>();
+              for (const r of kpiWeeklyStats) {
+                if (!byCoach.has(r.coachId)) byCoach.set(r.coachId, []);
+                const eff = Math.max(r.scheduled - (r.excused ?? 0), 1);
+                const pct = r.scheduled > 0 ? Math.round((r.completed / eff) * 1000) / 10 : 0;
+                byCoach.get(r.coachId)!.push({ weekStart: r.weekStart, pct });
+              }
+              return (
+                <div className="glass rounded-2xl p-5">
+                  <h3 className="text-sm font-semibold text-white/80 mb-4">Weekly Engagement by Coach</h3>
+                  <div className="space-y-3">
+                    {coaches.map(coach => {
+                      const weeks = (byCoach.get(coach.id) ?? []).sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+                      return (
+                        <div key={coach.id} className="flex items-center gap-3">
+                          <span className="text-sm font-medium text-white/70 w-16 shrink-0">{coach.name}</span>
+                          <div className="flex items-center gap-1.5 flex-1">
+                            {weeks.map(w => {
+                              const mon = new Date(w.weekStart + "T00:00:00");
+                              const label = `${mon.getDate()} ${months[mon.getMonth()]}`;
+                              return (
+                                <div key={w.weekStart} className={`flex-1 glass rounded-lg px-2 py-1.5 text-center border ${w.pct >= 80 ? "border-emerald-400/20" : "border-red-400/20"}`}>
+                                  <span className={`text-xs font-bold block ${w.pct >= 80 ? "text-emerald-400" : "text-red-400"}`}>{w.pct.toFixed(0)}%</span>
+                                  <span className="text-[9px] text-white/30 block">{label}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Engagement trend (weekly view only) */}
             {!isOneWeek && weeklyData && (

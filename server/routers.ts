@@ -2482,27 +2482,29 @@ const coachesRouter = t.router({
   updateSlackConfig: adminProcedure
     .input(
       z.object({
-        id: z.number(),
+        id: z.number().optional(),
+        coachId: z.number().optional(),
         slackUserId: z.string().optional(),
         timezone: z.string().optional(),
         reminderTimes: z.array(z.string()).optional(),
-        workdays: z.array(z.string()).optional(),
-        remindersEnabled: z.number().optional(),
+        workdays: z.union([z.array(z.string()), z.array(z.number())]).optional(),
+        remindersEnabled: z.union([z.number(), z.boolean()]).optional(),
         leaveStartDate: z.string().nullable().optional(),
         leaveEndDate: z.string().nullable().optional(),
       }),
     )
     .mutation(async ({ input }) => {
       const db = await requireDb();
-      const { id, ...updates } = input;
+      const id = input.id ?? input.coachId;
+      if (!id) throw new TRPCError({ code: "BAD_REQUEST", message: "id or coachId required" });
       const setObj: Record<string, any> = {};
-      if (updates.slackUserId !== undefined) setObj.slackUserId = updates.slackUserId;
-      if (updates.timezone !== undefined) setObj.timezone = updates.timezone;
-      if (updates.reminderTimes !== undefined) setObj.reminderTimes = updates.reminderTimes;
-      if (updates.workdays !== undefined) setObj.workdays = updates.workdays;
-      if (updates.remindersEnabled !== undefined) setObj.remindersEnabled = updates.remindersEnabled;
-      if (updates.leaveStartDate !== undefined) setObj.leaveStartDate = updates.leaveStartDate;
-      if (updates.leaveEndDate !== undefined) setObj.leaveEndDate = updates.leaveEndDate;
+      if (input.slackUserId !== undefined) setObj.slackUserId = input.slackUserId;
+      if (input.timezone !== undefined) setObj.timezone = input.timezone;
+      if (input.reminderTimes !== undefined) setObj.reminderTimes = input.reminderTimes;
+      if (input.workdays !== undefined) setObj.workdays = input.workdays;
+      if (input.remindersEnabled !== undefined) setObj.remindersEnabled = typeof input.remindersEnabled === "boolean" ? (input.remindersEnabled ? 1 : 0) : input.remindersEnabled;
+      if (input.leaveStartDate !== undefined) setObj.leaveStartDate = input.leaveStartDate;
+      if (input.leaveEndDate !== undefined) setObj.leaveEndDate = input.leaveEndDate;
 
       if (Object.keys(setObj).length > 0) {
         await db.update(coaches).set(setObj).where(eq(coaches.id, id));

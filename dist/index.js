@@ -2937,26 +2937,28 @@ var coachesRouter = t.router({
   /** Update coach's Slack/reminder settings. */
   updateSlackConfig: adminProcedure.input(
     z.object({
-      id: z.number(),
+      id: z.number().optional(),
+      coachId: z.number().optional(),
       slackUserId: z.string().optional(),
       timezone: z.string().optional(),
       reminderTimes: z.array(z.string()).optional(),
-      workdays: z.array(z.string()).optional(),
-      remindersEnabled: z.number().optional(),
+      workdays: z.union([z.array(z.string()), z.array(z.number())]).optional(),
+      remindersEnabled: z.union([z.number(), z.boolean()]).optional(),
       leaveStartDate: z.string().nullable().optional(),
       leaveEndDate: z.string().nullable().optional()
     })
   ).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    const { id, ...updates } = input;
+    const id = input.id ?? input.coachId;
+    if (!id) throw new TRPCError({ code: "BAD_REQUEST", message: "id or coachId required" });
     const setObj = {};
-    if (updates.slackUserId !== void 0) setObj.slackUserId = updates.slackUserId;
-    if (updates.timezone !== void 0) setObj.timezone = updates.timezone;
-    if (updates.reminderTimes !== void 0) setObj.reminderTimes = updates.reminderTimes;
-    if (updates.workdays !== void 0) setObj.workdays = updates.workdays;
-    if (updates.remindersEnabled !== void 0) setObj.remindersEnabled = updates.remindersEnabled;
-    if (updates.leaveStartDate !== void 0) setObj.leaveStartDate = updates.leaveStartDate;
-    if (updates.leaveEndDate !== void 0) setObj.leaveEndDate = updates.leaveEndDate;
+    if (input.slackUserId !== void 0) setObj.slackUserId = input.slackUserId;
+    if (input.timezone !== void 0) setObj.timezone = input.timezone;
+    if (input.reminderTimes !== void 0) setObj.reminderTimes = input.reminderTimes;
+    if (input.workdays !== void 0) setObj.workdays = input.workdays;
+    if (input.remindersEnabled !== void 0) setObj.remindersEnabled = typeof input.remindersEnabled === "boolean" ? input.remindersEnabled ? 1 : 0 : input.remindersEnabled;
+    if (input.leaveStartDate !== void 0) setObj.leaveStartDate = input.leaveStartDate;
+    if (input.leaveEndDate !== void 0) setObj.leaveEndDate = input.leaveEndDate;
     if (Object.keys(setObj).length > 0) {
       await db2.update(coaches).set(setObj).where(eq4(coaches.id, id));
     }

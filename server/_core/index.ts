@@ -15,6 +15,7 @@ import { registerTypeformWebhook } from "../typeformWebhook";
 import { runTypeformBackfill } from "../typeformBackfill";
 import { registerWeeklySummaryPdfRoute } from "../weeklySummaryPdfRoute";
 import { snapshotCurrentWeek } from "../weeklySnapshot";
+import { sendFridayAudit, checkMissedAudits } from "../slackFridayAudit";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -121,9 +122,15 @@ async function startServer() {
       sendFortnightlySweepReportReminder().catch(err => console.error("[Slack Sweep Reminder] error:", err));
     }
 
-    // Friday 20:00 AEST — current-week client check-in summary
+    // Friday 14:30 AEST — Friday quality audit (select 3 clients per coach)
+    if (weekday === "Fri" && hour === "14" && minuteInt >= 25 && minuteInt < 35) {
+      sendFridayAudit().catch(err => console.error("[Friday Audit] error:", err));
+    }
+
+    // Friday 20:00 AEST — current-week client check-in summary + missed audit check
     if (weekday === "Fri" && hour === "20" && minuteInt < 5) {
       sendFridayWeeklySummary().catch(err => console.error("[Slack Friday Summary] error:", err));
+      checkMissedAudits().catch(err => console.error("[Friday Audit] missed check error:", err));
     }
 
     // Sunday 23:59 AEST — snapshot the current week's roster stats

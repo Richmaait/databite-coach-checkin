@@ -17,6 +17,7 @@ import SweepReport from "./pages/SweepReport";
 import Login from "./pages/Login";
 import ClientCheckin from "./pages/ClientCheckin";
 import Sales from "./pages/Sales";
+import FridayAudit from "./pages/FridayAudit";
 
 function Router() {
   return (
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/weekly-summary" component={WeeklySummary} />
       <Route path="/sweep-report/:id" component={SweepReport} />
       <Route path="/sales" component={Sales} />
+      <Route path="/audit" component={FridayAudit} />
       <Route path="/client-performance"><Redirect to="/client-progress" /></Route>
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

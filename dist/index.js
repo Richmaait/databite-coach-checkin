@@ -46,11 +46,13 @@ var ENV = {
 // drizzle/schema.ts
 var schema_exports = {};
 __export(schema_exports, {
+  auditHistory: () => auditHistory,
   checkinRecords: () => checkinRecords,
   clientCheckIns: () => clientCheckIns,
   clientRatings: () => clientRatings,
   coaches: () => coaches,
   excusedClients: () => excusedClients,
+  fridayAudits: () => fridayAudits,
   kudos: () => kudos,
   pausedClients: () => pausedClients,
   rosterClientStarts: () => rosterClientStarts,
@@ -240,6 +242,27 @@ var salesCheckins = mysqlTable("sales_checkins", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
 }, (t2) => ({
   uqUserDate: uniqueIndex("uq_sales_user_date").on(t2.userId, t2.recordDate)
+}));
+var fridayAudits = mysqlTable("friday_audits", {
+  id: int("id").autoincrement().primaryKey(),
+  coachId: int("coachId").notNull(),
+  coachName: varchar("coachName", { length: 128 }).notNull(),
+  weekStart: varchar("weekStart", { length: 10 }).notNull(),
+  selectedClients: json("selectedClients").$type().notNull(),
+  allSubmittedAt: timestamp("allSubmittedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+}, (t2) => ({
+  uqCoachWeek: uniqueIndex("uq_friday_audit").on(t2.coachId, t2.weekStart)
+}));
+var auditHistory = mysqlTable("audit_history", {
+  id: int("id").autoincrement().primaryKey(),
+  coachId: int("coachId").notNull(),
+  clientName: varchar("clientName", { length: 256 }).notNull(),
+  lastAuditedWeek: varchar("lastAuditedWeek", { length: 10 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull()
+}, (t2) => ({
+  uqCoachClient: uniqueIndex("uq_audit_coach_client").on(t2.coachId, t2.clientName)
 }));
 
 // server/db.ts
@@ -3604,6 +3627,64 @@ ${summary}
     return db2.select().from(salesCheckins).where(conditions.length > 0 ? and2(...conditions) : void 0).orderBy(desc(salesCheckins.recordDate));
   })
 });
+var auditsRouter = t.router({
+  /** Get current week's audit for the logged-in coach. */
+  getMyAudit: protectedProcedure.input(z.object({ weekStart: z.string() })).query(async ({ input, ctx }) => {
+    const db2 = await requireDb();
+    const [myCoach] = await db2.select().from(coaches).where(eq4(coaches.userId, ctx.user.id)).limit(1);
+    const coachId = ctx.user.role === "admin" ? null : myCoach?.id;
+    if (!coachId && ctx.user.role !== "admin") return null;
+    if (coachId) {
+      const [audit] = await db2.select().from(fridayAudits).where(and2(eq4(fridayAudits.coachId, coachId), eq4(fridayAudits.weekStart, input.weekStart))).limit(1);
+      return audit ?? null;
+    }
+    return null;
+  }),
+  /** Get all audits for a week (admin view). */
+  getAllForWeek: adminProcedure.input(z.object({ weekStart: z.string() })).query(async ({ input }) => {
+    const db2 = await requireDb();
+    return db2.select().from(fridayAudits).where(eq4(fridayAudits.weekStart, input.weekStart));
+  }),
+  /** Get audit history (admin view). */
+  getHistory: adminProcedure.input(z.object({ limit: z.number().optional() }).optional()).query(async ({ input }) => {
+    const db2 = await requireDb();
+    return db2.select().from(fridayAudits).orderBy(desc(fridayAudits.createdAt)).limit(input?.limit ?? 20);
+  }),
+  /** Submit audit for one client (coach submits Loom/notes for a single selected client). */
+  submitClient: protectedProcedure.input(z.object({
+    auditId: z.number(),
+    clientName: z.string(),
+    loomLink: z.string().optional(),
+    notes: z.string().optional()
+  })).mutation(async ({ input, ctx }) => {
+    const db2 = await requireDb();
+    const [audit] = await db2.select().from(fridayAudits).where(eq4(fridayAudits.id, input.auditId)).limit(1);
+    if (!audit) throw new TRPCError({ code: "NOT_FOUND", message: "Audit not found" });
+    const clients = audit.selectedClients;
+    const idx = clients.findIndex((c) => c.name === input.clientName);
+    if (idx === -1) throw new TRPCError({ code: "BAD_REQUEST", message: "Client not in audit" });
+    clients[idx] = { ...clients[idx], loomLink: input.loomLink, notes: input.notes, submitted: true };
+    const allDone = clients.every((c) => c.submitted);
+    await db2.update(fridayAudits).set({
+      selectedClients: clients,
+      ...allDone ? { allSubmittedAt: /* @__PURE__ */ new Date() } : {}
+    }).where(eq4(fridayAudits.id, input.auditId));
+    if (allDone) {
+      const managerSlackId = ENV.managerSlackId;
+      if (managerSlackId && ENV.slackBotToken) {
+        const summary = clients.map(
+          (c) => `\u2022 *${c.name}* (${c.day})${c.loomLink ? ` \u2014 <${c.loomLink}|Loom>` : ""}${c.notes ? ` \u2014 ${c.notes}` : ""}`
+        ).join("\n");
+        const message = `\u2705 *${audit.coachName}* completed their Friday audit
+
+${summary}`;
+        sendSlackDM(managerSlackId, message).catch(() => {
+        });
+      }
+    }
+    return { allDone };
+  })
+});
 var appRouter = t.router({
   checkins: checkinsRouter,
   clientCheckins: clientCheckinsRouter,
@@ -3612,7 +3693,8 @@ var appRouter = t.router({
   sweepReport: sweepReportRouter,
   users: usersRouter,
   kudos: kudosRouter,
-  sales: salesRouter
+  sales: salesRouter,
+  audits: auditsRouter
 });
 
 // server/_core/context.ts
@@ -4902,6 +4984,135 @@ async function snapshotCurrentWeek() {
   console.log(`[Snapshot] Week ${weekStart} snapshot complete.`);
 }
 
+// server/slackFridayAudit.ts
+import { eq as eq7, and as and5, isNull as isNull3 } from "drizzle-orm";
+function getMonday4(dateStr) {
+  const d = dateStr ? /* @__PURE__ */ new Date(dateStr + "T00:00:00") : new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "Australia/Melbourne" }));
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function getTodayMelbourne3() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Melbourne" }).format(/* @__PURE__ */ new Date());
+}
+async function sendFridayAudit() {
+  const db2 = await getDb();
+  if (!db2) return;
+  const weekStart = getMonday4(getTodayMelbourne3());
+  const appUrl = ENV.appUrl || "https://coach.databite.com.au";
+  const allCoaches = await db2.select().from(coaches).where(eq7(coaches.isActive, 1));
+  for (const coach of allCoaches) {
+    if (!coach.slackUserId) continue;
+    const claimed = await claimReminderSlot(coach.id, getTodayMelbourne3(), 20);
+    if (!claimed) continue;
+    const existing = await db2.select().from(fridayAudits).where(and5(eq7(fridayAudits.coachId, coach.id), eq7(fridayAudits.weekStart, weekStart))).limit(1);
+    if (existing.length > 0) continue;
+    const roster = await fetchRosterForCoach(coach.name);
+    const completions = await db2.select().from(clientCheckIns).where(and5(eq7(clientCheckIns.coachId, coach.id), eq7(clientCheckIns.weekStart, weekStart)));
+    const completedSet = new Set(
+      completions.filter((c) => c.completedAt != null && c.clientSubmitted === 1).map((c) => `${c.clientName}|${c.dayOfWeek}`)
+    );
+    for (const c of completions) {
+      if (c.completedAt != null && c.clientSubmitted === 1) {
+        const base = c.clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+        if (base !== c.clientName) completedSet.add(`${base}|${c.dayOfWeek}`);
+      }
+    }
+    const prevAudited = await db2.select().from(auditHistory).where(eq7(auditHistory.coachId, coach.id));
+    const auditedSet = new Set(prevAudited.map((a) => a.clientName));
+    const eligibleByDay = {};
+    let totalEligible = 0;
+    for (const day of DAYS2) {
+      const clients = roster[day] ?? [];
+      const eligible = clients.filter((name) => {
+        const key = `${name}|${day}`;
+        return completedSet.has(key) && !auditedSet.has(name);
+      });
+      if (eligible.length > 0) {
+        eligibleByDay[day] = eligible;
+        totalEligible += eligible.length;
+      }
+    }
+    if (totalEligible === 0) {
+      await db2.delete(auditHistory).where(eq7(auditHistory.coachId, coach.id));
+      for (const day of DAYS2) {
+        const clients = roster[day] ?? [];
+        const eligible = clients.filter((name) => completedSet.has(`${name}|${day}`));
+        if (eligible.length > 0) {
+          eligibleByDay[day] = eligible;
+          totalEligible += eligible.length;
+        }
+      }
+    }
+    const daysWithClients = DAYS2.filter((d) => (eligibleByDay[d]?.length ?? 0) > 0);
+    const shuffledDays = daysWithClients.sort(() => Math.random() - 0.5).slice(0, 3);
+    const selected = [];
+    for (const day of shuffledDays) {
+      const dayClients = eligibleByDay[day];
+      const pick = dayClients[Math.floor(Math.random() * dayClients.length)];
+      selected.push({ name: pick, day });
+    }
+    if (selected.length === 0) {
+      console.log(`[Friday Audit] ${coach.name}: no eligible clients this week \u2014 skipping`);
+      continue;
+    }
+    const selectedWithSubmission = selected.map((s) => ({ ...s, submitted: false }));
+    await db2.insert(fridayAudits).values({
+      coachId: coach.id,
+      coachName: coach.name,
+      weekStart,
+      selectedClients: selectedWithSubmission
+    });
+    for (const s of selected) {
+      const existingHistory = await db2.select().from(auditHistory).where(and5(eq7(auditHistory.coachId, coach.id), eq7(auditHistory.clientName, s.name))).limit(1);
+      if (existingHistory.length > 0) {
+        await db2.update(auditHistory).set({ lastAuditedWeek: weekStart }).where(eq7(auditHistory.id, existingHistory[0].id));
+      } else {
+        await db2.insert(auditHistory).values({
+          coachId: coach.id,
+          clientName: s.name,
+          lastAuditedWeek: weekStart
+        });
+      }
+    }
+    const DAY_LABELS = { monday: "Monday", tuesday: "Tuesday", wednesday: "Wednesday", thursday: "Thursday", friday: "Friday" };
+    const clientList = selected.map((s) => `\u2022 *${s.name}* (${DAY_LABELS[s.day] ?? s.day})`).join("\n");
+    const message = `\u{1F4CB} *Friday Quality Audit*
+
+These 3 clients have been randomly selected for review this week:
+
+${clientList}
+
+Please submit a Loom link or notes for each client's check-in by *8:00pm today*.
+
+\u{1F449} <${appUrl}/audit|Submit your audit>`;
+    await sendSlackDM(coach.slackUserId, message);
+    console.log(`[Friday Audit] ${coach.name}: sent audit for ${selected.map((s) => s.name).join(", ")}`);
+  }
+}
+async function checkMissedAudits() {
+  const db2 = await getDb();
+  if (!db2) return;
+  const managerSlackId = ENV.managerSlackId;
+  if (!managerSlackId) return;
+  const weekStart = getMonday4(getTodayMelbourne3());
+  const audits = await db2.select().from(fridayAudits).where(and5(eq7(fridayAudits.weekStart, weekStart), isNull3(fridayAudits.allSubmittedAt)));
+  for (const audit of audits) {
+    const clients = audit.selectedClients;
+    const pending = clients.filter((c) => !c.submitted);
+    if (pending.length === 0) continue;
+    const message = `\u26A0\uFE0F *${audit.coachName}* has not completed their Friday audit
+
+${pending.length} of ${clients.length} clients still pending:
+` + pending.map((c) => `\u2022 ${c.name}`).join("\n");
+    const claimed = await claimReminderSlot(audit.coachId, getTodayMelbourne3(), 21);
+    if (claimed) {
+      await sendSlackDM(managerSlackId, message);
+    }
+  }
+}
+
 // server/_core/index.ts
 function isPortAvailable(port) {
   return new Promise((resolve) => {
@@ -4979,8 +5190,12 @@ async function startServer() {
     if (weekday === "Mon" && hour === "09" && minuteInt < 5) {
       sendFortnightlySweepReportReminder().catch((err) => console.error("[Slack Sweep Reminder] error:", err));
     }
+    if (weekday === "Fri" && hour === "14" && minuteInt >= 25 && minuteInt < 35) {
+      sendFridayAudit().catch((err) => console.error("[Friday Audit] error:", err));
+    }
     if (weekday === "Fri" && hour === "20" && minuteInt < 5) {
       sendFridayWeeklySummary().catch((err) => console.error("[Slack Friday Summary] error:", err));
+      checkMissedAudits().catch((err) => console.error("[Friday Audit] missed check error:", err));
     }
     if (weekday === "Sun" && hour === "23" && minuteInt >= 55) {
       snapshotCurrentWeek().catch((err) => console.error("[Snapshot] error:", err));

@@ -248,3 +248,34 @@ export const salesCheckins = mysqlTable("sales_checkins", {
 }));
 
 export type SalesCheckin = typeof salesCheckins.$inferSelect;
+
+// ─── Friday Audits ──────────────────────────────────────────────────────────
+// Weekly quality audit: 3 random completed clients selected per coach each Friday.
+export const fridayAudits = mysqlTable("friday_audits", {
+  id: int("id").autoincrement().primaryKey(),
+  coachId: int("coachId").notNull(),
+  coachName: varchar("coachName", { length: 128 }).notNull(),
+  weekStart: varchar("weekStart", { length: 10 }).notNull(),
+  selectedClients: json("selectedClients").$type<Array<{ name: string; day: string; loomLink?: string; notes?: string; submitted?: boolean }>>().notNull(),
+  allSubmittedAt: timestamp("allSubmittedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (t) => ({
+  uqCoachWeek: uniqueIndex("uq_friday_audit").on(t.coachId, t.weekStart),
+}));
+
+export type FridayAudit = typeof fridayAudits.$inferSelect;
+
+// ─── Audit History ──────────────────────────────────────────────────────────
+// Tracks which clients have been audited to avoid repeats.
+export const auditHistory = mysqlTable("audit_history", {
+  id: int("id").autoincrement().primaryKey(),
+  coachId: int("coachId").notNull(),
+  clientName: varchar("clientName", { length: 256 }).notNull(),
+  lastAuditedWeek: varchar("lastAuditedWeek", { length: 10 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => ({
+  uqCoachClient: uniqueIndex("uq_audit_coach_client").on(t.coachId, t.clientName),
+}));
+
+export type AuditHistory = typeof auditHistory.$inferSelect;

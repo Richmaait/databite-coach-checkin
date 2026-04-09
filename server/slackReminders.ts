@@ -132,7 +132,7 @@ const DEFAULT_TIMES = ["08:30", "11:00", "14:00"];
  * Returns true if this instance should send the message (insert succeeded),
  * false if another instance already sent it (duplicate key error).
  */
-async function claimReminderSlot(
+export async function claimReminderSlot(
   coachId: number,
   reminderDate: string,
   reminderIndex: number

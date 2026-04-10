@@ -3417,6 +3417,15 @@ const auditsRouter = t.router({
       return db.select().from(fridayAudits).where(eq(fridayAudits.weekStart, input.weekStart));
     }),
 
+  /** Admin: mark audit as reviewed. */
+  markReviewed: adminProcedure
+    .input(z.object({ auditId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await requireDb();
+      await db.update(fridayAudits).set({ reviewedAt: new Date(), reviewedByUserId: ctx.user.id }).where(eq(fridayAudits.id, input.auditId));
+      return { success: true };
+    }),
+
   /** Admin: add a client to an existing audit. */
   addClientToAudit: adminProcedure
     .input(z.object({ auditId: z.number(), clientName: z.string(), day: z.string() }))

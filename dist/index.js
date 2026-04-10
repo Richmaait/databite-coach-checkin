@@ -248,6 +248,8 @@ var init_schema = __esm({
       weekStart: varchar("weekStart", { length: 10 }).notNull(),
       selectedClients: json("selectedClients").$type().notNull(),
       allSubmittedAt: timestamp("allSubmittedAt"),
+      reviewedAt: timestamp("reviewedAt"),
+      reviewedByUserId: int("reviewedByUserId"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
       updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
     }, (t2) => ({
@@ -3877,6 +3879,12 @@ var auditsRouter = t.router({
   getAllForWeek: adminProcedure.input(z.object({ weekStart: z.string() })).query(async ({ input }) => {
     const db2 = await requireDb();
     return db2.select().from(fridayAudits).where(eq5(fridayAudits.weekStart, input.weekStart));
+  }),
+  /** Admin: mark audit as reviewed. */
+  markReviewed: adminProcedure.input(z.object({ auditId: z.number() })).mutation(async ({ input, ctx }) => {
+    const db2 = await requireDb();
+    await db2.update(fridayAudits).set({ reviewedAt: /* @__PURE__ */ new Date(), reviewedByUserId: ctx.user.id }).where(eq5(fridayAudits.id, input.auditId));
+    return { success: true };
   }),
   /** Admin: add a client to an existing audit. */
   addClientToAudit: adminProcedure.input(z.object({ auditId: z.number(), clientName: z.string(), day: z.string() })).mutation(async ({ input }) => {

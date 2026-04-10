@@ -258,6 +258,8 @@ export const fridayAudits = mysqlTable("friday_audits", {
   weekStart: varchar("weekStart", { length: 10 }).notNull(),
   selectedClients: json("selectedClients").$type<Array<{ name: string; day: string; loomLink?: string; notes?: string; rating?: "green" | "yellow" | "red"; submitted?: boolean }>>().notNull(),
   allSubmittedAt: timestamp("allSubmittedAt"),
+  reviewedAt: timestamp("reviewedAt"),
+  reviewedByUserId: int("reviewedByUserId"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (t) => ({

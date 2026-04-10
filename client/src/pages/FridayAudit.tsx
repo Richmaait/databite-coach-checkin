@@ -55,6 +55,17 @@ export default function FridayAudit() {
     onError: (e) => toast.error(e.message),
   });
 
+  const reviewMutation = trpc.audits.markReviewed.useMutation({
+    onSuccess: () => { refetchAll(); toast.success("Marked as reviewed"); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  // Split audits into pending review and reviewed
+  const pendingReview = useMemo(() => (allAudits ?? []).filter(a => a.allSubmittedAt && !a.reviewedAt), [allAudits]);
+  const awaitingSubmission = useMemo(() => (allAudits ?? []).filter(a => !a.allSubmittedAt), [allAudits]);
+  const reviewed = useMemo(() => (auditHistory ?? []).filter(a => (a as any).reviewedAt), [auditHistory]);
+  const unreviewed = useMemo(() => (auditHistory ?? []).filter(a => !(a as any).reviewedAt && (a as any).allSubmittedAt), [auditHistory]);
+
   if (!user) return null;
 
   return (
@@ -93,51 +104,47 @@ export default function FridayAudit() {
         {/* Admin View */}
         {isAdmin && (
           <>
-            <div className="glass rounded-2xl p-6">
-              <h2 className="text-base font-bold text-white/90 mb-4">This Week's Audits</h2>
-              {allAudits && allAudits.length > 0 ? (
+            {/* Awaiting coach submission */}
+            {awaitingSubmission.length > 0 && (
+              <div className="glass rounded-2xl p-6">
+                <h2 className="text-base font-bold text-white/90 mb-4">Awaiting Coach Submission</h2>
                 <div className="space-y-4">
-                  {allAudits.map(audit => (
-                    <div key={audit.id} className="glass-btn rounded-xl p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-semibold text-white/80">{audit.coachName}</span>
-                        {audit.allSubmittedAt ? (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-400/15 text-emerald-400 border border-emerald-400/20">ALL SUBMITTED</span>
-                        ) : (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-400/15 text-red-400 border border-red-400/20">PENDING</span>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        {(audit.selectedClients as AuditClient[]).map((c, i) => {
-                          const ratingInfo = RATINGS.find(r => r.value === c.rating);
-                          return (
-                            <div key={i} className={`rounded-lg px-3 py-2 border ${c.submitted ? "border-emerald-400/15 bg-emerald-400/[0.04]" : "border-white/[0.06] bg-white/[0.02]"}`}>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm text-white/80">{c.name}</span>
-                                  <span className="text-xs text-white/40">{DAY_LABELS[c.day] ?? c.day}</span>
-                                  {ratingInfo && <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${ratingInfo.bg} ${ratingInfo.border} ${ratingInfo.text}`}>{ratingInfo.emoji} {ratingInfo.label}</span>}
-                                </div>
-                                {c.submitted ? <span className="text-[9px] text-emerald-400">✓</span> : <span className="text-[9px] text-white/30">pending</span>}
-                              </div>
-                              {c.loomLink && (
-                                <a href={c.loomLink} target="_blank" rel="noopener noreferrer" className="text-xs text-violet-400 hover:underline block mt-1">
-                                  🎥 {c.loomLink}
-                                </a>
-                              )}
-                              {c.notes && <p className="text-xs text-white/40 mt-1">{c.notes}</p>}
-                            </div>
-                          );
-                        })}
-                      </div>
+                  {awaitingSubmission.map(audit => (
+                    <AuditAdminCard key={audit.id} audit={audit} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Ready for your review */}
+            {pendingReview.length > 0 && (
+              <div className="glass rounded-2xl p-6" style={{ borderColor: "rgba(139,92,246,0.2)" }}>
+                <h2 className="text-base font-bold text-violet-300 mb-4">Ready for Review ({pendingReview.length})</h2>
+                <div className="space-y-4">
+                  {pendingReview.map(audit => (
+                    <div key={audit.id}>
+                      <AuditAdminCard audit={audit} />
+                      <button
+                        onClick={() => reviewMutation.mutate({ auditId: audit.id })}
+                        disabled={reviewMutation.isPending}
+                        className="w-full mt-2 py-2 rounded-xl font-semibold text-sm bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-400 hover:to-fuchsia-400 disabled:opacity-40 text-white shadow-lg shadow-violet-500/20 transition-all"
+                      >
+                        {reviewMutation.isPending ? "Marking..." : "✓ Mark as Reviewed"}
+                      </button>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <p className="text-sm text-white/40">No audits for this week yet. Click "Trigger Audit Now" to test.</p>
-              )}
-            </div>
+              </div>
+            )}
 
+            {/* No audits yet */}
+            {(allAudits ?? []).length === 0 && (
+              <div className="glass rounded-2xl p-6">
+                <p className="text-sm text-white/40">No audits for this week yet. Click "Trigger Audit Now" to test.</p>
+              </div>
+            )}
+
+            {/* Reviewed History */}
             {auditHistory && auditHistory.length > 0 && (
               <div className="glass rounded-2xl p-6">
                 <h2 className="text-base font-bold text-white/90 mb-4">Audit History</h2>
@@ -145,21 +152,48 @@ export default function FridayAudit() {
                   {auditHistory.map(a => {
                     const clients = a.selectedClients as AuditClient[];
                     const done = clients.filter(c => c.submitted).length;
+                    const isReviewed = !!(a as any).reviewedAt;
                     return (
-                      <div key={a.id} className="glass-btn rounded-xl px-4 py-2 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm text-white/70">{a.coachName}</span>
-                          <span className="text-xs text-white/40">{a.weekStart}</span>
-                          <div className="flex gap-1">
-                            {clients.map((c, i) => {
-                              const r = RATINGS.find(rt => rt.value === c.rating);
-                              return r ? <span key={i} className="text-xs">{r.emoji}</span> : <span key={i} className="text-xs text-white/20">○</span>;
-                            })}
+                      <div key={a.id} className="glass-btn rounded-xl px-4 py-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium text-white/70">{a.coachName}</span>
+                            <span className="text-xs text-white/40">{a.weekStart}</span>
+                            <div className="flex gap-1">
+                              {clients.map((c, i) => {
+                                const r = RATINGS.find(rt => rt.value === c.rating);
+                                return r ? <span key={i} className="text-xs">{r.emoji}</span> : <span key={i} className="text-xs text-white/20">○</span>;
+                              })}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-semibold ${done === clients.length ? "text-emerald-400" : "text-red-400"}`}>
+                              {done}/{clients.length}
+                            </span>
+                            {isReviewed ? (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20">REVIEWED</span>
+                            ) : done === clients.length ? (
+                              <button
+                                onClick={() => reviewMutation.mutate({ auditId: a.id })}
+                                disabled={reviewMutation.isPending}
+                                className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/10 text-white/50 border border-white/20 hover:bg-violet-500/20 hover:text-violet-300 transition-colors"
+                              >
+                                Review
+                              </button>
+                            ) : null}
                           </div>
                         </div>
-                        <span className={`text-xs font-semibold ${done === clients.length ? "text-emerald-400" : "text-red-400"}`}>
-                          {done}/{clients.length}
-                        </span>
+                        {/* Expandable client details */}
+                        <div className="space-y-1 mt-2">
+                          {clients.map((c, i) => (
+                            <div key={i} className="text-xs text-white/40 flex items-center gap-2">
+                              {c.submitted && RATINGS.find(r => r.value === c.rating) ? <span>{RATINGS.find(r => r.value === c.rating)!.emoji}</span> : <span className="text-white/20">○</span>}
+                              <span className="text-white/60">{c.name}</span>
+                              <span className="text-white/30">{DAY_LABELS[c.day]}</span>
+                              {c.loomLink && <a href={c.loomLink} target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:underline">🎥</a>}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     );
                   })}
@@ -170,6 +204,41 @@ export default function FridayAudit() {
         )}
       </div>
     </DashboardLayout>
+  );
+}
+
+function AuditAdminCard({ audit }: { audit: any }) {
+  const clients = audit.selectedClients as AuditClient[];
+  return (
+    <div className="glass-btn rounded-xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-semibold text-white/80">{audit.coachName}</span>
+        {audit.allSubmittedAt ? (
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-400/15 text-emerald-400 border border-emerald-400/20">ALL SUBMITTED</span>
+        ) : (
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-400/15 text-red-400 border border-red-400/20">PENDING</span>
+        )}
+      </div>
+      <div className="space-y-2">
+        {clients.map((c, i) => {
+          const ratingInfo = RATINGS.find(r => r.value === c.rating);
+          return (
+            <div key={i} className={`rounded-lg px-3 py-2 border ${c.submitted ? "border-emerald-400/15 bg-emerald-400/[0.04]" : "border-white/[0.06] bg-white/[0.02]"}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-white/80">{c.name}</span>
+                  <span className="text-xs text-white/40">{DAY_LABELS[c.day] ?? c.day}</span>
+                  {ratingInfo && <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${ratingInfo.bg} ${ratingInfo.border} ${ratingInfo.text}`}>{ratingInfo.emoji} {ratingInfo.label}</span>}
+                </div>
+                {c.submitted ? <span className="text-[9px] text-emerald-400">✓</span> : <span className="text-[9px] text-white/30">pending</span>}
+              </div>
+              {c.loomLink && <a href={c.loomLink} target="_blank" rel="noopener noreferrer" className="text-xs text-violet-400 hover:underline block mt-1">🎥 {c.loomLink}</a>}
+              {c.notes && <p className="text-xs text-white/40 mt-1">{c.notes}</p>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

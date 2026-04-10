@@ -1,47 +1,41 @@
 var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// server/_core/index.ts
-import "dotenv/config";
-import express from "express";
-import { createServer } from "http";
-import net from "net";
-import { createExpressMiddleware } from "@trpc/server/adapters/express";
-
-// server/_core/auth.ts
-import { SignJWT, jwtVerify } from "jose";
-import { eq as eq2 } from "drizzle-orm";
-
-// server/db.ts
-import { drizzle } from "drizzle-orm/mysql2";
-import mysql from "mysql2/promise";
-import { eq, and, gte, lte, inArray } from "drizzle-orm";
-
 // server/env.ts
-var ENV = {
-  appId: process.env.VITE_APP_ID ?? "",
-  cookieSecret: process.env.JWT_SECRET ?? "",
-  databaseUrl: process.env.DATABASE_URL ?? "",
-  oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
-  ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
-  isProduction: process.env.NODE_ENV === "production",
-  forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
-  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
-  typeformApiToken: process.env.TYPEFORM_API_TOKEN ?? "",
-  typeformWebhookSecret: process.env.TYPEFORM_WEBHOOK_SECRET ?? "",
-  appUrl: process.env.APP_URL ?? "https://databitecoach.com",
-  slackBotToken: process.env.SLACK_BOT_TOKEN ?? "",
-  googleSheetsApiKey: process.env.GOOGLE_SHEETS_API_KEY ?? "",
-  managerSlackId: process.env.MANAGER_SLACK_ID ?? "",
-  port: parseInt(process.env.PORT ?? "3000", 10),
-  googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
-  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-  telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? "",
-  telegramManagerChatId: process.env.TELEGRAM_MANAGER_CHAT_ID ?? ""
-};
+var ENV;
+var init_env = __esm({
+  "server/env.ts"() {
+    "use strict";
+    ENV = {
+      appId: process.env.VITE_APP_ID ?? "",
+      cookieSecret: process.env.JWT_SECRET ?? "",
+      databaseUrl: process.env.DATABASE_URL ?? "",
+      oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
+      ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
+      isProduction: process.env.NODE_ENV === "production",
+      forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
+      forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+      typeformApiToken: process.env.TYPEFORM_API_TOKEN ?? "",
+      typeformWebhookSecret: process.env.TYPEFORM_WEBHOOK_SECRET ?? "",
+      appUrl: process.env.APP_URL ?? "https://databitecoach.com",
+      slackBotToken: process.env.SLACK_BOT_TOKEN ?? "",
+      googleSheetsApiKey: process.env.GOOGLE_SHEETS_API_KEY ?? "",
+      managerSlackId: process.env.MANAGER_SLACK_ID ?? "",
+      port: parseInt(process.env.PORT ?? "3000", 10),
+      googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
+      googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+      telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? "",
+      telegramManagerChatId: process.env.TELEGRAM_MANAGER_CHAT_ID ?? ""
+    };
+  }
+});
 
 // drizzle/schema.ts
 var schema_exports = {};
@@ -63,210 +57,218 @@ __export(schema_exports, {
   users: () => users
 });
 import { mysqlTable, int, varchar, text, timestamp, datetime, mysqlEnum, uniqueIndex, json, tinyint } from "drizzle-orm/mysql-core";
-var users = mysqlTable("users", {
-  id: int("id").autoincrement().primaryKey(),
-  name: varchar("name", { length: 256 }),
-  email: varchar("email", { length: 256 }),
-  role: varchar("role", { length: 32 }).default("coach").notNull(),
-  openId: varchar("openId", { length: 256 }),
-  profileImageUrl: varchar("profileImageUrl", { length: 512 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+var users, coaches, checkinRecords, clientCheckIns, excusedClients, rosterClientStarts, rosterWeeklySnapshots, kudos, sweepReports, clientRatings, slackReminderLog, pausedClients, salesCheckins, fridayAudits, auditHistory;
+var init_schema = __esm({
+  "drizzle/schema.ts"() {
+    "use strict";
+    users = mysqlTable("users", {
+      id: int("id").autoincrement().primaryKey(),
+      name: varchar("name", { length: 256 }),
+      email: varchar("email", { length: 256 }),
+      role: varchar("role", { length: 32 }).default("coach").notNull(),
+      openId: varchar("openId", { length: 256 }),
+      profileImageUrl: varchar("profileImageUrl", { length: 512 }),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    });
+    coaches = mysqlTable("coaches", {
+      id: int("id").autoincrement().primaryKey(),
+      name: varchar("name", { length: 128 }).notNull(),
+      email: varchar("email", { length: 256 }),
+      userId: int("userId"),
+      slackUserId: varchar("slackUserId", { length: 64 }),
+      timezone: varchar("timezone", { length: 64 }).default("Australia/Melbourne"),
+      reminderTimes: json("reminderTimes").$type(),
+      workdays: json("workdays").$type(),
+      remindersEnabled: tinyint("remindersEnabled").default(1),
+      leaveStartDate: varchar("leaveStartDate", { length: 10 }),
+      leaveEndDate: varchar("leaveEndDate", { length: 10 }),
+      isActive: tinyint("isActive").default(1).notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    });
+    checkinRecords = mysqlTable("checkin_records", {
+      id: int("id").autoincrement().primaryKey(),
+      coachId: int("coachId").notNull(),
+      recordDate: varchar("recordDate", { length: 10 }).notNull(),
+      // YYYY-MM-DD
+      // Morning review fields
+      scheduledCount: int("scheduledCount"),
+      completedCount: int("completedCount"),
+      moodScore: int("moodScore"),
+      // 1-5
+      actionPlan: text("actionPlan"),
+      workingHours: varchar("workingHours", { length: 256 }),
+      morningNotes: text("morningNotes"),
+      morningSubmittedAt: timestamp("morningSubmittedAt"),
+      // Follow-up outreach fields
+      followupCount: int("followupCount"),
+      followupNotes: text("followupNotes"),
+      followupSubmittedAt: timestamp("followupSubmittedAt"),
+      // Disengagement outreach fields
+      disengagementCount: int("disengagementCount"),
+      disengagementNotes: text("disengagementNotes"),
+      disengagementSubmittedAt: timestamp("disengagementSubmittedAt"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    }, (t2) => ({
+      uqCoachDate: uniqueIndex("uq_coach_date").on(t2.coachId, t2.recordDate)
+    }));
+    clientCheckIns = mysqlTable("client_check_ins", {
+      id: int("id").autoincrement().primaryKey(),
+      coachId: int("coachId").notNull(),
+      coachName: varchar("coachName", { length: 128 }).notNull(),
+      clientName: varchar("clientName", { length: 256 }).notNull(),
+      dayOfWeek: mysqlEnum("dayOfWeek", ["monday", "tuesday", "wednesday", "thursday", "friday"]).notNull(),
+      weekStart: varchar("weekStart", { length: 10 }).notNull(),
+      // YYYY-MM-DD (Monday)
+      completedByUserId: int("completedByUserId").default(0),
+      completedAt: timestamp("completedAt"),
+      clientSubmitted: tinyint("clientSubmitted").default(0),
+      clientSubmittedAt: timestamp("clientSubmittedAt"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    }, (t2) => ({
+      uqClientWeekDay: uniqueIndex("uq_client_week_day").on(t2.coachId, t2.clientName, t2.dayOfWeek, t2.weekStart)
+    }));
+    excusedClients = mysqlTable("excused_clients", {
+      id: int("id").autoincrement().primaryKey(),
+      coachId: int("coachId").notNull(),
+      coachName: varchar("coachName", { length: 128 }).notNull(),
+      clientName: varchar("clientName", { length: 256 }).notNull(),
+      dayOfWeek: mysqlEnum("dayOfWeek", ["monday", "tuesday", "wednesday", "thursday", "friday"]).notNull(),
+      weekStart: varchar("weekStart", { length: 10 }).notNull(),
+      reason: text("reason").notNull(),
+      status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
+      submittedByUserId: int("submittedByUserId").notNull(),
+      submittedAt: timestamp("submittedAt").defaultNow().notNull(),
+      reviewedByUserId: int("reviewedByUserId"),
+      reviewedAt: timestamp("reviewedAt"),
+      slackMessageTs: varchar("slackMessageTs", { length: 64 }),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    }, (t2) => ({
+      uqCoachClientDayWeek: uniqueIndex("uq_excused_client").on(t2.coachId, t2.clientName, t2.dayOfWeek, t2.weekStart)
+    }));
+    rosterClientStarts = mysqlTable("roster_client_starts", {
+      id: int("id").autoincrement().primaryKey(),
+      coachId: int("coachId").notNull(),
+      coachName: varchar("coachName", { length: 128 }).notNull(),
+      clientName: varchar("clientName", { length: 256 }).notNull(),
+      dayOfWeek: mysqlEnum("dayOfWeek", ["monday", "tuesday", "wednesday", "thursday", "friday"]).notNull(),
+      firstWeekStart: varchar("firstWeekStart", { length: 10 }).notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    }, (t2) => ({
+      uqRosterClient: uniqueIndex("uq_roster_client").on(t2.coachId, t2.clientName, t2.dayOfWeek)
+    }));
+    rosterWeeklySnapshots = mysqlTable("roster_weekly_snapshots", {
+      id: int("id").autoincrement().primaryKey(),
+      coachId: int("coachId").notNull(),
+      coachName: varchar("coachName", { length: 128 }).notNull(),
+      weekStart: varchar("weekStart", { length: 10 }).notNull(),
+      snapshotJson: json("snapshotJson").$type().notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    }, (t2) => ({
+      uqCoachWeek: uniqueIndex("uq_roster_snapshot").on(t2.coachId, t2.weekStart)
+    }));
+    kudos = mysqlTable("kudos", {
+      id: int("id").autoincrement().primaryKey(),
+      fromUserId: int("fromUserId").notNull(),
+      coachId: int("coachId").notNull(),
+      message: text("message").notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    sweepReports = mysqlTable("sweep_reports", {
+      id: int("id").autoincrement().primaryKey(),
+      title: varchar("title", { length: 256 }).notNull(),
+      createdByUserId: int("createdByUserId").notNull(),
+      createdByName: varchar("createdByName", { length: 256 }).notNull(),
+      snapshotJson: json("snapshotJson").notNull(),
+      weekStart: varchar("weekStart", { length: 10 }).notNull(),
+      isSaved: tinyint("isSaved").default(0).notNull(),
+      scopeType: varchar("scopeType", { length: 16 }).default("all").notNull(),
+      scopeCoachId: int("scopeCoachId"),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    });
+    clientRatings = mysqlTable("client_ratings", {
+      id: int("id").autoincrement().primaryKey(),
+      coachId: int("coachId").notNull(),
+      clientName: varchar("clientName", { length: 256 }).notNull(),
+      rating: mysqlEnum("rating", ["green", "yellow", "red"]).notNull(),
+      notes: text("notes"),
+      ratedAt: timestamp("ratedAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    }, (t2) => ({
+      uqCoachClient: uniqueIndex("uq_client_rating").on(t2.coachId, t2.clientName)
+    }));
+    slackReminderLog = mysqlTable("slack_reminder_log", {
+      id: int("id").autoincrement().primaryKey(),
+      coachId: int("coachId").notNull(),
+      reminderDate: varchar("reminderDate", { length: 10 }).notNull(),
+      reminderIndex: int("reminderIndex").notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    }, (t2) => ({
+      uqReminderSlot: uniqueIndex("uq_reminder_slot").on(t2.coachId, t2.reminderDate, t2.reminderIndex)
+    }));
+    pausedClients = mysqlTable("paused_clients", {
+      id: int("id").primaryKey().autoincrement(),
+      coachId: int("coachId").notNull(),
+      clientName: varchar("clientName", { length: 255 }).notNull(),
+      pausedByUserId: int("pausedByUserId"),
+      pausedAt: datetime("pausedAt"),
+      resumedAt: datetime("resumedAt")
+    });
+    salesCheckins = mysqlTable("sales_checkins", {
+      id: int("id").autoincrement().primaryKey(),
+      userId: int("userId").notNull(),
+      userName: varchar("userName", { length: 128 }).notNull(),
+      recordDate: varchar("recordDate", { length: 10 }).notNull(),
+      // YYYY-MM-DD
+      // Morning
+      moodScore: int("moodScore"),
+      intendedWorkingHours: varchar("intendedWorkingHours", { length: 128 }),
+      morningNotes: text("morningNotes"),
+      morningSubmittedAt: timestamp("morningSubmittedAt"),
+      // Evening
+      howDayWent: text("howDayWent"),
+      salesMade: int("salesMade"),
+      intendedHoursNextDay: varchar("intendedHoursNextDay", { length: 128 }),
+      eveningNotes: text("eveningNotes"),
+      eveningSubmittedAt: timestamp("eveningSubmittedAt"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    }, (t2) => ({
+      uqUserDate: uniqueIndex("uq_sales_user_date").on(t2.userId, t2.recordDate)
+    }));
+    fridayAudits = mysqlTable("friday_audits", {
+      id: int("id").autoincrement().primaryKey(),
+      coachId: int("coachId").notNull(),
+      coachName: varchar("coachName", { length: 128 }).notNull(),
+      weekStart: varchar("weekStart", { length: 10 }).notNull(),
+      selectedClients: json("selectedClients").$type().notNull(),
+      allSubmittedAt: timestamp("allSubmittedAt"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    }, (t2) => ({
+      uqCoachWeek: uniqueIndex("uq_friday_audit").on(t2.coachId, t2.weekStart)
+    }));
+    auditHistory = mysqlTable("audit_history", {
+      id: int("id").autoincrement().primaryKey(),
+      coachId: int("coachId").notNull(),
+      clientName: varchar("clientName", { length: 256 }).notNull(),
+      lastAuditedWeek: varchar("lastAuditedWeek", { length: 10 }).notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull()
+    }, (t2) => ({
+      uqCoachClient: uniqueIndex("uq_audit_coach_client").on(t2.coachId, t2.clientName)
+    }));
+  }
 });
-var coaches = mysqlTable("coaches", {
-  id: int("id").autoincrement().primaryKey(),
-  name: varchar("name", { length: 128 }).notNull(),
-  email: varchar("email", { length: 256 }),
-  userId: int("userId"),
-  slackUserId: varchar("slackUserId", { length: 64 }),
-  timezone: varchar("timezone", { length: 64 }).default("Australia/Melbourne"),
-  reminderTimes: json("reminderTimes").$type(),
-  workdays: json("workdays").$type(),
-  remindersEnabled: tinyint("remindersEnabled").default(1),
-  leaveStartDate: varchar("leaveStartDate", { length: 10 }),
-  leaveEndDate: varchar("leaveEndDate", { length: 10 }),
-  isActive: tinyint("isActive").default(1).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
-});
-var checkinRecords = mysqlTable("checkin_records", {
-  id: int("id").autoincrement().primaryKey(),
-  coachId: int("coachId").notNull(),
-  recordDate: varchar("recordDate", { length: 10 }).notNull(),
-  // YYYY-MM-DD
-  // Morning review fields
-  scheduledCount: int("scheduledCount"),
-  completedCount: int("completedCount"),
-  moodScore: int("moodScore"),
-  // 1-5
-  actionPlan: text("actionPlan"),
-  workingHours: varchar("workingHours", { length: 256 }),
-  morningNotes: text("morningNotes"),
-  morningSubmittedAt: timestamp("morningSubmittedAt"),
-  // Follow-up outreach fields
-  followupCount: int("followupCount"),
-  followupNotes: text("followupNotes"),
-  followupSubmittedAt: timestamp("followupSubmittedAt"),
-  // Disengagement outreach fields
-  disengagementCount: int("disengagementCount"),
-  disengagementNotes: text("disengagementNotes"),
-  disengagementSubmittedAt: timestamp("disengagementSubmittedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
-}, (t2) => ({
-  uqCoachDate: uniqueIndex("uq_coach_date").on(t2.coachId, t2.recordDate)
-}));
-var clientCheckIns = mysqlTable("client_check_ins", {
-  id: int("id").autoincrement().primaryKey(),
-  coachId: int("coachId").notNull(),
-  coachName: varchar("coachName", { length: 128 }).notNull(),
-  clientName: varchar("clientName", { length: 256 }).notNull(),
-  dayOfWeek: mysqlEnum("dayOfWeek", ["monday", "tuesday", "wednesday", "thursday", "friday"]).notNull(),
-  weekStart: varchar("weekStart", { length: 10 }).notNull(),
-  // YYYY-MM-DD (Monday)
-  completedByUserId: int("completedByUserId").default(0),
-  completedAt: timestamp("completedAt"),
-  clientSubmitted: tinyint("clientSubmitted").default(0),
-  clientSubmittedAt: timestamp("clientSubmittedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
-}, (t2) => ({
-  uqClientWeekDay: uniqueIndex("uq_client_week_day").on(t2.coachId, t2.clientName, t2.dayOfWeek, t2.weekStart)
-}));
-var excusedClients = mysqlTable("excused_clients", {
-  id: int("id").autoincrement().primaryKey(),
-  coachId: int("coachId").notNull(),
-  coachName: varchar("coachName", { length: 128 }).notNull(),
-  clientName: varchar("clientName", { length: 256 }).notNull(),
-  dayOfWeek: mysqlEnum("dayOfWeek", ["monday", "tuesday", "wednesday", "thursday", "friday"]).notNull(),
-  weekStart: varchar("weekStart", { length: 10 }).notNull(),
-  reason: text("reason").notNull(),
-  status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
-  submittedByUserId: int("submittedByUserId").notNull(),
-  submittedAt: timestamp("submittedAt").defaultNow().notNull(),
-  reviewedByUserId: int("reviewedByUserId"),
-  reviewedAt: timestamp("reviewedAt"),
-  slackMessageTs: varchar("slackMessageTs", { length: 64 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
-}, (t2) => ({
-  uqCoachClientDayWeek: uniqueIndex("uq_excused_client").on(t2.coachId, t2.clientName, t2.dayOfWeek, t2.weekStart)
-}));
-var rosterClientStarts = mysqlTable("roster_client_starts", {
-  id: int("id").autoincrement().primaryKey(),
-  coachId: int("coachId").notNull(),
-  coachName: varchar("coachName", { length: 128 }).notNull(),
-  clientName: varchar("clientName", { length: 256 }).notNull(),
-  dayOfWeek: mysqlEnum("dayOfWeek", ["monday", "tuesday", "wednesday", "thursday", "friday"]).notNull(),
-  firstWeekStart: varchar("firstWeekStart", { length: 10 }).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
-}, (t2) => ({
-  uqRosterClient: uniqueIndex("uq_roster_client").on(t2.coachId, t2.clientName, t2.dayOfWeek)
-}));
-var rosterWeeklySnapshots = mysqlTable("roster_weekly_snapshots", {
-  id: int("id").autoincrement().primaryKey(),
-  coachId: int("coachId").notNull(),
-  coachName: varchar("coachName", { length: 128 }).notNull(),
-  weekStart: varchar("weekStart", { length: 10 }).notNull(),
-  snapshotJson: json("snapshotJson").$type().notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-}, (t2) => ({
-  uqCoachWeek: uniqueIndex("uq_roster_snapshot").on(t2.coachId, t2.weekStart)
-}));
-var kudos = mysqlTable("kudos", {
-  id: int("id").autoincrement().primaryKey(),
-  fromUserId: int("fromUserId").notNull(),
-  coachId: int("coachId").notNull(),
-  message: text("message").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-});
-var sweepReports = mysqlTable("sweep_reports", {
-  id: int("id").autoincrement().primaryKey(),
-  title: varchar("title", { length: 256 }).notNull(),
-  createdByUserId: int("createdByUserId").notNull(),
-  createdByName: varchar("createdByName", { length: 256 }).notNull(),
-  snapshotJson: json("snapshotJson").notNull(),
-  weekStart: varchar("weekStart", { length: 10 }).notNull(),
-  isSaved: tinyint("isSaved").default(0).notNull(),
-  scopeType: varchar("scopeType", { length: 16 }).default("all").notNull(),
-  scopeCoachId: int("scopeCoachId"),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-});
-var clientRatings = mysqlTable("client_ratings", {
-  id: int("id").autoincrement().primaryKey(),
-  coachId: int("coachId").notNull(),
-  clientName: varchar("clientName", { length: 256 }).notNull(),
-  rating: mysqlEnum("rating", ["green", "yellow", "red"]).notNull(),
-  notes: text("notes"),
-  ratedAt: timestamp("ratedAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
-}, (t2) => ({
-  uqCoachClient: uniqueIndex("uq_client_rating").on(t2.coachId, t2.clientName)
-}));
-var slackReminderLog = mysqlTable("slack_reminder_log", {
-  id: int("id").autoincrement().primaryKey(),
-  coachId: int("coachId").notNull(),
-  reminderDate: varchar("reminderDate", { length: 10 }).notNull(),
-  reminderIndex: int("reminderIndex").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-}, (t2) => ({
-  uqReminderSlot: uniqueIndex("uq_reminder_slot").on(t2.coachId, t2.reminderDate, t2.reminderIndex)
-}));
-var pausedClients = mysqlTable("paused_clients", {
-  id: int("id").primaryKey().autoincrement(),
-  coachId: int("coachId").notNull(),
-  clientName: varchar("clientName", { length: 255 }).notNull(),
-  pausedByUserId: int("pausedByUserId"),
-  pausedAt: datetime("pausedAt"),
-  resumedAt: datetime("resumedAt")
-});
-var salesCheckins = mysqlTable("sales_checkins", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  userName: varchar("userName", { length: 128 }).notNull(),
-  recordDate: varchar("recordDate", { length: 10 }).notNull(),
-  // YYYY-MM-DD
-  // Morning
-  moodScore: int("moodScore"),
-  intendedWorkingHours: varchar("intendedWorkingHours", { length: 128 }),
-  morningNotes: text("morningNotes"),
-  morningSubmittedAt: timestamp("morningSubmittedAt"),
-  // Evening
-  howDayWent: text("howDayWent"),
-  salesMade: int("salesMade"),
-  intendedHoursNextDay: varchar("intendedHoursNextDay", { length: 128 }),
-  eveningNotes: text("eveningNotes"),
-  eveningSubmittedAt: timestamp("eveningSubmittedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
-}, (t2) => ({
-  uqUserDate: uniqueIndex("uq_sales_user_date").on(t2.userId, t2.recordDate)
-}));
-var fridayAudits = mysqlTable("friday_audits", {
-  id: int("id").autoincrement().primaryKey(),
-  coachId: int("coachId").notNull(),
-  coachName: varchar("coachName", { length: 128 }).notNull(),
-  weekStart: varchar("weekStart", { length: 10 }).notNull(),
-  selectedClients: json("selectedClients").$type().notNull(),
-  allSubmittedAt: timestamp("allSubmittedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
-}, (t2) => ({
-  uqCoachWeek: uniqueIndex("uq_friday_audit").on(t2.coachId, t2.weekStart)
-}));
-var auditHistory = mysqlTable("audit_history", {
-  id: int("id").autoincrement().primaryKey(),
-  coachId: int("coachId").notNull(),
-  clientName: varchar("clientName", { length: 256 }).notNull(),
-  lastAuditedWeek: varchar("lastAuditedWeek", { length: 10 }).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
-}, (t2) => ({
-  uqCoachClient: uniqueIndex("uq_audit_coach_client").on(t2.coachId, t2.clientName)
-}));
 
 // server/db.ts
-var db = null;
+import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
+import { eq, and, gte, lte, inArray } from "drizzle-orm";
 async function getDb() {
   if (db) return db;
   if (!ENV.databaseUrl) {
@@ -442,6 +444,583 @@ async function toggleClientSubmitted(params) {
     });
   }
 }
+var db;
+var init_db = __esm({
+  "server/db.ts"() {
+    "use strict";
+    init_env();
+    init_schema();
+    init_schema();
+    db = null;
+  }
+});
+
+// server/rosterUtils.ts
+async function fetchSheetRows() {
+  const now = Date.now();
+  if (_cachedRows && now - _cacheTime < CACHE_TTL_MS) return _cachedRows;
+  const apiKey = ENV.googleSheetsApiKey;
+  if (!apiKey) return [];
+  const range = encodeURIComponent(`${SHEET_TAB}!A1:J200`);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}?key=${apiKey}`;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(url);
+      const json2 = await res.json();
+      _cachedRows = json2.values ?? [];
+      _cacheTime = now;
+      return _cachedRows;
+    } catch {
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 1e3 * (attempt + 1)));
+    }
+  }
+  return [];
+}
+async function fetchRosterForCoach(coachName) {
+  const empty = {
+    monday: [],
+    tuesday: [],
+    wednesday: [],
+    thursday: [],
+    friday: []
+  };
+  const rows = await fetchSheetRows();
+  if (rows.length === 0) return empty;
+  const upperName = coachName.toUpperCase();
+  const aliases = [
+    upperName,
+    upperName.replace("STEVE", "STEPHEN"),
+    upperName.replace("STEPHEN", "STEVE")
+  ];
+  let sectionStart = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const cell = (rows[i]?.[0] ?? "").trim().toUpperCase();
+    if (aliases.some((a) => cell === `${a} - MONDAY`)) {
+      sectionStart = i;
+      break;
+    }
+  }
+  if (sectionStart === -1) return empty;
+  const headerRow = rows[sectionStart];
+  const prevRow = sectionStart > 0 ? rows[sectionStart - 1] ?? [] : [];
+  const colToDay = { 0: "monday" };
+  for (let col = 1; col <= 9; col++) {
+    const fromHeader = (headerRow[col] ?? "").trim().toLowerCase();
+    const fromPrev = (prevRow[col] ?? "").trim().toLowerCase();
+    const dayName = DAYS2.includes(fromHeader) ? fromHeader : DAYS2.includes(fromPrev) ? fromPrev : null;
+    if (dayName) colToDay[col] = dayName;
+  }
+  const days = { ...empty };
+  for (const [colStr, day] of Object.entries(colToDay)) {
+    const col = Number(colStr);
+    if (col === 0) continue;
+    const cell = (headerRow[col] ?? "").trim();
+    if (cell && !DAYS2.includes(cell.toLowerCase())) {
+      const name = cleanClientName(cell);
+      if (name) days[day].push(name);
+    }
+  }
+  for (let i = sectionStart + 1; i < rows.length; i++) {
+    const row = rows[i] ?? [];
+    const firstCell = (row[0] ?? "").trim();
+    if (/^[A-Z]+ - MONDAY$/i.test(firstCell) && i !== sectionStart) break;
+    if (!firstCell && row.every((c) => !c?.trim())) break;
+    for (const [colStr, day] of Object.entries(colToDay)) {
+      const raw = (row[Number(colStr)] ?? "").trim();
+      if (!raw) continue;
+      const name = cleanClientName(raw);
+      if (name) days[day].push(name);
+    }
+  }
+  return days;
+}
+function cleanClientName(raw) {
+  if (!raw) return "";
+  if (/^CLIENT NAME$/i.test(raw.trim())) return "";
+  if (/^UPFRONT$/i.test(raw.trim())) return "";
+  if (/^---/.test(raw.trim())) return "";
+  return raw.replace(/\s*\(.*\)\s*$/, "").trim();
+}
+async function fetchRawRosterForCoach(coachName) {
+  const empty = {
+    monday: [],
+    tuesday: [],
+    wednesday: [],
+    thursday: [],
+    friday: []
+  };
+  const rows = await fetchSheetRows();
+  if (rows.length === 0) return empty;
+  const upperName = coachName.toUpperCase();
+  const aliases = [upperName, upperName.replace("STEVE", "STEPHEN"), upperName.replace("STEPHEN", "STEVE")];
+  let sectionStart = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const cell = (rows[i]?.[0] ?? "").trim().toUpperCase();
+    if (aliases.some((a) => cell === `${a} - MONDAY`)) {
+      sectionStart = i;
+      break;
+    }
+  }
+  if (sectionStart === -1) return empty;
+  const headerRow = rows[sectionStart];
+  const prevRow = sectionStart > 0 ? rows[sectionStart - 1] ?? [] : [];
+  const colToDay = { 0: "monday" };
+  for (let col = 1; col <= 9; col++) {
+    const fromHeader = (headerRow[col] ?? "").trim().toLowerCase();
+    const fromPrev = (prevRow[col] ?? "").trim().toLowerCase();
+    const dayName = DAYS2.includes(fromHeader) ? fromHeader : DAYS2.includes(fromPrev) ? fromPrev : null;
+    if (dayName) colToDay[col] = dayName;
+  }
+  const days = { ...empty };
+  for (const [colStr, day] of Object.entries(colToDay)) {
+    const col = Number(colStr);
+    if (col === 0) continue;
+    const cell = (headerRow[col] ?? "").trim();
+    if (cell && !DAYS2.includes(cell.toLowerCase()) && !/^CLIENT NAME$/i.test(cell) && !/^UPFRONT$/i.test(cell) && !/^---/.test(cell)) {
+      days[day].push(cell);
+    }
+  }
+  for (let i = sectionStart + 1; i < rows.length; i++) {
+    const row = rows[i] ?? [];
+    const firstCell = (row[0] ?? "").trim();
+    if (/^[A-Z]+ - MONDAY$/i.test(firstCell) && i !== sectionStart) break;
+    if (!firstCell && row.every((c) => !c?.trim())) break;
+    for (const [colStr, day] of Object.entries(colToDay)) {
+      const raw = (row[Number(colStr)] ?? "").trim();
+      if (!raw || /^CLIENT NAME$/i.test(raw) || /^UPFRONT$/i.test(raw) || /^---/.test(raw)) continue;
+      days[day].push(raw);
+    }
+  }
+  return days;
+}
+var SHEET_ID, SHEET_TAB, DAYS2, _cachedRows, _cacheTime, CACHE_TTL_MS;
+var init_rosterUtils = __esm({
+  "server/rosterUtils.ts"() {
+    "use strict";
+    init_env();
+    SHEET_ID = "1puu4oLAmC5jV_GEmRrMxvXuTak_dl6pOJ6iWC44Nfl4";
+    SHEET_TAB = "CLIENT ROSTER";
+    DAYS2 = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+    _cachedRows = null;
+    _cacheTime = 0;
+    CACHE_TTL_MS = 5 * 60 * 1e3;
+  }
+});
+
+// server/slackReminders.ts
+import { eq as eq3 } from "drizzle-orm";
+async function sendSlackDM(slackUserId, text2) {
+  if (!SLACK_BOT_TOKEN) {
+    console.warn("[Slack] SLACK_BOT_TOKEN not set \u2014 skipping DM");
+    return false;
+  }
+  try {
+    const response = await fetch("https://slack.com/api/chat.postMessage", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        Authorization: `Bearer ${SLACK_BOT_TOKEN}`
+      },
+      body: JSON.stringify({
+        channel: slackUserId,
+        text: text2,
+        unfurl_links: false
+      })
+    });
+    const data = await response.json();
+    if (!data.ok) {
+      console.error(`[Slack] Failed to send DM to ${slackUserId}: ${data.error}`);
+      return false;
+    }
+    console.log(`[Slack] DM sent to ${slackUserId}`);
+    return true;
+  } catch (err) {
+    console.error(`[Slack] Error sending DM to ${slackUserId}:`, err);
+    return false;
+  }
+}
+function getLocalHHMM(timezone) {
+  const now = /* @__PURE__ */ new Date();
+  const parts = new Intl.DateTimeFormat("en-AU", {
+    timeZone: timezone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).formatToParts(now);
+  const hour = parts.find((p) => p.type === "hour")?.value ?? "00";
+  const minute = parts.find((p) => p.type === "minute")?.value ?? "00";
+  return `${hour}:${minute}`;
+}
+function getLocalDateString(timezone) {
+  const now = /* @__PURE__ */ new Date();
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(now);
+}
+function getLocalDayOfWeek(timezone) {
+  const now = /* @__PURE__ */ new Date();
+  const formatter = new Intl.DateTimeFormat("en-AU", {
+    timeZone: timezone,
+    weekday: "short"
+  });
+  const day = formatter.format(now);
+  const map = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return map[day] ?? (/* @__PURE__ */ new Date()).getDay();
+}
+function parseJSON(value, fallback) {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+async function claimReminderSlot(coachId, reminderDate, reminderIndex) {
+  const db2 = await getDb();
+  if (!db2) return false;
+  try {
+    await db2.insert(slackReminderLog).values({ coachId, reminderDate, reminderIndex });
+    return true;
+  } catch (err) {
+    const anyErr = err;
+    const causeCode = anyErr?.cause?.code;
+    const causeErrno = anyErr?.cause?.errno;
+    const causeMsg = anyErr?.cause?.message ?? "";
+    const topMsg = anyErr?.message ?? "";
+    const isDuplicate = causeCode === "ER_DUP_ENTRY" || causeErrno === 1062 || causeMsg.includes("Duplicate entry") || topMsg.includes("Duplicate entry");
+    if (isDuplicate) {
+      console.log(`[Slack Reminders] Slot already claimed for coach ${coachId} on ${reminderDate} index ${reminderIndex} \u2014 skipping duplicate`);
+      return false;
+    }
+    console.error("[Slack Reminders] claimReminderSlot unexpected error:", err);
+    return false;
+  }
+}
+async function runReminderTick() {
+  const db2 = await getDb();
+  if (!db2) return;
+  const allCoaches = await db2.select().from(coaches).where(eq3(coaches.isActive, 1));
+  for (const coach of allCoaches) {
+    if (!coach.slackUserId || !coach.remindersEnabled) continue;
+    const timezone = coach.timezone ?? "Australia/Melbourne";
+    const workdays = parseJSON(coach.workdays, DEFAULT_WORKDAYS);
+    const reminderTimes = parseJSON(coach.reminderTimes, DEFAULT_TIMES);
+    const localDay = getLocalDayOfWeek(timezone);
+    const localTime = getLocalHHMM(timezone);
+    const localDate = getLocalDateString(timezone);
+    if (coach.leaveStartDate && coach.leaveEndDate) {
+      if (localDate >= coach.leaveStartDate && localDate <= coach.leaveEndDate) {
+        console.log(`[Slack Reminders] Coach ${coach.id} is on scheduled leave (${coach.leaveStartDate} \u2013 ${coach.leaveEndDate}) \u2014 skipping`);
+        continue;
+      }
+    } else if (coach.leaveStartDate && !coach.leaveEndDate) {
+      if (localDate >= coach.leaveStartDate) {
+        console.log(`[Slack Reminders] Coach ${coach.id} is on open-ended leave from ${coach.leaveStartDate} \u2014 skipping`);
+        continue;
+      }
+    }
+    if (!workdays.includes(localDay)) continue;
+    const matchIndex = reminderTimes.indexOf(localTime);
+    if (matchIndex === -1) continue;
+    const reminder = REMINDER_LABELS[matchIndex];
+    if (!reminder) continue;
+    const claimed = await claimReminderSlot(coach.id, localDate, matchIndex);
+    if (!claimed) continue;
+    const desc2 = REMINDER_DESCRIPTIONS[matchIndex] ?? "";
+    const url = `${APP_URL}${reminder.path}`;
+    const message = `${reminder.emoji} *Coach Check-In Reminder \u2014 ${reminder.label}*
+${desc2}
+
+\u{1F449} <${url}|Open the form here>`;
+    await sendSlackDM(coach.slackUserId, message);
+  }
+}
+async function runSalesReminderTick() {
+  for (const person of SALES_TEAM) {
+    const localDay = getLocalDayOfWeek(person.timezone);
+    const localTime = getLocalHHMM(person.timezone);
+    const localDate = getLocalDateString(person.timezone);
+    if (!person.workdays.includes(localDay)) continue;
+    for (const reminder of SALES_REMINDERS) {
+      const targetTime = person[reminder.time];
+      if (localTime !== targetTime) continue;
+      const claimed = await claimReminderSlot(9e3 + SALES_TEAM.indexOf(person), localDate, reminder.index);
+      if (!claimed) continue;
+      const url = `${APP_URL}${reminder.path}`;
+      const message = `${reminder.emoji} *Sales Check-In Reminder \u2014 ${reminder.label}*
+${reminder.desc}
+
+\u{1F449} <${url}|Open the form here>`;
+      await sendSlackDM(person.slackUserId, message);
+    }
+  }
+}
+async function sendFortnightlyPerformanceReviewReminder() {
+  const MANAGER_SLACK_ID4 = ENV.managerSlackId;
+  if (!SLACK_BOT_TOKEN || !MANAGER_SLACK_ID4) {
+    console.warn("[Slack Fortnightly] SLACK_BOT_TOKEN or MANAGER_SLACK_ID not set \u2014 skipping");
+    return;
+  }
+  const now = /* @__PURE__ */ new Date();
+  const aestDateStr = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Australia/Melbourne",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(now);
+  const aestDate = /* @__PURE__ */ new Date(aestDateStr + "T00:00:00Z");
+  const dayOfWeek = aestDate.getUTCDay() || 7;
+  const thursday = new Date(aestDate);
+  thursday.setUTCDate(aestDate.getUTCDate() + (4 - dayOfWeek));
+  const yearStart = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 1));
+  const isoWeek = Math.ceil(((thursday.getTime() - yearStart.getTime()) / 864e5 + 1) / 7);
+  if (isoWeek % 2 !== 0) {
+    console.log(`[Slack Fortnightly] ISO week ${isoWeek} is odd \u2014 coach review week, no manager reminder`);
+    return;
+  }
+  const APP_URL_LOCAL = ENV.appUrl || "https://databitecoach.com";
+  const url = `${APP_URL_LOCAL}/client-progress`;
+  const message = `\u{1F4CA} *Fortnightly Client Progress Review*
+It's your fortnightly check-in to review and update client ratings in the performance tracker.
+
+*What to do:*
+\u2022 Review each coach's roster and update the traffic light ratings (\u{1F7E2} On Track / \u{1F7E1} Neutral / \u{1F534} Off Track)
+\u2022 Add notes for any clients who have changed status since the last review
+\u2022 Check the KPI summary \u2014 target is *70% On Track* across the business
+
+\u{1F449} <${url}|Open Client Progress Tracker>`;
+  await sendSlackDM(MANAGER_SLACK_ID4, message);
+  console.log("[Slack Fortnightly] Performance review reminder sent to manager");
+}
+async function sendFortnightlySweepReportReminder() {
+  const MANAGER_SLACK_ID4 = ENV.managerSlackId;
+  if (!SLACK_BOT_TOKEN || !MANAGER_SLACK_ID4) {
+    console.warn("[Slack Sweep Reminder] SLACK_BOT_TOKEN or MANAGER_SLACK_ID not set \u2014 skipping");
+    return;
+  }
+  const now = /* @__PURE__ */ new Date();
+  const aestDateStr = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Australia/Melbourne",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(now);
+  const aestDate = /* @__PURE__ */ new Date(aestDateStr + "T00:00:00Z");
+  const dayOfWeek = aestDate.getUTCDay() || 7;
+  const thursday = new Date(aestDate);
+  thursday.setUTCDate(aestDate.getUTCDate() + (4 - dayOfWeek));
+  const yearStart = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 1));
+  const isoWeek = Math.ceil(((thursday.getTime() - yearStart.getTime()) / 864e5 + 1) / 7);
+  if (isoWeek % 2 === 0) {
+    console.log(`[Slack Sweep Reminder] ISO week ${isoWeek} is even \u2014 performance review week, no sweep reminder`);
+    return;
+  }
+  const APP_URL_LOCAL = ENV.appUrl || "https://databitecoach.com";
+  const url = `${APP_URL_LOCAL}/client-progress`;
+  const message = `\u{1F4CB} *Fortnightly Post-Sweep Report*
+Time to generate and save this fortnight's sweep report.
+
+*What to do:*
+\u2022 Head to Client Progress and click *Generate Post-Sweep Report*
+\u2022 Give the report a title (e.g. "Sweep \u2014 Week ${isoWeek}, ${(/* @__PURE__ */ new Date()).getFullYear()}")
+\u2022 Review the report, then click *Save Report* to add it to the history
+\u2022 Use *Compare to Previous* to see what changed since the last sweep
+
+\u{1F449} <${url}|Open Client Progress Tracker>`;
+  await sendSlackDM(MANAGER_SLACK_ID4, message);
+  console.log("[Slack Sweep Reminder] Fortnightly sweep report reminder sent to manager");
+}
+var SLACK_BOT_TOKEN, APP_URL, REMINDER_LABELS, REMINDER_DESCRIPTIONS, DEFAULT_WORKDAYS, DEFAULT_TIMES, SALES_TEAM, SALES_REMINDERS;
+var init_slackReminders = __esm({
+  "server/slackReminders.ts"() {
+    "use strict";
+    init_db();
+    init_env();
+    init_schema();
+    SLACK_BOT_TOKEN = ENV.slackBotToken;
+    APP_URL = ENV.appUrl || "https://databitecoach.com";
+    REMINDER_LABELS = [
+      { index: 0, label: "Morning Review", path: "/coach?form=morning", emoji: "\u{1F305}" },
+      { index: 1, label: "Follow-Up Outreach", path: "/coach?form=followup", emoji: "\u{1F4E8}" },
+      { index: 2, label: "Disengagement Outreach", path: "/coach?form=disengagement", emoji: "\u{1F50D}" }
+    ];
+    REMINDER_DESCRIPTIONS = [
+      "Time to submit your morning review \u2014 log last work day's scheduled vs completed check-ins.",
+      "Check-in cut-off has passed \u2014 log how many follow-up messages you've sent to clients who missed their check-in.",
+      "Time to log your disengagement outreach \u2014 how many clients haven't logged weight/nutrition for 3+ days did you reach out to?"
+    ];
+    DEFAULT_WORKDAYS = [1, 2, 3, 4, 5];
+    DEFAULT_TIMES = ["08:30", "11:00", "14:00"];
+    SALES_TEAM = [
+      { name: "Yaman", slackUserId: "U0AN8E2RE5S", timezone: "Australia/Melbourne", workdays: [1, 2, 3, 4, 5], morningTime: "08:30", eveningTime: "18:00" }
+    ];
+    SALES_REMINDERS = [
+      { index: 10, time: "morningTime", label: "Morning Check-In", emoji: "\u{1F305}", desc: "Time to submit your morning check-in \u2014 how are you feeling and what are your planned hours?", path: "/sales" },
+      { index: 11, time: "eveningTime", label: "Evening Check-In", emoji: "\u{1F319}", desc: "End of day \u2014 how did your day go, any sales, and what are your planned hours for tomorrow?", path: "/sales" }
+    ];
+  }
+});
+
+// server/slackFridayAudit.ts
+var slackFridayAudit_exports = {};
+__export(slackFridayAudit_exports, {
+  checkMissedAudits: () => checkMissedAudits,
+  sendFridayAudit: () => sendFridayAudit
+});
+import { eq as eq4, and as and2, isNull } from "drizzle-orm";
+function getMonday2(dateStr) {
+  const d = dateStr ? /* @__PURE__ */ new Date(dateStr + "T00:00:00") : new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "Australia/Melbourne" }));
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function getTodayMelbourne() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Melbourne" }).format(/* @__PURE__ */ new Date());
+}
+async function sendFridayAudit() {
+  const db2 = await getDb();
+  if (!db2) return;
+  const weekStart = getMonday2(getTodayMelbourne());
+  const appUrl = ENV.appUrl || "https://coach.databite.com.au";
+  const allCoaches = await db2.select().from(coaches).where(eq4(coaches.isActive, 1));
+  for (const coach of allCoaches) {
+    if (!coach.slackUserId) continue;
+    const claimed = await claimReminderSlot(coach.id, getTodayMelbourne(), 20);
+    if (!claimed) continue;
+    const existing = await db2.select().from(fridayAudits).where(and2(eq4(fridayAudits.coachId, coach.id), eq4(fridayAudits.weekStart, weekStart))).limit(1);
+    if (existing.length > 0) continue;
+    const roster = await fetchRosterForCoach(coach.name);
+    const completions = await db2.select().from(clientCheckIns).where(and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, weekStart)));
+    const completedSet = new Set(
+      completions.filter((c) => c.completedAt != null && c.clientSubmitted === 1).map((c) => `${c.clientName}|${c.dayOfWeek}`)
+    );
+    for (const c of completions) {
+      if (c.completedAt != null && c.clientSubmitted === 1) {
+        const base = c.clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+        if (base !== c.clientName) completedSet.add(`${base}|${c.dayOfWeek}`);
+      }
+    }
+    const prevAudited = await db2.select().from(auditHistory).where(eq4(auditHistory.coachId, coach.id));
+    const auditedSet = new Set(prevAudited.map((a) => a.clientName));
+    const eligibleByDay = {};
+    let totalEligible = 0;
+    for (const day of DAYS2) {
+      const clients = roster[day] ?? [];
+      const eligible = clients.filter((name) => {
+        const key = `${name}|${day}`;
+        return completedSet.has(key) && !auditedSet.has(name);
+      });
+      if (eligible.length > 0) {
+        eligibleByDay[day] = eligible;
+        totalEligible += eligible.length;
+      }
+    }
+    if (totalEligible === 0) {
+      await db2.delete(auditHistory).where(eq4(auditHistory.coachId, coach.id));
+      for (const day of DAYS2) {
+        const clients = roster[day] ?? [];
+        const eligible = clients.filter((name) => completedSet.has(`${name}|${day}`));
+        if (eligible.length > 0) {
+          eligibleByDay[day] = eligible;
+          totalEligible += eligible.length;
+        }
+      }
+    }
+    const daysWithClients = DAYS2.filter((d) => (eligibleByDay[d]?.length ?? 0) > 0);
+    const shuffledDays = daysWithClients.sort(() => Math.random() - 0.5).slice(0, 3);
+    const selected = [];
+    for (const day of shuffledDays) {
+      const dayClients = eligibleByDay[day];
+      const pick = dayClients[Math.floor(Math.random() * dayClients.length)];
+      selected.push({ name: pick, day });
+    }
+    if (selected.length === 0) {
+      console.log(`[Friday Audit] ${coach.name}: no eligible clients this week \u2014 skipping`);
+      continue;
+    }
+    const selectedWithSubmission = selected.map((s) => ({ ...s, submitted: false }));
+    await db2.insert(fridayAudits).values({
+      coachId: coach.id,
+      coachName: coach.name,
+      weekStart,
+      selectedClients: selectedWithSubmission
+    });
+    for (const s of selected) {
+      const existingHistory = await db2.select().from(auditHistory).where(and2(eq4(auditHistory.coachId, coach.id), eq4(auditHistory.clientName, s.name))).limit(1);
+      if (existingHistory.length > 0) {
+        await db2.update(auditHistory).set({ lastAuditedWeek: weekStart }).where(eq4(auditHistory.id, existingHistory[0].id));
+      } else {
+        await db2.insert(auditHistory).values({
+          coachId: coach.id,
+          clientName: s.name,
+          lastAuditedWeek: weekStart
+        });
+      }
+    }
+    const DAY_LABELS = { monday: "Monday", tuesday: "Tuesday", wednesday: "Wednesday", thursday: "Thursday", friday: "Friday" };
+    const clientList = selected.map((s) => `\u2022 *${s.name}* (${DAY_LABELS[s.day] ?? s.day})`).join("\n");
+    const message = `\u{1F4CB} *Friday Quality Audit*
+
+These 3 clients have been randomly selected for review this week:
+
+${clientList}
+
+Please submit a Loom link or notes for each client's check-in by *8:00pm today*.
+
+\u{1F449} <${appUrl}/audit|Submit your audit>`;
+    await sendSlackDM(coach.slackUserId, message);
+    console.log(`[Friday Audit] ${coach.name}: sent audit for ${selected.map((s) => s.name).join(", ")}`);
+  }
+}
+async function checkMissedAudits() {
+  const db2 = await getDb();
+  if (!db2) return;
+  const managerSlackId = ENV.managerSlackId;
+  if (!managerSlackId) return;
+  const weekStart = getMonday2(getTodayMelbourne());
+  const audits = await db2.select().from(fridayAudits).where(and2(eq4(fridayAudits.weekStart, weekStart), isNull(fridayAudits.allSubmittedAt)));
+  for (const audit of audits) {
+    const clients = audit.selectedClients;
+    const pending = clients.filter((c) => !c.submitted);
+    if (pending.length === 0) continue;
+    const message = `\u26A0\uFE0F *${audit.coachName}* has not completed their Friday audit
+
+${pending.length} of ${clients.length} clients still pending:
+` + pending.map((c) => `\u2022 ${c.name}`).join("\n");
+    const claimed = await claimReminderSlot(audit.coachId, getTodayMelbourne(), 21);
+    if (claimed) {
+      await sendSlackDM(managerSlackId, message);
+    }
+  }
+}
+var init_slackFridayAudit = __esm({
+  "server/slackFridayAudit.ts"() {
+    "use strict";
+    init_db();
+    init_schema();
+    init_rosterUtils();
+    init_slackReminders();
+    init_env();
+  }
+});
+
+// server/_core/index.ts
+import "dotenv/config";
+import express from "express";
+import { createServer } from "http";
+import net from "net";
+import { createExpressMiddleware } from "@trpc/server/adapters/express";
+
+// server/_core/auth.ts
+init_db();
+init_schema();
+init_env();
+import { SignJWT, jwtVerify } from "jose";
+import { eq as eq2 } from "drizzle-orm";
 
 // shared/const.ts
 var UNAUTHED_ERR_MSG = "UNAUTHORIZED";
@@ -723,157 +1302,19 @@ async function registerAuthRoutes(app) {
 }
 
 // server/routers.ts
+init_db();
+init_rosterUtils();
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { z } from "zod";
-import { eq as eq4, and as and2, gte as gte2, lte as lte2, desc, sql, inArray as inArray2, asc, isNull } from "drizzle-orm";
-
-// server/rosterUtils.ts
-var SHEET_ID = "1puu4oLAmC5jV_GEmRrMxvXuTak_dl6pOJ6iWC44Nfl4";
-var SHEET_TAB = "CLIENT ROSTER";
-var DAYS2 = ["monday", "tuesday", "wednesday", "thursday", "friday"];
-var _cachedRows = null;
-var _cacheTime = 0;
-var CACHE_TTL_MS = 5 * 60 * 1e3;
-async function fetchSheetRows() {
-  const now = Date.now();
-  if (_cachedRows && now - _cacheTime < CACHE_TTL_MS) return _cachedRows;
-  const apiKey = ENV.googleSheetsApiKey;
-  if (!apiKey) return [];
-  const range = encodeURIComponent(`${SHEET_TAB}!A1:J200`);
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}?key=${apiKey}`;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const res = await fetch(url);
-      const json2 = await res.json();
-      _cachedRows = json2.values ?? [];
-      _cacheTime = now;
-      return _cachedRows;
-    } catch {
-      if (attempt < 2) await new Promise((r) => setTimeout(r, 1e3 * (attempt + 1)));
-    }
-  }
-  return [];
-}
-async function fetchRosterForCoach(coachName) {
-  const empty = {
-    monday: [],
-    tuesday: [],
-    wednesday: [],
-    thursday: [],
-    friday: []
-  };
-  const rows = await fetchSheetRows();
-  if (rows.length === 0) return empty;
-  const upperName = coachName.toUpperCase();
-  const aliases = [
-    upperName,
-    upperName.replace("STEVE", "STEPHEN"),
-    upperName.replace("STEPHEN", "STEVE")
-  ];
-  let sectionStart = -1;
-  for (let i = 0; i < rows.length; i++) {
-    const cell = (rows[i]?.[0] ?? "").trim().toUpperCase();
-    if (aliases.some((a) => cell === `${a} - MONDAY`)) {
-      sectionStart = i;
-      break;
-    }
-  }
-  if (sectionStart === -1) return empty;
-  const headerRow = rows[sectionStart];
-  const prevRow = sectionStart > 0 ? rows[sectionStart - 1] ?? [] : [];
-  const colToDay = { 0: "monday" };
-  for (let col = 1; col <= 9; col++) {
-    const fromHeader = (headerRow[col] ?? "").trim().toLowerCase();
-    const fromPrev = (prevRow[col] ?? "").trim().toLowerCase();
-    const dayName = DAYS2.includes(fromHeader) ? fromHeader : DAYS2.includes(fromPrev) ? fromPrev : null;
-    if (dayName) colToDay[col] = dayName;
-  }
-  const days = { ...empty };
-  for (const [colStr, day] of Object.entries(colToDay)) {
-    const col = Number(colStr);
-    if (col === 0) continue;
-    const cell = (headerRow[col] ?? "").trim();
-    if (cell && !DAYS2.includes(cell.toLowerCase())) {
-      const name = cleanClientName(cell);
-      if (name) days[day].push(name);
-    }
-  }
-  for (let i = sectionStart + 1; i < rows.length; i++) {
-    const row = rows[i] ?? [];
-    const firstCell = (row[0] ?? "").trim();
-    if (/^[A-Z]+ - MONDAY$/i.test(firstCell) && i !== sectionStart) break;
-    if (!firstCell && row.every((c) => !c?.trim())) break;
-    for (const [colStr, day] of Object.entries(colToDay)) {
-      const raw = (row[Number(colStr)] ?? "").trim();
-      if (!raw) continue;
-      const name = cleanClientName(raw);
-      if (name) days[day].push(name);
-    }
-  }
-  return days;
-}
-function cleanClientName(raw) {
-  if (!raw) return "";
-  if (/^CLIENT NAME$/i.test(raw.trim())) return "";
-  if (/^UPFRONT$/i.test(raw.trim())) return "";
-  if (/^---/.test(raw.trim())) return "";
-  return raw.replace(/\s*\(.*\)\s*$/, "").trim();
-}
-async function fetchRawRosterForCoach(coachName) {
-  const empty = {
-    monday: [],
-    tuesday: [],
-    wednesday: [],
-    thursday: [],
-    friday: []
-  };
-  const rows = await fetchSheetRows();
-  if (rows.length === 0) return empty;
-  const upperName = coachName.toUpperCase();
-  const aliases = [upperName, upperName.replace("STEVE", "STEPHEN"), upperName.replace("STEPHEN", "STEVE")];
-  let sectionStart = -1;
-  for (let i = 0; i < rows.length; i++) {
-    const cell = (rows[i]?.[0] ?? "").trim().toUpperCase();
-    if (aliases.some((a) => cell === `${a} - MONDAY`)) {
-      sectionStart = i;
-      break;
-    }
-  }
-  if (sectionStart === -1) return empty;
-  const headerRow = rows[sectionStart];
-  const prevRow = sectionStart > 0 ? rows[sectionStart - 1] ?? [] : [];
-  const colToDay = { 0: "monday" };
-  for (let col = 1; col <= 9; col++) {
-    const fromHeader = (headerRow[col] ?? "").trim().toLowerCase();
-    const fromPrev = (prevRow[col] ?? "").trim().toLowerCase();
-    const dayName = DAYS2.includes(fromHeader) ? fromHeader : DAYS2.includes(fromPrev) ? fromPrev : null;
-    if (dayName) colToDay[col] = dayName;
-  }
-  const days = { ...empty };
-  for (const [colStr, day] of Object.entries(colToDay)) {
-    const col = Number(colStr);
-    if (col === 0) continue;
-    const cell = (headerRow[col] ?? "").trim();
-    if (cell && !DAYS2.includes(cell.toLowerCase()) && !/^CLIENT NAME$/i.test(cell) && !/^UPFRONT$/i.test(cell) && !/^---/.test(cell)) {
-      days[day].push(cell);
-    }
-  }
-  for (let i = sectionStart + 1; i < rows.length; i++) {
-    const row = rows[i] ?? [];
-    const firstCell = (row[0] ?? "").trim();
-    if (/^[A-Z]+ - MONDAY$/i.test(firstCell) && i !== sectionStart) break;
-    if (!firstCell && row.every((c) => !c?.trim())) break;
-    for (const [colStr, day] of Object.entries(colToDay)) {
-      const raw = (row[Number(colStr)] ?? "").trim();
-      if (!raw || /^CLIENT NAME$/i.test(raw) || /^UPFRONT$/i.test(raw) || /^---/.test(raw)) continue;
-      days[day].push(raw);
-    }
-  }
-  return days;
-}
+import { eq as eq5, and as and3, gte as gte2, lte as lte2, desc, sql, inArray as inArray2, asc, isNull as isNull2 } from "drizzle-orm";
+init_env();
+init_schema();
 
 // server/typeformBackfill.ts
+init_db();
+init_env();
+init_rosterUtils();
 var TYPEFORM_API_TOKEN = ENV.typeformApiToken ?? "";
 var FORM_CONFIGS = [
   {
@@ -1018,256 +1459,10 @@ async function runTypeformBackfill() {
   return results;
 }
 
-// server/slackReminders.ts
-import { eq as eq3 } from "drizzle-orm";
-var SLACK_BOT_TOKEN = ENV.slackBotToken;
-var APP_URL = ENV.appUrl || "https://databitecoach.com";
-var REMINDER_LABELS = [
-  { index: 0, label: "Morning Review", path: "/coach?form=morning", emoji: "\u{1F305}" },
-  { index: 1, label: "Follow-Up Outreach", path: "/coach?form=followup", emoji: "\u{1F4E8}" },
-  { index: 2, label: "Disengagement Outreach", path: "/coach?form=disengagement", emoji: "\u{1F50D}" }
-];
-var REMINDER_DESCRIPTIONS = [
-  "Time to submit your morning review \u2014 log last work day's scheduled vs completed check-ins.",
-  "Check-in cut-off has passed \u2014 log how many follow-up messages you've sent to clients who missed their check-in.",
-  "Time to log your disengagement outreach \u2014 how many clients haven't logged weight/nutrition for 3+ days did you reach out to?"
-];
-async function sendSlackDM(slackUserId, text2) {
-  if (!SLACK_BOT_TOKEN) {
-    console.warn("[Slack] SLACK_BOT_TOKEN not set \u2014 skipping DM");
-    return false;
-  }
-  try {
-    const response = await fetch("https://slack.com/api/chat.postMessage", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        Authorization: `Bearer ${SLACK_BOT_TOKEN}`
-      },
-      body: JSON.stringify({
-        channel: slackUserId,
-        text: text2,
-        unfurl_links: false
-      })
-    });
-    const data = await response.json();
-    if (!data.ok) {
-      console.error(`[Slack] Failed to send DM to ${slackUserId}: ${data.error}`);
-      return false;
-    }
-    console.log(`[Slack] DM sent to ${slackUserId}`);
-    return true;
-  } catch (err) {
-    console.error(`[Slack] Error sending DM to ${slackUserId}:`, err);
-    return false;
-  }
-}
-function getLocalHHMM(timezone) {
-  const now = /* @__PURE__ */ new Date();
-  const parts = new Intl.DateTimeFormat("en-AU", {
-    timeZone: timezone,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).formatToParts(now);
-  const hour = parts.find((p) => p.type === "hour")?.value ?? "00";
-  const minute = parts.find((p) => p.type === "minute")?.value ?? "00";
-  return `${hour}:${minute}`;
-}
-function getLocalDateString(timezone) {
-  const now = /* @__PURE__ */ new Date();
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).format(now);
-}
-function getLocalDayOfWeek(timezone) {
-  const now = /* @__PURE__ */ new Date();
-  const formatter = new Intl.DateTimeFormat("en-AU", {
-    timeZone: timezone,
-    weekday: "short"
-  });
-  const day = formatter.format(now);
-  const map = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-  return map[day] ?? (/* @__PURE__ */ new Date()).getDay();
-}
-function parseJSON(value, fallback) {
-  if (!value) return fallback;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return fallback;
-  }
-}
-var DEFAULT_WORKDAYS = [1, 2, 3, 4, 5];
-var DEFAULT_TIMES = ["08:30", "11:00", "14:00"];
-async function claimReminderSlot(coachId, reminderDate, reminderIndex) {
-  const db2 = await getDb();
-  if (!db2) return false;
-  try {
-    await db2.insert(slackReminderLog).values({ coachId, reminderDate, reminderIndex });
-    return true;
-  } catch (err) {
-    const anyErr = err;
-    const causeCode = anyErr?.cause?.code;
-    const causeErrno = anyErr?.cause?.errno;
-    const causeMsg = anyErr?.cause?.message ?? "";
-    const topMsg = anyErr?.message ?? "";
-    const isDuplicate = causeCode === "ER_DUP_ENTRY" || causeErrno === 1062 || causeMsg.includes("Duplicate entry") || topMsg.includes("Duplicate entry");
-    if (isDuplicate) {
-      console.log(`[Slack Reminders] Slot already claimed for coach ${coachId} on ${reminderDate} index ${reminderIndex} \u2014 skipping duplicate`);
-      return false;
-    }
-    console.error("[Slack Reminders] claimReminderSlot unexpected error:", err);
-    return false;
-  }
-}
-async function runReminderTick() {
-  const db2 = await getDb();
-  if (!db2) return;
-  const allCoaches = await db2.select().from(coaches).where(eq3(coaches.isActive, 1));
-  for (const coach of allCoaches) {
-    if (!coach.slackUserId || !coach.remindersEnabled) continue;
-    const timezone = coach.timezone ?? "Australia/Melbourne";
-    const workdays = parseJSON(coach.workdays, DEFAULT_WORKDAYS);
-    const reminderTimes = parseJSON(coach.reminderTimes, DEFAULT_TIMES);
-    const localDay = getLocalDayOfWeek(timezone);
-    const localTime = getLocalHHMM(timezone);
-    const localDate = getLocalDateString(timezone);
-    if (coach.leaveStartDate && coach.leaveEndDate) {
-      if (localDate >= coach.leaveStartDate && localDate <= coach.leaveEndDate) {
-        console.log(`[Slack Reminders] Coach ${coach.id} is on scheduled leave (${coach.leaveStartDate} \u2013 ${coach.leaveEndDate}) \u2014 skipping`);
-        continue;
-      }
-    } else if (coach.leaveStartDate && !coach.leaveEndDate) {
-      if (localDate >= coach.leaveStartDate) {
-        console.log(`[Slack Reminders] Coach ${coach.id} is on open-ended leave from ${coach.leaveStartDate} \u2014 skipping`);
-        continue;
-      }
-    }
-    if (!workdays.includes(localDay)) continue;
-    const matchIndex = reminderTimes.indexOf(localTime);
-    if (matchIndex === -1) continue;
-    const reminder = REMINDER_LABELS[matchIndex];
-    if (!reminder) continue;
-    const claimed = await claimReminderSlot(coach.id, localDate, matchIndex);
-    if (!claimed) continue;
-    const desc2 = REMINDER_DESCRIPTIONS[matchIndex] ?? "";
-    const url = `${APP_URL}${reminder.path}`;
-    const message = `${reminder.emoji} *Coach Check-In Reminder \u2014 ${reminder.label}*
-${desc2}
-
-\u{1F449} <${url}|Open the form here>`;
-    await sendSlackDM(coach.slackUserId, message);
-  }
-}
-var SALES_TEAM = [
-  { name: "Yaman", slackUserId: "U0AN8E2RE5S", timezone: "Australia/Melbourne", workdays: [1, 2, 3, 4, 5], morningTime: "08:30", eveningTime: "18:00" }
-];
-var SALES_REMINDERS = [
-  { index: 10, time: "morningTime", label: "Morning Check-In", emoji: "\u{1F305}", desc: "Time to submit your morning check-in \u2014 how are you feeling and what are your planned hours?", path: "/sales" },
-  { index: 11, time: "eveningTime", label: "Evening Check-In", emoji: "\u{1F319}", desc: "End of day \u2014 how did your day go, any sales, and what are your planned hours for tomorrow?", path: "/sales" }
-];
-async function runSalesReminderTick() {
-  for (const person of SALES_TEAM) {
-    const localDay = getLocalDayOfWeek(person.timezone);
-    const localTime = getLocalHHMM(person.timezone);
-    const localDate = getLocalDateString(person.timezone);
-    if (!person.workdays.includes(localDay)) continue;
-    for (const reminder of SALES_REMINDERS) {
-      const targetTime = person[reminder.time];
-      if (localTime !== targetTime) continue;
-      const claimed = await claimReminderSlot(9e3 + SALES_TEAM.indexOf(person), localDate, reminder.index);
-      if (!claimed) continue;
-      const url = `${APP_URL}${reminder.path}`;
-      const message = `${reminder.emoji} *Sales Check-In Reminder \u2014 ${reminder.label}*
-${reminder.desc}
-
-\u{1F449} <${url}|Open the form here>`;
-      await sendSlackDM(person.slackUserId, message);
-    }
-  }
-}
-async function sendFortnightlyPerformanceReviewReminder() {
-  const MANAGER_SLACK_ID4 = ENV.managerSlackId;
-  if (!SLACK_BOT_TOKEN || !MANAGER_SLACK_ID4) {
-    console.warn("[Slack Fortnightly] SLACK_BOT_TOKEN or MANAGER_SLACK_ID not set \u2014 skipping");
-    return;
-  }
-  const now = /* @__PURE__ */ new Date();
-  const aestDateStr = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Australia/Melbourne",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).format(now);
-  const aestDate = /* @__PURE__ */ new Date(aestDateStr + "T00:00:00Z");
-  const dayOfWeek = aestDate.getUTCDay() || 7;
-  const thursday = new Date(aestDate);
-  thursday.setUTCDate(aestDate.getUTCDate() + (4 - dayOfWeek));
-  const yearStart = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 1));
-  const isoWeek = Math.ceil(((thursday.getTime() - yearStart.getTime()) / 864e5 + 1) / 7);
-  if (isoWeek % 2 !== 0) {
-    console.log(`[Slack Fortnightly] ISO week ${isoWeek} is odd \u2014 coach review week, no manager reminder`);
-    return;
-  }
-  const APP_URL_LOCAL = ENV.appUrl || "https://databitecoach.com";
-  const url = `${APP_URL_LOCAL}/client-progress`;
-  const message = `\u{1F4CA} *Fortnightly Client Progress Review*
-It's your fortnightly check-in to review and update client ratings in the performance tracker.
-
-*What to do:*
-\u2022 Review each coach's roster and update the traffic light ratings (\u{1F7E2} On Track / \u{1F7E1} Neutral / \u{1F534} Off Track)
-\u2022 Add notes for any clients who have changed status since the last review
-\u2022 Check the KPI summary \u2014 target is *70% On Track* across the business
-
-\u{1F449} <${url}|Open Client Progress Tracker>`;
-  await sendSlackDM(MANAGER_SLACK_ID4, message);
-  console.log("[Slack Fortnightly] Performance review reminder sent to manager");
-}
-async function sendFortnightlySweepReportReminder() {
-  const MANAGER_SLACK_ID4 = ENV.managerSlackId;
-  if (!SLACK_BOT_TOKEN || !MANAGER_SLACK_ID4) {
-    console.warn("[Slack Sweep Reminder] SLACK_BOT_TOKEN or MANAGER_SLACK_ID not set \u2014 skipping");
-    return;
-  }
-  const now = /* @__PURE__ */ new Date();
-  const aestDateStr = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Australia/Melbourne",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).format(now);
-  const aestDate = /* @__PURE__ */ new Date(aestDateStr + "T00:00:00Z");
-  const dayOfWeek = aestDate.getUTCDay() || 7;
-  const thursday = new Date(aestDate);
-  thursday.setUTCDate(aestDate.getUTCDate() + (4 - dayOfWeek));
-  const yearStart = new Date(Date.UTC(thursday.getUTCFullYear(), 0, 1));
-  const isoWeek = Math.ceil(((thursday.getTime() - yearStart.getTime()) / 864e5 + 1) / 7);
-  if (isoWeek % 2 === 0) {
-    console.log(`[Slack Sweep Reminder] ISO week ${isoWeek} is even \u2014 performance review week, no sweep reminder`);
-    return;
-  }
-  const APP_URL_LOCAL = ENV.appUrl || "https://databitecoach.com";
-  const url = `${APP_URL_LOCAL}/client-progress`;
-  const message = `\u{1F4CB} *Fortnightly Post-Sweep Report*
-Time to generate and save this fortnight's sweep report.
-
-*What to do:*
-\u2022 Head to Client Progress and click *Generate Post-Sweep Report*
-\u2022 Give the report a title (e.g. "Sweep \u2014 Week ${isoWeek}, ${(/* @__PURE__ */ new Date()).getFullYear()}")
-\u2022 Review the report, then click *Save Report* to add it to the history
-\u2022 Use *Compare to Previous* to see what changed since the last sweep
-
-\u{1F449} <${url}|Open Client Progress Tracker>`;
-  await sendSlackDM(MANAGER_SLACK_ID4, message);
-  console.log("[Slack Sweep Reminder] Fortnightly sweep report reminder sent to manager");
-}
-
 // server/routers.ts
-function getTodayMelbourne() {
+init_slackReminders();
+init_rosterUtils();
+function getTodayMelbourne2() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Australia/Melbourne",
     year: "numeric",
@@ -1283,12 +1478,12 @@ function getMelbourneNow() {
 async function computeDisengagedClients(coachId, coachName, weekStart) {
   const db2 = await getDb();
   if (!db2) return [];
-  const epochWeek = getMonday2(CLIENT_CHECKINS_EPOCH);
+  const epochWeek = getMonday3(CLIENT_CHECKINS_EPOCH);
   const roster = await fetchRosterForCoach(coachName);
   const allWeeks = getWeeksBetween(epochWeek, weekStart);
-  const completions = await db2.select().from(clientCheckIns).where(eq4(clientCheckIns.coachId, coachId));
-  const approvedExcuses = await db2.select().from(excusedClients).where(and2(eq4(excusedClients.coachId, coachId), eq4(excusedClients.status, "approved")));
-  const starts = await db2.select().from(rosterClientStarts).where(eq4(rosterClientStarts.coachId, coachId));
+  const completions = await db2.select().from(clientCheckIns).where(eq5(clientCheckIns.coachId, coachId));
+  const approvedExcuses = await db2.select().from(excusedClients).where(and3(eq5(excusedClients.coachId, coachId), eq5(excusedClients.status, "approved")));
+  const starts = await db2.select().from(rosterClientStarts).where(eq5(rosterClientStarts.coachId, coachId));
   const completionSet = new Set(
     completions.filter((c) => c.completedAt != null).map((c) => `${c.clientName}|${c.dayOfWeek}|${c.weekStart}`)
   );
@@ -1330,7 +1525,7 @@ async function computeDisengagedClients(coachId, coachName, weekStart) {
   }
   return results;
 }
-function getMonday2(dateStr) {
+function getMonday3(dateStr) {
   const d = /* @__PURE__ */ new Date(dateStr + "T12:00:00+10:00");
   const day = d.getUTCDay();
   const diff = day === 0 ? -6 : 1 - day;
@@ -1387,7 +1582,7 @@ async function notifyManagerOfSubmission(coachId, submissionType, details) {
   if (!managerSlackId || !ENV.slackBotToken) return;
   try {
     const db2 = await requireDb();
-    const [coach] = await db2.select().from(coaches).where(eq4(coaches.id, coachId)).limit(1);
+    const [coach] = await db2.select().from(coaches).where(eq5(coaches.id, coachId)).limit(1);
     if (!coach) return;
     const appUrl = ENV.appUrl || "https://coach.databite.com.au";
     const emojis = { morning: "\u{1F305}", followup: "\u{1F4E8}", disengagement: "\u{1F50D}" };
@@ -1456,7 +1651,7 @@ var checkinsRouter = t.router({
     })
   ).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    const existing = await db2.select().from(checkinRecords).where(and2(eq4(checkinRecords.coachId, input.coachId), eq4(checkinRecords.recordDate, input.recordDate))).limit(1);
+    const existing = await db2.select().from(checkinRecords).where(and3(eq5(checkinRecords.coachId, input.coachId), eq5(checkinRecords.recordDate, input.recordDate))).limit(1);
     if (existing.length > 0) {
       await db2.update(checkinRecords).set({
         scheduledCount: input.scheduledCount ?? existing[0].scheduledCount,
@@ -1466,7 +1661,7 @@ var checkinsRouter = t.router({
         workingHours: input.workingHours ?? existing[0].workingHours,
         morningNotes: input.morningNotes ?? existing[0].morningNotes,
         morningSubmittedAt: /* @__PURE__ */ new Date()
-      }).where(eq4(checkinRecords.id, existing[0].id));
+      }).where(eq5(checkinRecords.id, existing[0].id));
       notifyManagerOfSubmission(input.coachId, "morning", input).catch(() => {
       });
       return { id: existing[0].id, updated: true };
@@ -1496,13 +1691,13 @@ var checkinsRouter = t.router({
     })
   ).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    const existing = await db2.select().from(checkinRecords).where(and2(eq4(checkinRecords.coachId, input.coachId), eq4(checkinRecords.recordDate, input.recordDate))).limit(1);
+    const existing = await db2.select().from(checkinRecords).where(and3(eq5(checkinRecords.coachId, input.coachId), eq5(checkinRecords.recordDate, input.recordDate))).limit(1);
     if (existing.length > 0) {
       await db2.update(checkinRecords).set({
         followupCount: input.followupMessagesSent ?? existing[0].followupCount,
         followupNotes: input.notes ?? existing[0].followupNotes,
         followupSubmittedAt: /* @__PURE__ */ new Date()
-      }).where(eq4(checkinRecords.id, existing[0].id));
+      }).where(eq5(checkinRecords.id, existing[0].id));
       notifyManagerOfSubmission(input.coachId, "followup", input).catch(() => {
       });
       return { id: existing[0].id, updated: true };
@@ -1528,13 +1723,13 @@ var checkinsRouter = t.router({
     })
   ).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    const existing = await db2.select().from(checkinRecords).where(and2(eq4(checkinRecords.coachId, input.coachId), eq4(checkinRecords.recordDate, input.recordDate))).limit(1);
+    const existing = await db2.select().from(checkinRecords).where(and3(eq5(checkinRecords.coachId, input.coachId), eq5(checkinRecords.recordDate, input.recordDate))).limit(1);
     if (existing.length > 0) {
       await db2.update(checkinRecords).set({
         disengagementCount: input.disengagementMessagesSent ?? existing[0].disengagementCount,
         disengagementNotes: input.notes ?? existing[0].disengagementNotes,
         disengagementSubmittedAt: /* @__PURE__ */ new Date()
-      }).where(eq4(checkinRecords.id, existing[0].id));
+      }).where(eq5(checkinRecords.id, existing[0].id));
       notifyManagerOfSubmission(input.coachId, "disengagement", input).catch(() => {
       });
       return { id: existing[0].id, updated: true };
@@ -1558,7 +1753,7 @@ var checkinsRouter = t.router({
     })
   ).query(async ({ input }) => {
     const db2 = await requireDb();
-    const rows = await db2.select().from(checkinRecords).where(and2(eq4(checkinRecords.coachId, input.coachId), eq4(checkinRecords.recordDate, input.recordDate))).limit(1);
+    const rows = await db2.select().from(checkinRecords).where(and3(eq5(checkinRecords.coachId, input.coachId), eq5(checkinRecords.recordDate, input.recordDate))).limit(1);
     if (rows.length === 0) return [];
     const rec = rows[0];
     const results = [];
@@ -1621,10 +1816,10 @@ var checkinsRouter = t.router({
     })
   ).query(async ({ input }) => {
     const db2 = await requireDb();
-    const today = getTodayMelbourne();
+    const today = getTodayMelbourne2();
     const endDate = input.endDate ?? today;
     const startDate = input.startDate ?? (input.days ? addDays(today, -(input.days - 1)) : addDays(today, -6));
-    const rows = await db2.select().from(checkinRecords).where(and2(gte2(checkinRecords.recordDate, startDate), lte2(checkinRecords.recordDate, endDate)));
+    const rows = await db2.select().from(checkinRecords).where(and3(gte2(checkinRecords.recordDate, startDate), lte2(checkinRecords.recordDate, endDate)));
     const totalRecords = rows.length;
     const morningCount = rows.filter((r) => r.morningSubmittedAt).length;
     const followupCount = rows.filter((r) => r.followupSubmittedAt).length;
@@ -1670,7 +1865,7 @@ var checkinsRouter = t.router({
       disengagementCount: checkinRecords.disengagementCount,
       disengagementNotes: checkinRecords.disengagementNotes,
       disengagementSubmittedAt: checkinRecords.disengagementSubmittedAt
-    }).from(checkinRecords).where(and2(gte2(checkinRecords.recordDate, input.startDate), lte2(checkinRecords.recordDate, input.endDate))).orderBy(desc(checkinRecords.recordDate));
+    }).from(checkinRecords).where(and3(gte2(checkinRecords.recordDate, input.startDate), lte2(checkinRecords.recordDate, input.endDate))).orderBy(desc(checkinRecords.recordDate));
     const flat = [];
     for (const r of rows) {
       if (r.morningSubmittedAt) {
@@ -1736,7 +1931,7 @@ var checkinsRouter = t.router({
   /** Records where moodScore <= 2 from the last 7 days. */
   lowMoodAlerts: adminProcedure.query(async () => {
     const db2 = await requireDb();
-    const today = getTodayMelbourne();
+    const today = getTodayMelbourne2();
     const weekAgo = addDays(today, -7);
     const rows = await db2.select({
       id: checkinRecords.id,
@@ -1745,7 +1940,7 @@ var checkinsRouter = t.router({
       moodScore: checkinRecords.moodScore,
       morningNotes: checkinRecords.morningNotes,
       coachName: coaches.name
-    }).from(checkinRecords).leftJoin(coaches, eq4(checkinRecords.coachId, coaches.id)).where(and2(gte2(checkinRecords.recordDate, weekAgo), lte2(checkinRecords.moodScore, 2))).orderBy(desc(checkinRecords.recordDate));
+    }).from(checkinRecords).leftJoin(coaches, eq5(checkinRecords.coachId, coaches.id)).where(and3(gte2(checkinRecords.recordDate, weekAgo), lte2(checkinRecords.moodScore, 2))).orderBy(desc(checkinRecords.recordDate));
     return rows;
   }),
   /** Last 10 morning notes with coach name. */
@@ -1762,7 +1957,7 @@ var checkinsRouter = t.router({
       followupSubmittedAt: checkinRecords.followupSubmittedAt,
       disengagementSubmittedAt: checkinRecords.disengagementSubmittedAt,
       coachName: coaches.name
-    }).from(checkinRecords).leftJoin(coaches, eq4(checkinRecords.coachId, coaches.id)).orderBy(desc(checkinRecords.recordDate)).limit(20);
+    }).from(checkinRecords).leftJoin(coaches, eq5(checkinRecords.coachId, coaches.id)).orderBy(desc(checkinRecords.recordDate)).limit(20);
     const notes = [];
     for (const r of rows) {
       if (r.morningNotes && r.morningSubmittedAt) {
@@ -1824,20 +2019,20 @@ var clientCheckinsRouter = t.router({
     const weekStart = weekStartList[0];
     let coachList;
     if (input.coachId) {
-      const [coach] = await db2.select().from(coaches).where(eq4(coaches.id, input.coachId)).limit(1);
+      const [coach] = await db2.select().from(coaches).where(eq5(coaches.id, input.coachId)).limit(1);
       coachList = coach ? [{ id: coach.id, name: coach.name }] : [];
     } else {
-      coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq4(coaches.isActive, 1));
+      coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq5(coaches.isActive, 1));
     }
     const results = [];
-    const todayMelb = getTodayMelbourne();
-    const currentWeekMon = getMonday2(todayMelb);
+    const todayMelb = getTodayMelbourne2();
+    const currentWeekMon = getMonday3(todayMelb);
     const allSnapshots = await db2.select().from(rosterWeeklySnapshots).where(inArray2(rosterWeeklySnapshots.weekStart, weekStartList));
     const snapshotMap = /* @__PURE__ */ new Map();
     for (const s of allSnapshots) snapshotMap.set(`${s.coachId}|${s.weekStart}`, s);
     const coachData = await Promise.all(coachList.map(async (coach) => {
       const roster = await fetchRosterForCoach(coach.name);
-      const paused = await db2.select().from(pausedClients).where(and2(eq4(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
+      const paused = await db2.select().from(pausedClients).where(and3(eq5(pausedClients.coachId, coach.id), isNull2(pausedClients.resumedAt)));
       const pausedSet = new Set(paused.map((p) => p.clientName));
       let scheduled = 0;
       for (const day of DAYS) {
@@ -1851,10 +2046,10 @@ var clientCheckinsRouter = t.router({
         const snapshot = snapshotMap.get(`${coach.id}|${ws}`);
         const snapStats = snapshot?.snapshotJson;
         if (isPastWeek && snapStats?.scheduled != null) {
-          const liveExcuses = await db2.select().from(excusedClients).where(and2(
-            eq4(excusedClients.coachId, coach.id),
-            eq4(excusedClients.weekStart, ws),
-            eq4(excusedClients.status, "approved")
+          const liveExcuses = await db2.select().from(excusedClients).where(and3(
+            eq5(excusedClients.coachId, coach.id),
+            eq5(excusedClients.weekStart, ws),
+            eq5(excusedClients.status, "approved")
           ));
           const liveExcusedCount = liveExcuses.length;
           const snapScheduled = snapStats.scheduled;
@@ -1872,13 +2067,13 @@ var clientCheckinsRouter = t.router({
             pct: Math.round(recalcPct)
           });
         } else {
-          const completions = await db2.select().from(clientCheckIns).where(and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, ws)));
+          const completions = await db2.select().from(clientCheckIns).where(and3(eq5(clientCheckIns.coachId, coach.id), eq5(clientCheckIns.weekStart, ws)));
           const completed = completions.filter((c) => c.completedAt != null).length;
           const clientSubmittedCount = completions.filter((c) => c.clientSubmitted === 1).length;
-          const excuses = await db2.select().from(excusedClients).where(and2(
-            eq4(excusedClients.coachId, coach.id),
-            eq4(excusedClients.weekStart, ws),
-            eq4(excusedClients.status, "approved")
+          const excuses = await db2.select().from(excusedClients).where(and3(
+            eq5(excusedClients.coachId, coach.id),
+            eq5(excusedClients.weekStart, ws),
+            eq5(excusedClients.status, "approved")
           ));
           const excusedCount = excuses.length;
           const effectiveScheduled = Math.max(liveScheduled - excusedCount, 0);
@@ -1911,17 +2106,17 @@ var clientCheckinsRouter = t.router({
     }
     if (!input.weekStart) throw new TRPCError({ code: "BAD_REQUEST", message: "weekStart or startDate required" });
     const db2 = await requireDb();
-    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq4(coaches.isActive, 1));
+    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq5(coaches.isActive, 1));
     const results = [];
     for (const coach of coachList) {
       const roster = await fetchRosterForCoach(coach.name);
       for (const day of DAYS) {
         const clients = roster[day] ?? [];
         const completions = await db2.select().from(clientCheckIns).where(
-          and2(
-            eq4(clientCheckIns.coachId, coach.id),
-            eq4(clientCheckIns.weekStart, input.weekStart),
-            eq4(clientCheckIns.dayOfWeek, day)
+          and3(
+            eq5(clientCheckIns.coachId, coach.id),
+            eq5(clientCheckIns.weekStart, input.weekStart),
+            eq5(clientCheckIns.dayOfWeek, day)
           )
         );
         const completed = completions.filter((c) => c.completedAt != null).length;
@@ -1959,21 +2154,21 @@ var clientCheckinsRouter = t.router({
       followupSubmittedAt: checkinRecords.followupSubmittedAt,
       disengagementSubmittedAt: checkinRecords.disengagementSubmittedAt,
       coachName: coaches.name
-    }).from(checkinRecords).leftJoin(coaches, eq4(checkinRecords.coachId, coaches.id)).where(
-      and2(
+    }).from(checkinRecords).leftJoin(coaches, eq5(checkinRecords.coachId, coaches.id)).where(
+      and3(
         gte2(checkinRecords.recordDate, startDate),
         lte2(checkinRecords.recordDate, endDate)
       )
     ).orderBy(desc(checkinRecords.recordDate));
     const results = [];
     for (const r of records) {
-      const weekStart = getMonday2(r.recordDate);
+      const weekStart = getMonday3(r.recordDate);
       const dayKey = getDayKey(r.recordDate);
       const completions = dayKey ? await db2.select().from(clientCheckIns).where(
-        and2(
-          eq4(clientCheckIns.coachId, r.coachId),
-          eq4(clientCheckIns.weekStart, weekStart),
-          eq4(clientCheckIns.dayOfWeek, dayKey)
+        and3(
+          eq5(clientCheckIns.coachId, r.coachId),
+          eq5(clientCheckIns.weekStart, weekStart),
+          eq5(clientCheckIns.dayOfWeek, dayKey)
         )
       ) : [];
       const coachCompletions = completions.filter((c) => c.completedAt != null);
@@ -2001,24 +2196,24 @@ var clientCheckinsRouter = t.router({
   /** Compute disengaged clients — missed 1+ consecutive weeks. */
   getAllDisengagedClients: protectedProcedure.query(async () => {
     const db2 = await requireDb();
-    const today = getTodayMelbourne();
-    const currentWeek = getMonday2(today);
+    const today = getTodayMelbourne2();
+    const currentWeek = getMonday3(today);
     const lastWeek = (() => {
       const d = /* @__PURE__ */ new Date(currentWeek + "T00:00:00");
       d.setDate(d.getDate() - 7);
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     })();
-    const epochWeek = getMonday2(CLIENT_CHECKINS_EPOCH);
-    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq4(coaches.isActive, 1));
+    const epochWeek = getMonday3(CLIENT_CHECKINS_EPOCH);
+    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq5(coaches.isActive, 1));
     const allWeeks = getWeeksBetween(epochWeek, lastWeek);
     const disengaged = [];
     for (const coach of coachList) {
       const roster = await fetchRosterForCoach(coach.name);
-      const completions = await db2.select().from(clientCheckIns).where(and2(eq4(clientCheckIns.coachId, coach.id)));
-      const approvedExcuses = await db2.select().from(excusedClients).where(and2(eq4(excusedClients.coachId, coach.id), eq4(excusedClients.status, "approved")));
-      const paused = await db2.select().from(pausedClients).where(and2(eq4(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
+      const completions = await db2.select().from(clientCheckIns).where(and3(eq5(clientCheckIns.coachId, coach.id)));
+      const approvedExcuses = await db2.select().from(excusedClients).where(and3(eq5(excusedClients.coachId, coach.id), eq5(excusedClients.status, "approved")));
+      const paused = await db2.select().from(pausedClients).where(and3(eq5(pausedClients.coachId, coach.id), isNull2(pausedClients.resumedAt)));
       const pausedSet = new Set(paused.map((p) => p.clientName));
-      const starts = await db2.select().from(rosterClientStarts).where(eq4(rosterClientStarts.coachId, coach.id));
+      const starts = await db2.select().from(rosterClientStarts).where(eq5(rosterClientStarts.coachId, coach.id));
       const completionSet = /* @__PURE__ */ new Set();
       for (const c of completions) {
         if (c.completedAt == null) continue;
@@ -2081,23 +2276,23 @@ var clientCheckinsRouter = t.router({
   /** Consecutive missed weeks per client. */
   getAllMissedStreaks: protectedProcedure.query(async () => {
     const db2 = await requireDb();
-    const today = getTodayMelbourne();
-    const currentWeek = getMonday2(today);
+    const today = getTodayMelbourne2();
+    const currentWeek = getMonday3(today);
     const lastWeek = (() => {
       const d = /* @__PURE__ */ new Date(currentWeek + "T00:00:00");
       d.setDate(d.getDate() - 7);
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     })();
-    const epochWeek = getMonday2(CLIENT_CHECKINS_EPOCH);
-    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq4(coaches.isActive, 1));
+    const epochWeek = getMonday3(CLIENT_CHECKINS_EPOCH);
+    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq5(coaches.isActive, 1));
     const allWeeks = getWeeksBetween(epochWeek, lastWeek);
     const streaks = [];
     for (const coach of coachList) {
       const roster = await fetchRosterForCoach(coach.name);
-      const paused = await db2.select().from(pausedClients).where(and2(eq4(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
+      const paused = await db2.select().from(pausedClients).where(and3(eq5(pausedClients.coachId, coach.id), isNull2(pausedClients.resumedAt)));
       const pausedSet = new Set(paused.map((p) => p.clientName));
-      const completions = await db2.select().from(clientCheckIns).where(eq4(clientCheckIns.coachId, coach.id));
-      const approvedExcuses = await db2.select().from(excusedClients).where(and2(eq4(excusedClients.coachId, coach.id), eq4(excusedClients.status, "approved")));
+      const completions = await db2.select().from(clientCheckIns).where(eq5(clientCheckIns.coachId, coach.id));
+      const approvedExcuses = await db2.select().from(excusedClients).where(and3(eq5(excusedClients.coachId, coach.id), eq5(excusedClients.status, "approved")));
       const completionSet = /* @__PURE__ */ new Set();
       for (const c of completions) {
         if (c.completedAt == null) continue;
@@ -2144,7 +2339,7 @@ var clientCheckinsRouter = t.router({
   /** All morning submissions for today. */
   getAllTodayMorning: adminProcedure.query(async () => {
     const db2 = await requireDb();
-    const today = getTodayMelbourne();
+    const today = getTodayMelbourne2();
     const rows = await db2.select({
       id: checkinRecords.id,
       coachId: checkinRecords.coachId,
@@ -2157,14 +2352,14 @@ var clientCheckinsRouter = t.router({
       morningNotes: checkinRecords.morningNotes,
       morningSubmittedAt: checkinRecords.morningSubmittedAt,
       coachName: coaches.name
-    }).from(checkinRecords).leftJoin(coaches, eq4(checkinRecords.coachId, coaches.id)).where(and2(eq4(checkinRecords.recordDate, today), sql`${checkinRecords.morningSubmittedAt} IS NOT NULL`));
+    }).from(checkinRecords).leftJoin(coaches, eq5(checkinRecords.coachId, coaches.id)).where(and3(eq5(checkinRecords.recordDate, today), sql`${checkinRecords.morningSubmittedAt} IS NOT NULL`));
     return rows;
   }),
   /** New clients from roster_client_starts — includes computed weeksOnRoster. */
   getClientTenure: adminProcedure.query(async () => {
     const db2 = await requireDb();
-    const today = getTodayMelbourne();
-    const currentMonday = getMonday2(today);
+    const today = getTodayMelbourne2();
+    const currentMonday = getMonday3(today);
     const rows = await db2.select({
       id: rosterClientStarts.id,
       coachId: rosterClientStarts.coachId,
@@ -2193,8 +2388,8 @@ var clientCheckinsRouter = t.router({
       recordDate: checkinRecords.recordDate,
       workingHours: checkinRecords.workingHours,
       coachName: coaches.name
-    }).from(checkinRecords).leftJoin(coaches, eq4(checkinRecords.coachId, coaches.id)).where(
-      and2(
+    }).from(checkinRecords).leftJoin(coaches, eq5(checkinRecords.coachId, coaches.id)).where(
+      and3(
         gte2(checkinRecords.recordDate, input.startDate),
         lte2(checkinRecords.recordDate, input.endDate),
         sql`${checkinRecords.workingHours} IS NOT NULL`,
@@ -2210,7 +2405,7 @@ var clientCheckinsRouter = t.router({
     })
   ).query(async ({ input }) => {
     const db2 = await requireDb();
-    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq4(coaches.isActive, 1));
+    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq5(coaches.isActive, 1));
     const result = [];
     for (let i = 0; i < DAYS.length; i++) {
       const day = DAYS[i];
@@ -2220,18 +2415,18 @@ var clientCheckinsRouter = t.router({
         const roster = await fetchRosterForCoach(coach.name);
         const clients = roster[day] ?? [];
         const completions = await db2.select().from(clientCheckIns).where(
-          and2(
-            eq4(clientCheckIns.coachId, coach.id),
-            eq4(clientCheckIns.weekStart, input.weekStart),
-            eq4(clientCheckIns.dayOfWeek, day)
+          and3(
+            eq5(clientCheckIns.coachId, coach.id),
+            eq5(clientCheckIns.weekStart, input.weekStart),
+            eq5(clientCheckIns.dayOfWeek, day)
           )
         );
         const excuses = await db2.select().from(excusedClients).where(
-          and2(
-            eq4(excusedClients.coachId, coach.id),
-            eq4(excusedClients.weekStart, input.weekStart),
-            eq4(excusedClients.dayOfWeek, day),
-            eq4(excusedClients.status, "approved")
+          and3(
+            eq5(excusedClients.coachId, coach.id),
+            eq5(excusedClients.weekStart, input.weekStart),
+            eq5(excusedClients.dayOfWeek, day),
+            eq5(excusedClients.status, "approved")
           )
         );
         dayCoaches.push({
@@ -2294,12 +2489,12 @@ var clientCheckinsRouter = t.router({
     }).optional()
   ).query(async ({ input }) => {
     const db2 = await requireDb();
-    const weekStart = input?.weekStart ?? getTodayMelbourne().slice(0, 8) + "01";
+    const weekStart = input?.weekStart ?? getTodayMelbourne2().slice(0, 8) + "01";
     const rows = await db2.select({
       coachId: excusedClients.coachId,
       coachName: excusedClients.coachName,
       status: excusedClients.status
-    }).from(excusedClients).where(eq4(excusedClients.weekStart, weekStart));
+    }).from(excusedClients).where(eq5(excusedClients.weekStart, weekStart));
     const byCoach = /* @__PURE__ */ new Map();
     for (const r of rows) {
       if (!byCoach.has(r.coachId)) {
@@ -2318,7 +2513,7 @@ var clientCheckinsRouter = t.router({
   /** All pending excuse requests. */
   getPendingExcuses: adminProcedure.query(async () => {
     const db2 = await requireDb();
-    const rows = await db2.select().from(excusedClients).where(eq4(excusedClients.status, "pending")).orderBy(desc(excusedClients.submittedAt));
+    const rows = await db2.select().from(excusedClients).where(eq5(excusedClients.status, "pending")).orderBy(desc(excusedClients.submittedAt));
     return rows;
   }),
   /** Coach performance metrics over time. */
@@ -2331,18 +2526,18 @@ var clientCheckinsRouter = t.router({
     })
   ).query(async ({ input }) => {
     const db2 = await requireDb();
-    const today = getTodayMelbourne();
+    const today = getTodayMelbourne2();
     const numDays = input.days ?? (input.startDate && input.endDate ? Math.ceil((new Date(input.endDate).getTime() - new Date(input.startDate).getTime()) / 864e5) : 28);
     const startDate = addDays(today, -numDays);
-    const startWeek = getMonday2(startDate);
-    const endWeek = getMonday2(today);
+    const startWeek = getMonday3(startDate);
+    const endWeek = getMonday3(today);
     const weeks = getWeeksBetween(startWeek, endWeek).reverse();
     let coachList;
     if (input.coachId) {
-      const [coach] = await db2.select().from(coaches).where(eq4(coaches.id, input.coachId)).limit(1);
+      const [coach] = await db2.select().from(coaches).where(eq5(coaches.id, input.coachId)).limit(1);
       coachList = coach ? [{ id: coach.id, name: coach.name }] : [];
     } else {
-      coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq4(coaches.isActive, 1));
+      coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq5(coaches.isActive, 1));
     }
     const weeklyData = [];
     for (const week of weeks) {
@@ -2351,7 +2546,7 @@ var clientCheckinsRouter = t.router({
         const roster = await fetchRosterForCoach(coach.name);
         let scheduled = 0;
         for (const day of DAYS) scheduled += (roster[day] ?? []).length;
-        const completions = await db2.select().from(clientCheckIns).where(and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, week)));
+        const completions = await db2.select().from(clientCheckIns).where(and3(eq5(clientCheckIns.coachId, coach.id), eq5(clientCheckIns.weekStart, week)));
         const completed = completions.filter((c) => c.completedAt != null).length;
         const pct = scheduled > 0 ? Math.round(completed / scheduled * 100) : 0;
         coachEntries.push({ coachId: coach.id, coachName: coach.name, scheduled, completed, pct });
@@ -2407,29 +2602,29 @@ var clientCheckinsRouter = t.router({
     })
   ).query(async ({ input }) => {
     const db2 = await requireDb();
-    const weekStart = getMonday2(input.date);
+    const weekStart = getMonday3(input.date);
     const dayKey = getDayKey(input.date);
     if (!dayKey) return [];
-    const [coach] = await db2.select().from(coaches).where(eq4(coaches.id, input.coachId)).limit(1);
+    const [coach] = await db2.select().from(coaches).where(eq5(coaches.id, input.coachId)).limit(1);
     if (!coach) return [];
     const roster = await fetchRosterForCoach(coach.name);
     const todayClients = roster[dayKey] ?? [];
     const completions = await db2.select().from(clientCheckIns).where(
-      and2(
-        eq4(clientCheckIns.coachId, input.coachId),
-        eq4(clientCheckIns.weekStart, weekStart),
-        eq4(clientCheckIns.dayOfWeek, dayKey)
+      and3(
+        eq5(clientCheckIns.coachId, input.coachId),
+        eq5(clientCheckIns.weekStart, weekStart),
+        eq5(clientCheckIns.dayOfWeek, dayKey)
       )
     );
     const completedSet = new Set(
       completions.filter((c) => c.completedAt != null).map((c) => c.clientName)
     );
     const excuses = await db2.select().from(excusedClients).where(
-      and2(
-        eq4(excusedClients.coachId, input.coachId),
-        eq4(excusedClients.weekStart, weekStart),
-        eq4(excusedClients.dayOfWeek, dayKey),
-        eq4(excusedClients.status, "approved")
+      and3(
+        eq5(excusedClients.coachId, input.coachId),
+        eq5(excusedClients.weekStart, weekStart),
+        eq5(excusedClients.dayOfWeek, dayKey),
+        eq5(excusedClients.status, "approved")
       )
     );
     const excusedSet = new Set(excuses.map((e) => e.clientName));
@@ -2447,18 +2642,18 @@ var clientCheckinsRouter = t.router({
   ).mutation(async ({ input, ctx }) => {
     const db2 = await requireDb();
     const existing = await db2.select().from(clientCheckIns).where(
-      and2(
-        eq4(clientCheckIns.coachId, input.coachId),
-        eq4(clientCheckIns.clientName, input.clientName),
-        eq4(clientCheckIns.dayOfWeek, input.dayOfWeek),
-        eq4(clientCheckIns.weekStart, input.weekStart)
+      and3(
+        eq5(clientCheckIns.coachId, input.coachId),
+        eq5(clientCheckIns.clientName, input.clientName),
+        eq5(clientCheckIns.dayOfWeek, input.dayOfWeek),
+        eq5(clientCheckIns.weekStart, input.weekStart)
       )
     ).limit(1);
     if (existing.length > 0) {
       await db2.update(clientCheckIns).set({
         completedAt: /* @__PURE__ */ new Date(),
         completedByUserId: ctx.user.id
-      }).where(eq4(clientCheckIns.id, existing[0].id));
+      }).where(eq5(clientCheckIns.id, existing[0].id));
       return { id: existing[0].id };
     }
     const [result] = await db2.insert(clientCheckIns).values({
@@ -2486,11 +2681,11 @@ var clientCheckinsRouter = t.router({
       completedAt: null,
       completedByUserId: 0
     }).where(
-      and2(
-        eq4(clientCheckIns.coachId, input.coachId),
-        eq4(clientCheckIns.clientName, input.clientName),
-        eq4(clientCheckIns.dayOfWeek, input.dayOfWeek),
-        eq4(clientCheckIns.weekStart, input.weekStart)
+      and3(
+        eq5(clientCheckIns.coachId, input.coachId),
+        eq5(clientCheckIns.clientName, input.clientName),
+        eq5(clientCheckIns.dayOfWeek, input.dayOfWeek),
+        eq5(clientCheckIns.weekStart, input.weekStart)
       )
     );
     return { success: true };
@@ -2507,18 +2702,18 @@ var clientCheckinsRouter = t.router({
     const db2 = await requireDb();
     let coachId = input.coachId;
     if (!coachId) {
-      const [myCoach] = await db2.select().from(coaches).where(eq4(coaches.userId, ctx.user.id)).limit(1);
+      const [myCoach] = await db2.select().from(coaches).where(eq5(coaches.userId, ctx.user.id)).limit(1);
       if (!myCoach) throw new TRPCError({ code: "BAD_REQUEST", message: "No coach profile linked" });
       coachId = myCoach.id;
     }
-    const [coach] = await db2.select().from(coaches).where(eq4(coaches.id, coachId)).limit(1);
+    const [coach] = await db2.select().from(coaches).where(eq5(coaches.id, coachId)).limit(1);
     if (!coach) throw new TRPCError({ code: "NOT_FOUND", message: "Coach not found" });
     const existing = await db2.select().from(clientCheckIns).where(
-      and2(
-        eq4(clientCheckIns.coachId, coachId),
-        eq4(clientCheckIns.clientName, input.clientName),
-        eq4(clientCheckIns.dayOfWeek, input.dayOfWeek),
-        eq4(clientCheckIns.weekStart, input.weekStart)
+      and3(
+        eq5(clientCheckIns.coachId, coachId),
+        eq5(clientCheckIns.clientName, input.clientName),
+        eq5(clientCheckIns.dayOfWeek, input.dayOfWeek),
+        eq5(clientCheckIns.weekStart, input.weekStart)
       )
     ).limit(1);
     if (existing.length > 0) {
@@ -2526,7 +2721,7 @@ var clientCheckinsRouter = t.router({
       await db2.update(clientCheckIns).set({
         clientSubmitted: newVal,
         clientSubmittedAt: newVal === 1 ? /* @__PURE__ */ new Date() : null
-      }).where(eq4(clientCheckIns.id, existing[0].id));
+      }).where(eq5(clientCheckIns.id, existing[0].id));
       return { id: existing[0].id, clientSubmitted: newVal === 1 };
     }
     const [result] = await db2.insert(clientCheckIns).values({
@@ -2553,11 +2748,11 @@ var clientCheckinsRouter = t.router({
   ).mutation(async ({ input, ctx }) => {
     const db2 = await requireDb();
     const existing = await db2.select().from(excusedClients).where(
-      and2(
-        eq4(excusedClients.coachId, input.coachId),
-        eq4(excusedClients.clientName, input.clientName),
-        eq4(excusedClients.dayOfWeek, input.dayOfWeek),
-        eq4(excusedClients.weekStart, input.weekStart)
+      and3(
+        eq5(excusedClients.coachId, input.coachId),
+        eq5(excusedClients.clientName, input.clientName),
+        eq5(excusedClients.dayOfWeek, input.dayOfWeek),
+        eq5(excusedClients.weekStart, input.weekStart)
       )
     ).limit(1);
     if (existing.length > 0) {
@@ -2617,7 +2812,7 @@ Open the app to approve or reject.`;
       status: input.status,
       reviewedByUserId: ctx.user.id,
       reviewedAt: /* @__PURE__ */ new Date()
-    }).where(eq4(excusedClients.id, input.id));
+    }).where(eq5(excusedClients.id, input.id));
     return { success: true };
   }),
   /** Trigger Typeform backfill for current week. */
@@ -2628,7 +2823,7 @@ Open the app to approve or reject.`;
   /** Get ALL client check-in rows for a given week (across all coaches). */
   getWeekStatusAll: protectedProcedure.input(z.object({ weekStart: z.string() })).query(async ({ input }) => {
     const db2 = await requireDb();
-    const rows = await db2.select().from(clientCheckIns).where(eq4(clientCheckIns.weekStart, input.weekStart));
+    const rows = await db2.select().from(clientCheckIns).where(eq5(clientCheckIns.weekStart, input.weekStart));
     return rows.map((r) => ({
       id: r.id,
       coachId: r.coachId,
@@ -2645,7 +2840,7 @@ Open the app to approve or reject.`;
   /** Get the Google Sheets roster for a specific coach. */
   getRosterByCoach: protectedProcedure.input(z.object({ coachId: z.number(), weekStart: z.string().optional() })).query(async ({ input }) => {
     const db2 = await requireDb();
-    const [coach] = await db2.select().from(coaches).where(eq4(coaches.id, input.coachId)).limit(1);
+    const [coach] = await db2.select().from(coaches).where(eq5(coaches.id, input.coachId)).limit(1);
     if (!coach) throw new TRPCError({ code: "NOT_FOUND", message: "Coach not found" });
     const roster = await fetchRosterForCoach(coach.name);
     return roster;
@@ -2653,13 +2848,13 @@ Open the app to approve or reject.`;
   /** Get active pauses for a coach. */
   getActivePauses: protectedProcedure.input(z.object({ coachId: z.number() })).query(async ({ input }) => {
     const db2 = await requireDb();
-    const rows = await db2.select().from(pausedClients).where(and2(eq4(pausedClients.coachId, input.coachId), isNull(pausedClients.resumedAt)));
+    const rows = await db2.select().from(pausedClients).where(and3(eq5(pausedClients.coachId, input.coachId), isNull2(pausedClients.resumedAt)));
     return rows.map((r) => r.clientName);
   }),
   /** Pause a client — excludes from disengagement tracking. */
   pauseClient: protectedProcedure.input(z.object({ coachId: z.number(), clientName: z.string() })).mutation(async ({ input, ctx }) => {
     const db2 = await requireDb();
-    const [existing] = await db2.select().from(pausedClients).where(and2(eq4(pausedClients.coachId, input.coachId), eq4(pausedClients.clientName, input.clientName), isNull(pausedClients.resumedAt))).limit(1);
+    const [existing] = await db2.select().from(pausedClients).where(and3(eq5(pausedClients.coachId, input.coachId), eq5(pausedClients.clientName, input.clientName), isNull2(pausedClients.resumedAt))).limit(1);
     if (existing) {
       throw new TRPCError({ code: "CONFLICT", message: "Client is already paused" });
     }
@@ -2673,17 +2868,17 @@ Open the app to approve or reject.`;
   /** Resume a paused client. */
   resumeClient: protectedProcedure.input(z.object({ coachId: z.number(), clientName: z.string() })).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    await db2.update(pausedClients).set({ resumedAt: sql`NOW()` }).where(and2(eq4(pausedClients.coachId, input.coachId), eq4(pausedClients.clientName, input.clientName), isNull(pausedClients.resumedAt)));
+    await db2.update(pausedClients).set({ resumedAt: sql`NOW()` }).where(and3(eq5(pausedClients.coachId, input.coachId), eq5(pausedClients.clientName, input.clientName), isNull2(pausedClients.resumedAt)));
     return { ok: true };
   }),
   /** Get excuses for a given week, optionally filtered by coach. */
   getExcusesForWeek: protectedProcedure.input(z.object({ weekStart: z.string(), coachId: z.number().optional() })).query(async ({ input }) => {
     const db2 = await requireDb();
-    const conditions = [eq4(excusedClients.weekStart, input.weekStart)];
+    const conditions = [eq5(excusedClients.weekStart, input.weekStart)];
     if (input.coachId != null) {
-      conditions.push(eq4(excusedClients.coachId, input.coachId));
+      conditions.push(eq5(excusedClients.coachId, input.coachId));
     }
-    const rows = await db2.select().from(excusedClients).where(and2(...conditions));
+    const rows = await db2.select().from(excusedClients).where(and3(...conditions));
     return rows;
   }),
   /** Get clients with upcoming UPFRONT end dates (parsed from client names). */
@@ -2700,9 +2895,9 @@ Open the app to approve or reject.`;
     let imported = 0;
     for (const r of input) {
       const snap = { scheduled: r.scheduled, completed: r.completed, missed: r.scheduled - r.completed, engagementPct: r.engagementPct, source: "manus" };
-      const existing = await db2.select().from(rosterWeeklySnapshots).where(and2(eq4(rosterWeeklySnapshots.coachId, r.coachId), eq4(rosterWeeklySnapshots.weekStart, r.weekStart))).limit(1);
+      const existing = await db2.select().from(rosterWeeklySnapshots).where(and3(eq5(rosterWeeklySnapshots.coachId, r.coachId), eq5(rosterWeeklySnapshots.weekStart, r.weekStart))).limit(1);
       if (existing.length > 0) {
-        await db2.update(rosterWeeklySnapshots).set({ snapshotJson: snap }).where(eq4(rosterWeeklySnapshots.id, existing[0].id));
+        await db2.update(rosterWeeklySnapshots).set({ snapshotJson: snap }).where(eq5(rosterWeeklySnapshots.id, existing[0].id));
       } else {
         await db2.insert(rosterWeeklySnapshots).values({ coachId: r.coachId, coachName: r.coachName, weekStart: r.weekStart, snapshotJson: snap });
       }
@@ -2712,7 +2907,7 @@ Open the app to approve or reject.`;
   }),
   getUpfrontAlertsAll: protectedProcedure.query(async () => {
     const db2 = await requireDb();
-    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq4(coaches.isActive, 1));
+    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq5(coaches.isActive, 1));
     const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
     const now = /* @__PURE__ */ new Date();
     const alerts = [];
@@ -2776,7 +2971,7 @@ Open the app to approve or reject.`;
       throw new TRPCError({ code: "BAD_REQUEST", message: "Check-ins are only available Monday to Friday." });
     }
     const dayOfWeek = todayName;
-    const allCoaches = await db2.select().from(coaches).where(eq4(coaches.isActive, 1));
+    const allCoaches = await db2.select().from(coaches).where(eq5(coaches.isActive, 1));
     let foundCoach = null;
     let foundClientName = null;
     const searchName = input.clientName.toLowerCase().trim();
@@ -2794,18 +2989,18 @@ Open the app to approve or reject.`;
       throw new TRPCError({ code: "NOT_FOUND", message: "Could not find your name on today's roster. Please check with your coach." });
     }
     const existing = await db2.select().from(clientCheckIns).where(
-      and2(
-        eq4(clientCheckIns.coachId, foundCoach.id),
-        eq4(clientCheckIns.clientName, foundClientName),
-        eq4(clientCheckIns.dayOfWeek, dayOfWeek),
-        eq4(clientCheckIns.weekStart, weekStart)
+      and3(
+        eq5(clientCheckIns.coachId, foundCoach.id),
+        eq5(clientCheckIns.clientName, foundClientName),
+        eq5(clientCheckIns.dayOfWeek, dayOfWeek),
+        eq5(clientCheckIns.weekStart, weekStart)
       )
     ).limit(1);
     if (existing.length > 0) {
       if (existing[0].clientSubmitted === 1) {
         return { alreadySubmitted: true, clientName: foundClientName, coachName: foundCoach.name, dayOfWeek };
       }
-      await db2.update(clientCheckIns).set({ clientSubmitted: 1, clientSubmittedAt: /* @__PURE__ */ new Date() }).where(eq4(clientCheckIns.id, existing[0].id));
+      await db2.update(clientCheckIns).set({ clientSubmitted: 1, clientSubmittedAt: /* @__PURE__ */ new Date() }).where(eq5(clientCheckIns.id, existing[0].id));
       return { alreadySubmitted: false, clientName: foundClientName, coachName: foundCoach.name, dayOfWeek };
     }
     await db2.insert(clientCheckIns).values({
@@ -2824,27 +3019,27 @@ var coachesRouter = t.router({
   /** All active coaches. */
   list: protectedProcedure.query(async () => {
     const db2 = await requireDb();
-    return db2.select().from(coaches).where(eq4(coaches.isActive, 1)).orderBy(asc(coaches.name));
+    return db2.select().from(coaches).where(eq5(coaches.isActive, 1)).orderBy(asc(coaches.name));
   }),
   /** Coach profile linked to current user. */
   myCoach: protectedProcedure.query(async ({ ctx }) => {
     const db2 = await requireDb();
-    const [coach] = await db2.select().from(coaches).where(eq4(coaches.userId, ctx.user.id)).limit(1);
+    const [coach] = await db2.select().from(coaches).where(eq5(coaches.userId, ctx.user.id)).limit(1);
     return coach ?? null;
   }),
   /** Coaches with no userId linked. */
   unclaimed: protectedProcedure.query(async () => {
     const db2 = await requireDb();
-    return db2.select().from(coaches).where(and2(eq4(coaches.isActive, 1), isNull(coaches.userId)));
+    return db2.select().from(coaches).where(and3(eq5(coaches.isActive, 1), isNull2(coaches.userId)));
   }),
   /** Submission streaks per coach. */
   streaks: protectedProcedure.query(async () => {
     const db2 = await requireDb();
-    const today = getTodayMelbourne();
-    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq4(coaches.isActive, 1));
+    const today = getTodayMelbourne2();
+    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq5(coaches.isActive, 1));
     const results = [];
     for (const coach of coachList) {
-      const records = await db2.select({ recordDate: checkinRecords.recordDate, morningSubmittedAt: checkinRecords.morningSubmittedAt }).from(checkinRecords).where(eq4(checkinRecords.coachId, coach.id)).orderBy(desc(checkinRecords.recordDate));
+      const records = await db2.select({ recordDate: checkinRecords.recordDate, morningSubmittedAt: checkinRecords.morningSubmittedAt }).from(checkinRecords).where(eq5(checkinRecords.coachId, coach.id)).orderBy(desc(checkinRecords.recordDate));
       const submittedDates = new Set(
         records.filter((r) => r.morningSubmittedAt).map((r) => r.recordDate)
       );
@@ -2927,7 +3122,7 @@ var coachesRouter = t.router({
     if (updates.email !== void 0) setObj.email = updates.email;
     if (updates.isActive !== void 0) setObj.isActive = updates.isActive;
     if (Object.keys(setObj).length > 0) {
-      await db2.update(coaches).set(setObj).where(eq4(coaches.id, id));
+      await db2.update(coaches).set(setObj).where(eq5(coaches.id, id));
     }
     return { success: true };
   }),
@@ -2938,12 +3133,12 @@ var coachesRouter = t.router({
     })
   ).mutation(async ({ input, ctx }) => {
     const db2 = await requireDb();
-    const [existing] = await db2.select().from(coaches).where(eq4(coaches.id, input.coachId)).limit(1);
+    const [existing] = await db2.select().from(coaches).where(eq5(coaches.id, input.coachId)).limit(1);
     if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Coach not found" });
     if (existing.userId) {
       throw new TRPCError({ code: "CONFLICT", message: "This coach profile is already claimed" });
     }
-    await db2.update(coaches).set({ userId: ctx.user.id, email: ctx.user.email }).where(eq4(coaches.id, input.coachId));
+    await db2.update(coaches).set({ userId: ctx.user.id, email: ctx.user.email }).where(eq5(coaches.id, input.coachId));
     return { success: true };
   }),
   /** Link a user to a coach (admin). */
@@ -2954,7 +3149,7 @@ var coachesRouter = t.router({
     })
   ).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    await db2.update(coaches).set({ userId: input.userId }).where(eq4(coaches.id, input.coachId));
+    await db2.update(coaches).set({ userId: input.userId }).where(eq5(coaches.id, input.coachId));
     return { success: true };
   }),
   /** Update coach's Slack/reminder settings. */
@@ -2983,7 +3178,7 @@ var coachesRouter = t.router({
     if (input.leaveStartDate !== void 0) setObj.leaveStartDate = input.leaveStartDate;
     if (input.leaveEndDate !== void 0) setObj.leaveEndDate = input.leaveEndDate;
     if (Object.keys(setObj).length > 0) {
-      await db2.update(coaches).set(setObj).where(eq4(coaches.id, id));
+      await db2.update(coaches).set(setObj).where(eq5(coaches.id, id));
     }
     return { success: true };
   })
@@ -2992,7 +3187,7 @@ var performanceRouter = t.router({
   /** Business-wide and per-coach green/yellow/red counts vs 70% target. */
   kpiSummary: protectedProcedure.query(async () => {
     const db2 = await requireDb();
-    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq4(coaches.isActive, 1));
+    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq5(coaches.isActive, 1));
     const allRatings = await db2.select().from(clientRatings);
     const TARGET = 70;
     const coachStats = coachList.map((coach) => {
@@ -3041,7 +3236,7 @@ var performanceRouter = t.router({
     let coachName = input.coachName;
     if (!coachName && input.coachId) {
       const db2 = await requireDb();
-      const [coach] = await db2.select().from(coaches).where(eq4(coaches.id, input.coachId)).limit(1);
+      const [coach] = await db2.select().from(coaches).where(eq5(coaches.id, input.coachId)).limit(1);
       if (!coach) throw new TRPCError({ code: "NOT_FOUND", message: "Coach not found" });
       coachName = coach.name;
     }
@@ -3070,9 +3265,9 @@ var performanceRouter = t.router({
   /** Ratings for current user's coach. */
   myRatings: protectedProcedure.query(async ({ ctx }) => {
     const db2 = await requireDb();
-    const [myCoach] = await db2.select().from(coaches).where(eq4(coaches.userId, ctx.user.id)).limit(1);
+    const [myCoach] = await db2.select().from(coaches).where(eq5(coaches.userId, ctx.user.id)).limit(1);
     if (!myCoach) return [];
-    return db2.select().from(clientRatings).where(eq4(clientRatings.coachId, myCoach.id)).orderBy(asc(clientRatings.clientName));
+    return db2.select().from(clientRatings).where(eq5(clientRatings.coachId, myCoach.id)).orderBy(asc(clientRatings.clientName));
   }),
   /** Aggregated weekly summary. */
   getWeeklySummary: adminProcedure.input(
@@ -3081,12 +3276,12 @@ var performanceRouter = t.router({
     })
   ).query(async ({ input }) => {
     const db2 = await requireDb();
-    const coachList = await db2.select({ id: coaches.id, name: coaches.name, workdays: coaches.workdays }).from(coaches).where(eq4(coaches.isActive, 1));
+    const coachList = await db2.select({ id: coaches.id, name: coaches.name, workdays: coaches.workdays }).from(coaches).where(eq5(coaches.isActive, 1));
     const coachSummaries = [];
-    const todayMelb = getTodayMelbourne();
-    const currentWeekMon = getMonday2(todayMelb);
+    const todayMelb = getTodayMelbourne2();
+    const currentWeekMon = getMonday3(todayMelb);
     const isPastWeek = input.weekStart < currentWeekMon;
-    const snapshots = isPastWeek ? await db2.select().from(rosterWeeklySnapshots).where(eq4(rosterWeeklySnapshots.weekStart, input.weekStart)) : [];
+    const snapshots = isPastWeek ? await db2.select().from(rosterWeeklySnapshots).where(eq5(rosterWeeklySnapshots.weekStart, input.weekStart)) : [];
     const snapMap = new Map(snapshots.map((s) => [s.coachId, s.snapshotJson]));
     for (const coach of coachList) {
       const snap = snapMap.get(coach.id);
@@ -3097,10 +3292,10 @@ var performanceRouter = t.router({
       if (isPastWeek && snap?.scheduled != null) {
         scheduled = snap.scheduled;
         completed = snap.completed ?? 0;
-        const liveExcuses = await db2.select().from(excusedClients).where(and2(
-          eq4(excusedClients.coachId, coach.id),
-          eq4(excusedClients.weekStart, input.weekStart),
-          eq4(excusedClients.status, "approved")
+        const liveExcuses = await db2.select().from(excusedClients).where(and3(
+          eq5(excusedClients.coachId, coach.id),
+          eq5(excusedClients.weekStart, input.weekStart),
+          eq5(excusedClients.status, "approved")
         ));
         excusedCount = liveExcuses.length;
         effectiveScheduled = Math.max(scheduled - excusedCount, 0);
@@ -3108,13 +3303,13 @@ var performanceRouter = t.router({
         const roster = await fetchRosterForCoach(coach.name);
         scheduled = 0;
         for (const day of DAYS) scheduled += (roster[day] ?? []).length;
-        const completions = await db2.select().from(clientCheckIns).where(and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, input.weekStart)));
+        const completions = await db2.select().from(clientCheckIns).where(and3(eq5(clientCheckIns.coachId, coach.id), eq5(clientCheckIns.weekStart, input.weekStart)));
         completed = completions.filter((c) => c.completedAt != null).length;
         const excuses = await db2.select().from(excusedClients).where(
-          and2(
-            eq4(excusedClients.coachId, coach.id),
-            eq4(excusedClients.weekStart, input.weekStart),
-            eq4(excusedClients.status, "approved")
+          and3(
+            eq5(excusedClients.coachId, coach.id),
+            eq5(excusedClients.weekStart, input.weekStart),
+            eq5(excusedClients.status, "approved")
           )
         );
         excusedCount = excuses.length;
@@ -3123,8 +3318,8 @@ var performanceRouter = t.router({
       const pct = effectiveScheduled > 0 ? Math.round(completed / effectiveScheduled * 100) : 0;
       const weekEnd2 = addDays(input.weekStart, 4);
       const records = await db2.select().from(checkinRecords).where(
-        and2(
-          eq4(checkinRecords.coachId, coach.id),
+        and3(
+          eq5(checkinRecords.coachId, coach.id),
           gte2(checkinRecords.recordDate, input.weekStart),
           lte2(checkinRecords.recordDate, weekEnd2)
         )
@@ -3152,12 +3347,12 @@ var performanceRouter = t.router({
     const overallPct = effectiveTotal > 0 ? Math.round(totalCompleted / effectiveTotal * 100) : 0;
     const weekEnd = addDays(input.weekStart, 4);
     const allRecords = await db2.select().from(checkinRecords).where(
-      and2(
+      and3(
         gte2(checkinRecords.recordDate, input.weekStart),
         lte2(checkinRecords.recordDate, weekEnd)
       )
     );
-    const today = getTodayMelbourne();
+    const today = getTodayMelbourne2();
     let elapsedWeekdays = 5;
     if (weekEnd > today) {
       const todayDate = /* @__PURE__ */ new Date(today + "T12:00:00+10:00");
@@ -3211,7 +3406,7 @@ var performanceRouter = t.router({
       }
     }
     const prevWeekStart = addDays(input.weekStart, -7);
-    const prevSnapshots = await db2.select().from(rosterWeeklySnapshots).where(eq4(rosterWeeklySnapshots.weekStart, prevWeekStart));
+    const prevSnapshots = await db2.select().from(rosterWeeklySnapshots).where(eq5(rosterWeeklySnapshots.weekStart, prevWeekStart));
     const prevSnapMap = new Map(prevSnapshots.map((s) => [s.coachId, s.snapshotJson]));
     let prevTotalScheduled = 0;
     let prevTotalCompleted = 0;
@@ -3224,7 +3419,7 @@ var performanceRouter = t.router({
         const roster = await fetchRosterForCoach(coach.name);
         let scheduled = 0;
         for (const day of DAYS) scheduled += (roster[day] ?? []).length;
-        const completions = await db2.select().from(clientCheckIns).where(and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, prevWeekStart)));
+        const completions = await db2.select().from(clientCheckIns).where(and3(eq5(clientCheckIns.coachId, coach.id), eq5(clientCheckIns.weekStart, prevWeekStart)));
         const completed = completions.filter((c) => c.completedAt != null).length;
         prevTotalScheduled += scheduled;
         prevTotalCompleted += completed;
@@ -3282,10 +3477,10 @@ var performanceRouter = t.router({
   ).mutation(async ({ input }) => {
     const db2 = await requireDb();
     const existing = await db2.select().from(clientRatings).where(
-      and2(eq4(clientRatings.coachId, input.coachId), eq4(clientRatings.clientName, input.clientName))
+      and3(eq5(clientRatings.coachId, input.coachId), eq5(clientRatings.clientName, input.clientName))
     ).limit(1);
     if (existing.length > 0) {
-      await db2.update(clientRatings).set({ rating: input.rating, notes: input.notes ?? existing[0].notes }).where(eq4(clientRatings.id, existing[0].id));
+      await db2.update(clientRatings).set({ rating: input.rating, notes: input.notes ?? existing[0].notes }).where(eq5(clientRatings.id, existing[0].id));
       return { id: existing[0].id };
     }
     const [result] = await db2.insert(clientRatings).values({
@@ -3305,14 +3500,14 @@ var performanceRouter = t.router({
   ).mutation(async ({ input }) => {
     const db2 = await requireDb();
     await db2.delete(clientRatings).where(
-      and2(eq4(clientRatings.coachId, input.coachId), eq4(clientRatings.clientName, input.clientName))
+      and3(eq5(clientRatings.coachId, input.coachId), eq5(clientRatings.clientName, input.clientName))
     );
     return { success: true };
   }),
   /** Clear all ratings, or for a specific coach if coachId provided. */
   resetAllRatings: adminProcedure.input(z.object({ coachId: z.number().optional() }).optional()).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    const ratingsToBackup = input?.coachId ? await db2.select().from(clientRatings).where(eq4(clientRatings.coachId, input.coachId)) : await db2.select().from(clientRatings);
+    const ratingsToBackup = input?.coachId ? await db2.select().from(clientRatings).where(eq5(clientRatings.coachId, input.coachId)) : await db2.select().from(clientRatings);
     const backupSnapshot = {
       _isRatingBackup: true,
       ratings: ratingsToBackup.map((r) => ({
@@ -3332,7 +3527,7 @@ var performanceRouter = t.router({
       scopeCoachId: input?.coachId ?? null
     });
     if (input?.coachId) {
-      await db2.delete(clientRatings).where(eq4(clientRatings.coachId, input.coachId));
+      await db2.delete(clientRatings).where(eq5(clientRatings.coachId, input.coachId));
     } else {
       await db2.delete(clientRatings);
     }
@@ -3341,7 +3536,7 @@ var performanceRouter = t.router({
   /** Undo a rating reset by restoring from backup. */
   undoResetRatings: adminProcedure.input(z.object({ backupId: z.number() })).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    const [backup] = await db2.select().from(sweepReports).where(eq4(sweepReports.id, input.backupId)).limit(1);
+    const [backup] = await db2.select().from(sweepReports).where(eq5(sweepReports.id, input.backupId)).limit(1);
     if (!backup) throw new TRPCError({ code: "NOT_FOUND", message: "Backup not found" });
     const snapshot = backup.snapshotJson;
     if (!snapshot?._isRatingBackup || !snapshot?.ratings) {
@@ -3349,9 +3544,9 @@ var performanceRouter = t.router({
     }
     let restored = 0;
     for (const r of snapshot.ratings) {
-      const existing = await db2.select().from(clientRatings).where(and2(eq4(clientRatings.coachId, r.coachId), eq4(clientRatings.clientName, r.clientName))).limit(1);
+      const existing = await db2.select().from(clientRatings).where(and3(eq5(clientRatings.coachId, r.coachId), eq5(clientRatings.clientName, r.clientName))).limit(1);
       if (existing.length > 0) {
-        await db2.update(clientRatings).set({ rating: r.rating, notes: r.notes }).where(eq4(clientRatings.id, existing[0].id));
+        await db2.update(clientRatings).set({ rating: r.rating, notes: r.notes }).where(eq5(clientRatings.id, existing[0].id));
       } else {
         await db2.insert(clientRatings).values({
           coachId: r.coachId,
@@ -3362,7 +3557,7 @@ var performanceRouter = t.router({
       }
       restored++;
     }
-    await db2.delete(sweepReports).where(eq4(sweepReports.id, input.backupId));
+    await db2.delete(sweepReports).where(eq5(sweepReports.id, input.backupId));
     return { success: true, restored };
   })
 });
@@ -3376,22 +3571,22 @@ var sweepReportRouter = t.router({
     })
   ).mutation(async ({ input, ctx }) => {
     const db2 = await requireDb();
-    const coachList = input.coachId ? await db2.select().from(coaches).where(eq4(coaches.id, input.coachId)) : await db2.select().from(coaches).where(eq4(coaches.isActive, 1));
+    const coachList = input.coachId ? await db2.select().from(coaches).where(eq5(coaches.id, input.coachId)) : await db2.select().from(coaches).where(eq5(coaches.isActive, 1));
     const snapshot = { coaches: [] };
     for (const coach of coachList) {
       const roster = await fetchRosterForCoach(coach.name);
       let scheduled = 0;
       for (const day of DAYS) scheduled += (roster[day] ?? []).length;
-      const completions = await db2.select().from(clientCheckIns).where(and2(eq4(clientCheckIns.coachId, coach.id), eq4(clientCheckIns.weekStart, input.weekStart)));
+      const completions = await db2.select().from(clientCheckIns).where(and3(eq5(clientCheckIns.coachId, coach.id), eq5(clientCheckIns.weekStart, input.weekStart)));
       const completed = completions.filter((c) => c.completedAt != null).length;
       const excuses = await db2.select().from(excusedClients).where(
-        and2(
-          eq4(excusedClients.coachId, coach.id),
-          eq4(excusedClients.weekStart, input.weekStart),
-          eq4(excusedClients.status, "approved")
+        and3(
+          eq5(excusedClients.coachId, coach.id),
+          eq5(excusedClients.weekStart, input.weekStart),
+          eq5(excusedClients.status, "approved")
         )
       );
-      const ratings = await db2.select().from(clientRatings).where(eq4(clientRatings.coachId, coach.id));
+      const ratings = await db2.select().from(clientRatings).where(eq5(clientRatings.coachId, coach.id));
       const green = ratings.filter((r) => r.rating === "green").length;
       const yellow = ratings.filter((r) => r.rating === "yellow").length;
       const red = ratings.filter((r) => r.rating === "red").length;
@@ -3425,13 +3620,13 @@ var sweepReportRouter = t.router({
   /** Mark report as saved. */
   save: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    await db2.update(sweepReports).set({ isSaved: 1 }).where(eq4(sweepReports.id, input.id));
+    await db2.update(sweepReports).set({ isSaved: 1 }).where(eq5(sweepReports.id, input.id));
     return { success: true };
   }),
   /** Get report by ID (public for sharing). */
   getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
     const db2 = await requireDb();
-    const [report] = await db2.select().from(sweepReports).where(eq4(sweepReports.id, input.id)).limit(1);
+    const [report] = await db2.select().from(sweepReports).where(eq5(sweepReports.id, input.id)).limit(1);
     if (!report) throw new TRPCError({ code: "NOT_FOUND", message: "Report not found" });
     return report;
   }),
@@ -3443,7 +3638,7 @@ var sweepReportRouter = t.router({
   /** Saved reports only. */
   listSaved: adminProcedure.query(async () => {
     const db2 = await requireDb();
-    return db2.select().from(sweepReports).where(eq4(sweepReports.isSaved, 1)).orderBy(desc(sweepReports.createdAt));
+    return db2.select().from(sweepReports).where(eq5(sweepReports.isSaved, 1)).orderBy(desc(sweepReports.createdAt));
   }),
   /** Compare two reports. */
   compare: adminProcedure.input(
@@ -3453,8 +3648,8 @@ var sweepReportRouter = t.router({
     })
   ).query(async ({ input }) => {
     const db2 = await requireDb();
-    const [reportA] = await db2.select().from(sweepReports).where(eq4(sweepReports.id, input.idA)).limit(1);
-    const [reportB] = await db2.select().from(sweepReports).where(eq4(sweepReports.id, input.idB)).limit(1);
+    const [reportA] = await db2.select().from(sweepReports).where(eq5(sweepReports.id, input.idA)).limit(1);
+    const [reportB] = await db2.select().from(sweepReports).where(eq5(sweepReports.id, input.idB)).limit(1);
     if (!reportA || !reportB) {
       throw new TRPCError({ code: "NOT_FOUND", message: "One or both reports not found" });
     }
@@ -3482,7 +3677,7 @@ var usersRouter = t.router({
     })
   ).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    await db2.update(users).set({ role: input.role }).where(eq4(users.id, input.id));
+    await db2.update(users).set({ role: input.role }).where(eq5(users.id, input.id));
     return { success: true };
   })
 });
@@ -3500,7 +3695,7 @@ var kudosRouter = t.router({
       coachId: input.coachId,
       message: input.message
     });
-    const [coach] = await db2.select().from(coaches).where(eq4(coaches.id, input.coachId)).limit(1);
+    const [coach] = await db2.select().from(coaches).where(eq5(coaches.id, input.coachId)).limit(1);
     if (coach?.slackUserId) {
       const senderName = ctx.user.name ?? ctx.user.email ?? "Your manager";
       const slackMsg = `\u2728 *Kudos from ${senderName}!*
@@ -3522,7 +3717,7 @@ ${input.message}`;
       message: kudos.message,
       createdAt: kudos.createdAt,
       coachName: coaches.name
-    }).from(kudos).leftJoin(coaches, eq4(kudos.coachId, coaches.id)).orderBy(desc(kudos.createdAt)).limit(50);
+    }).from(kudos).leftJoin(coaches, eq5(kudos.coachId, coaches.id)).orderBy(desc(kudos.createdAt)).limit(50);
   })
 });
 var salesRouter = t.router({
@@ -3534,14 +3729,14 @@ var salesRouter = t.router({
     morningNotes: z.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db2 = await requireDb();
-    const existing = await db2.select().from(salesCheckins).where(and2(eq4(salesCheckins.userId, ctx.user.id), eq4(salesCheckins.recordDate, input.recordDate))).limit(1);
+    const existing = await db2.select().from(salesCheckins).where(and3(eq5(salesCheckins.userId, ctx.user.id), eq5(salesCheckins.recordDate, input.recordDate))).limit(1);
     if (existing.length > 0) {
       await db2.update(salesCheckins).set({
         moodScore: input.moodScore ?? existing[0].moodScore,
         intendedWorkingHours: input.intendedWorkingHours ?? existing[0].intendedWorkingHours,
         morningNotes: input.morningNotes ?? existing[0].morningNotes,
         morningSubmittedAt: /* @__PURE__ */ new Date()
-      }).where(eq4(salesCheckins.id, existing[0].id));
+      }).where(eq5(salesCheckins.id, existing[0].id));
     } else {
       await db2.insert(salesCheckins).values({
         userId: ctx.user.id,
@@ -3570,7 +3765,7 @@ var salesRouter = t.router({
     eveningNotes: z.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db2 = await requireDb();
-    const existing = await db2.select().from(salesCheckins).where(and2(eq4(salesCheckins.userId, ctx.user.id), eq4(salesCheckins.recordDate, input.recordDate))).limit(1);
+    const existing = await db2.select().from(salesCheckins).where(and3(eq5(salesCheckins.userId, ctx.user.id), eq5(salesCheckins.recordDate, input.recordDate))).limit(1);
     if (existing.length > 0) {
       await db2.update(salesCheckins).set({
         howDayWent: input.howDayWent ?? existing[0].howDayWent,
@@ -3578,7 +3773,7 @@ var salesRouter = t.router({
         intendedHoursNextDay: input.intendedHoursNextDay ?? existing[0].intendedHoursNextDay,
         eveningNotes: input.eveningNotes ?? existing[0].eveningNotes,
         eveningSubmittedAt: /* @__PURE__ */ new Date()
-      }).where(eq4(salesCheckins.id, existing[0].id));
+      }).where(eq5(salesCheckins.id, existing[0].id));
     } else {
       await db2.insert(salesCheckins).values({
         userId: ctx.user.id,
@@ -3615,7 +3810,7 @@ ${summary}
   /** Get today's check-in for the current user. */
   getToday: protectedProcedure.input(z.object({ recordDate: z.string() })).query(async ({ input, ctx }) => {
     const db2 = await requireDb();
-    const [record] = await db2.select().from(salesCheckins).where(and2(eq4(salesCheckins.userId, ctx.user.id), eq4(salesCheckins.recordDate, input.recordDate))).limit(1);
+    const [record] = await db2.select().from(salesCheckins).where(and3(eq5(salesCheckins.userId, ctx.user.id), eq5(salesCheckins.recordDate, input.recordDate))).limit(1);
     return record ?? null;
   }),
   /** Get all check-ins (admin view). */
@@ -3624,18 +3819,18 @@ ${summary}
     const conditions = [];
     if (input?.startDate) conditions.push(gte2(salesCheckins.recordDate, input.startDate));
     if (input?.endDate) conditions.push(lte2(salesCheckins.recordDate, input.endDate));
-    return db2.select().from(salesCheckins).where(conditions.length > 0 ? and2(...conditions) : void 0).orderBy(desc(salesCheckins.recordDate));
+    return db2.select().from(salesCheckins).where(conditions.length > 0 ? and3(...conditions) : void 0).orderBy(desc(salesCheckins.recordDate));
   })
 });
 var auditsRouter = t.router({
   /** Get current week's audit for the logged-in coach. */
   getMyAudit: protectedProcedure.input(z.object({ weekStart: z.string() })).query(async ({ input, ctx }) => {
     const db2 = await requireDb();
-    const [myCoach] = await db2.select().from(coaches).where(eq4(coaches.userId, ctx.user.id)).limit(1);
+    const [myCoach] = await db2.select().from(coaches).where(eq5(coaches.userId, ctx.user.id)).limit(1);
     const coachId = ctx.user.role === "admin" ? null : myCoach?.id;
     if (!coachId && ctx.user.role !== "admin") return null;
     if (coachId) {
-      const [audit] = await db2.select().from(fridayAudits).where(and2(eq4(fridayAudits.coachId, coachId), eq4(fridayAudits.weekStart, input.weekStart))).limit(1);
+      const [audit] = await db2.select().from(fridayAudits).where(and3(eq5(fridayAudits.coachId, coachId), eq5(fridayAudits.weekStart, input.weekStart))).limit(1);
       return audit ?? null;
     }
     return null;
@@ -3643,7 +3838,13 @@ var auditsRouter = t.router({
   /** Get all audits for a week (admin view). */
   getAllForWeek: adminProcedure.input(z.object({ weekStart: z.string() })).query(async ({ input }) => {
     const db2 = await requireDb();
-    return db2.select().from(fridayAudits).where(eq4(fridayAudits.weekStart, input.weekStart));
+    return db2.select().from(fridayAudits).where(eq5(fridayAudits.weekStart, input.weekStart));
+  }),
+  /** Manually trigger audit (admin — for testing). */
+  triggerNow: adminProcedure.mutation(async () => {
+    const { sendFridayAudit: sendFridayAudit2 } = await Promise.resolve().then(() => (init_slackFridayAudit(), slackFridayAudit_exports));
+    await sendFridayAudit2();
+    return { triggered: true };
   }),
   /** Get audit history (admin view). */
   getHistory: adminProcedure.input(z.object({ limit: z.number().optional() }).optional()).query(async ({ input }) => {
@@ -3655,25 +3856,28 @@ var auditsRouter = t.router({
     auditId: z.number(),
     clientName: z.string(),
     loomLink: z.string().optional(),
-    notes: z.string().optional()
+    notes: z.string().optional(),
+    rating: z.enum(["green", "yellow", "red"]).optional()
   })).mutation(async ({ input, ctx }) => {
     const db2 = await requireDb();
-    const [audit] = await db2.select().from(fridayAudits).where(eq4(fridayAudits.id, input.auditId)).limit(1);
+    const [audit] = await db2.select().from(fridayAudits).where(eq5(fridayAudits.id, input.auditId)).limit(1);
     if (!audit) throw new TRPCError({ code: "NOT_FOUND", message: "Audit not found" });
     const clients = audit.selectedClients;
     const idx = clients.findIndex((c) => c.name === input.clientName);
     if (idx === -1) throw new TRPCError({ code: "BAD_REQUEST", message: "Client not in audit" });
-    clients[idx] = { ...clients[idx], loomLink: input.loomLink, notes: input.notes, submitted: true };
+    clients[idx] = { ...clients[idx], loomLink: input.loomLink, notes: input.notes, rating: input.rating, submitted: true };
     const allDone = clients.every((c) => c.submitted);
     await db2.update(fridayAudits).set({
       selectedClients: clients,
       ...allDone ? { allSubmittedAt: /* @__PURE__ */ new Date() } : {}
-    }).where(eq4(fridayAudits.id, input.auditId));
+    }).where(eq5(fridayAudits.id, input.auditId));
     if (allDone) {
       const managerSlackId = ENV.managerSlackId;
       if (managerSlackId && ENV.slackBotToken) {
+        const ratingEmojis = { green: "\u{1F7E2} On Track", yellow: "\u{1F7E1} Neutral", red: "\u{1F534} Off Track" };
         const summary = clients.map(
-          (c) => `\u2022 *${c.name}* (${c.day})${c.loomLink ? ` \u2014 <${c.loomLink}|Loom>` : ""}${c.notes ? ` \u2014 ${c.notes}` : ""}`
+          (c) => `\u2022 *${c.name}* (${c.day}) \u2014 ${ratingEmojis[c.rating ?? ""] ?? "No rating"}${c.loomLink ? ` \u2014 <${c.loomLink}|Loom/Fireflies>` : ""}${c.notes ? `
+  _${c.notes}_` : ""}`
         ).join("\n");
         const message = `\u2705 *${audit.coachName}* completed their Friday audit
 
@@ -3765,7 +3969,13 @@ async function serveStatic(app) {
   });
 }
 
+// server/_core/index.ts
+init_slackReminders();
+
 // server/slackWeeklySummary.ts
+init_db();
+init_env();
+init_slackReminders();
 var MANAGER_SLACK_ID = ENV.managerSlackId;
 var APP_URL2 = ENV.appUrl || "https://databitecoach.com";
 function formatDate(dateStr) {
@@ -3858,6 +4068,8 @@ async function screenshotDisengagementCard() {
 }
 
 // server/slackDisengagementAlert.ts
+init_env();
+init_slackReminders();
 var MANAGER_SLACK_ID2 = ENV.managerSlackId;
 var SLACK_BOT_TOKEN2 = ENV.slackBotToken;
 var APP_URL3 = ENV.appUrl || "https://databitecoach.com";
@@ -3979,6 +4191,10 @@ _(PNG screenshot failed \u2014 check server logs)_
 }
 
 // server/slackFridaySummary.ts
+init_db();
+init_env();
+init_slackReminders();
+init_rosterUtils();
 var MANAGER_SLACK_ID3 = ENV.managerSlackId;
 var APP_URL4 = ENV.appUrl || "https://databitecoach.com";
 function getMondayLocal2(date2) {
@@ -4114,8 +4330,11 @@ async function sendFridayWeeklySummary() {
 }
 
 // server/typeformWebhook.ts
+init_db();
+init_env();
+init_schema();
 import crypto from "crypto";
-import { and as and3, eq as eq5 } from "drizzle-orm";
+import { and as and4, eq as eq6 } from "drizzle-orm";
 var FORM_TO_COACH = {
   hrGCn0V0: "Kyah",
   i9de5jMN: "Luke",
@@ -4321,21 +4540,21 @@ async function markClientSubmitted(params) {
   const db2 = await getDb();
   if (!db2) return;
   const existing = await db2.select().from(clientCheckIns).where(
-    and3(
-      eq5(clientCheckIns.coachId, params.coachId),
-      eq5(clientCheckIns.clientName, params.clientName),
-      eq5(clientCheckIns.dayOfWeek, params.dayOfWeek),
-      eq5(clientCheckIns.weekStart, params.weekStart)
+    and4(
+      eq6(clientCheckIns.coachId, params.coachId),
+      eq6(clientCheckIns.clientName, params.clientName),
+      eq6(clientCheckIns.dayOfWeek, params.dayOfWeek),
+      eq6(clientCheckIns.weekStart, params.weekStart)
     )
   ).limit(1);
   if (existing.length > 0) {
     if (!existing[0].clientSubmitted) {
       await db2.update(clientCheckIns).set({ clientSubmitted: true, clientSubmittedAt: /* @__PURE__ */ new Date() }).where(
-        and3(
-          eq5(clientCheckIns.coachId, params.coachId),
-          eq5(clientCheckIns.clientName, params.clientName),
-          eq5(clientCheckIns.dayOfWeek, params.dayOfWeek),
-          eq5(clientCheckIns.weekStart, params.weekStart)
+        and4(
+          eq6(clientCheckIns.coachId, params.coachId),
+          eq6(clientCheckIns.clientName, params.clientName),
+          eq6(clientCheckIns.dayOfWeek, params.dayOfWeek),
+          eq6(clientCheckIns.weekStart, params.weekStart)
         )
       );
     }
@@ -4437,7 +4656,7 @@ function registerTypeformWebhook(app) {
           res.status(500).json({ error: "Database unavailable" });
           return;
         }
-        const coachRows = await db2.select().from(coaches).where(eq5(coaches.name, coachName)).limit(1);
+        const coachRows = await db2.select().from(coaches).where(eq6(coaches.name, coachName)).limit(1);
         if (!coachRows.length) {
           console.warn(`[Webhook] Coach not found in DB: ${coachName}`);
           res.status(200).json({ ok: true, skipped: true, reason: "coach_not_found" });
@@ -4718,6 +4937,7 @@ async function generateWeeklySummaryPdf(data, weekLabel) {
 }
 
 // server/weeklySummaryPdfRoute.ts
+init_db();
 function registerWeeklySummaryPdfRoute(app) {
   app.get("/api/weekly-summary-pdf", async (req, res) => {
     try {
@@ -4922,15 +5142,18 @@ function registerWeeklySummaryPdfRoute(app) {
 }
 
 // server/weeklySnapshot.ts
-import { eq as eq6, and as and4, isNull as isNull2 } from "drizzle-orm";
-function getMonday3(dateStr) {
+init_db();
+init_schema();
+init_rosterUtils();
+import { eq as eq7, and as and5, isNull as isNull3 } from "drizzle-orm";
+function getMonday4(dateStr) {
   const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   d.setDate(diff);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
-function getTodayMelbourne2() {
+function getTodayMelbourne3() {
   const now = /* @__PURE__ */ new Date();
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Melbourne" }).format(now);
 }
@@ -4940,22 +5163,22 @@ async function snapshotCurrentWeek() {
     console.warn("[Snapshot] Database not available \u2014 skipping");
     return;
   }
-  const today = getTodayMelbourne2();
-  const weekStart = getMonday3(today);
+  const today = getTodayMelbourne3();
+  const weekStart = getMonday4(today);
   console.log(`[Snapshot] Snapshotting week ${weekStart}...`);
-  const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq6(coaches.isActive, 1));
+  const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq7(coaches.isActive, 1));
   for (const coach of coachList) {
     const roster = await fetchRosterForCoach(coach.name);
-    const paused = await db2.select().from(pausedClients).where(and4(eq6(pausedClients.coachId, coach.id), isNull2(pausedClients.resumedAt)));
+    const paused = await db2.select().from(pausedClients).where(and5(eq7(pausedClients.coachId, coach.id), isNull3(pausedClients.resumedAt)));
     const pausedSet = new Set(paused.map((p) => p.clientName));
     let scheduled = 0;
     for (const day of DAYS2) {
       scheduled += (roster[day] ?? []).filter((c) => !pausedSet.has(c)).length;
     }
-    const completions = await db2.select().from(clientCheckIns).where(and4(eq6(clientCheckIns.coachId, coach.id), eq6(clientCheckIns.weekStart, weekStart)));
+    const completions = await db2.select().from(clientCheckIns).where(and5(eq7(clientCheckIns.coachId, coach.id), eq7(clientCheckIns.weekStart, weekStart)));
     const completed = completions.filter((c) => c.completedAt != null).length;
     const clientSubmitted = completions.filter((c) => c.clientSubmitted === 1).length;
-    const excuses = await db2.select().from(excusedClients).where(and4(eq6(excusedClients.coachId, coach.id), eq6(excusedClients.weekStart, weekStart), eq6(excusedClients.status, "approved")));
+    const excuses = await db2.select().from(excusedClients).where(and5(eq7(excusedClients.coachId, coach.id), eq7(excusedClients.weekStart, weekStart), eq7(excusedClients.status, "approved")));
     const excusedCount = excuses.length;
     const effectiveScheduled = Math.max(scheduled - excusedCount, 0);
     const engagementPct = effectiveScheduled > 0 ? Math.round(completed / effectiveScheduled * 1e3) / 10 : 0;
@@ -4968,9 +5191,9 @@ async function snapshotCurrentWeek() {
       engagementPct,
       source: "auto-snapshot"
     };
-    const existing = await db2.select().from(rosterWeeklySnapshots).where(and4(eq6(rosterWeeklySnapshots.coachId, coach.id), eq6(rosterWeeklySnapshots.weekStart, weekStart))).limit(1);
+    const existing = await db2.select().from(rosterWeeklySnapshots).where(and5(eq7(rosterWeeklySnapshots.coachId, coach.id), eq7(rosterWeeklySnapshots.weekStart, weekStart))).limit(1);
     if (existing.length > 0) {
-      await db2.update(rosterWeeklySnapshots).set({ snapshotJson: snap }).where(eq6(rosterWeeklySnapshots.id, existing[0].id));
+      await db2.update(rosterWeeklySnapshots).set({ snapshotJson: snap }).where(eq7(rosterWeeklySnapshots.id, existing[0].id));
     } else {
       await db2.insert(rosterWeeklySnapshots).values({
         coachId: coach.id,
@@ -4984,136 +5207,8 @@ async function snapshotCurrentWeek() {
   console.log(`[Snapshot] Week ${weekStart} snapshot complete.`);
 }
 
-// server/slackFridayAudit.ts
-import { eq as eq7, and as and5, isNull as isNull3 } from "drizzle-orm";
-function getMonday4(dateStr) {
-  const d = dateStr ? /* @__PURE__ */ new Date(dateStr + "T00:00:00") : new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "Australia/Melbourne" }));
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-function getTodayMelbourne3() {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Melbourne" }).format(/* @__PURE__ */ new Date());
-}
-async function sendFridayAudit() {
-  const db2 = await getDb();
-  if (!db2) return;
-  const weekStart = getMonday4(getTodayMelbourne3());
-  const appUrl = ENV.appUrl || "https://coach.databite.com.au";
-  const allCoaches = await db2.select().from(coaches).where(eq7(coaches.isActive, 1));
-  for (const coach of allCoaches) {
-    if (!coach.slackUserId) continue;
-    const claimed = await claimReminderSlot(coach.id, getTodayMelbourne3(), 20);
-    if (!claimed) continue;
-    const existing = await db2.select().from(fridayAudits).where(and5(eq7(fridayAudits.coachId, coach.id), eq7(fridayAudits.weekStart, weekStart))).limit(1);
-    if (existing.length > 0) continue;
-    const roster = await fetchRosterForCoach(coach.name);
-    const completions = await db2.select().from(clientCheckIns).where(and5(eq7(clientCheckIns.coachId, coach.id), eq7(clientCheckIns.weekStart, weekStart)));
-    const completedSet = new Set(
-      completions.filter((c) => c.completedAt != null && c.clientSubmitted === 1).map((c) => `${c.clientName}|${c.dayOfWeek}`)
-    );
-    for (const c of completions) {
-      if (c.completedAt != null && c.clientSubmitted === 1) {
-        const base = c.clientName.replace(/\s*\(.*\)\s*$/, "").trim();
-        if (base !== c.clientName) completedSet.add(`${base}|${c.dayOfWeek}`);
-      }
-    }
-    const prevAudited = await db2.select().from(auditHistory).where(eq7(auditHistory.coachId, coach.id));
-    const auditedSet = new Set(prevAudited.map((a) => a.clientName));
-    const eligibleByDay = {};
-    let totalEligible = 0;
-    for (const day of DAYS2) {
-      const clients = roster[day] ?? [];
-      const eligible = clients.filter((name) => {
-        const key = `${name}|${day}`;
-        return completedSet.has(key) && !auditedSet.has(name);
-      });
-      if (eligible.length > 0) {
-        eligibleByDay[day] = eligible;
-        totalEligible += eligible.length;
-      }
-    }
-    if (totalEligible === 0) {
-      await db2.delete(auditHistory).where(eq7(auditHistory.coachId, coach.id));
-      for (const day of DAYS2) {
-        const clients = roster[day] ?? [];
-        const eligible = clients.filter((name) => completedSet.has(`${name}|${day}`));
-        if (eligible.length > 0) {
-          eligibleByDay[day] = eligible;
-          totalEligible += eligible.length;
-        }
-      }
-    }
-    const daysWithClients = DAYS2.filter((d) => (eligibleByDay[d]?.length ?? 0) > 0);
-    const shuffledDays = daysWithClients.sort(() => Math.random() - 0.5).slice(0, 3);
-    const selected = [];
-    for (const day of shuffledDays) {
-      const dayClients = eligibleByDay[day];
-      const pick = dayClients[Math.floor(Math.random() * dayClients.length)];
-      selected.push({ name: pick, day });
-    }
-    if (selected.length === 0) {
-      console.log(`[Friday Audit] ${coach.name}: no eligible clients this week \u2014 skipping`);
-      continue;
-    }
-    const selectedWithSubmission = selected.map((s) => ({ ...s, submitted: false }));
-    await db2.insert(fridayAudits).values({
-      coachId: coach.id,
-      coachName: coach.name,
-      weekStart,
-      selectedClients: selectedWithSubmission
-    });
-    for (const s of selected) {
-      const existingHistory = await db2.select().from(auditHistory).where(and5(eq7(auditHistory.coachId, coach.id), eq7(auditHistory.clientName, s.name))).limit(1);
-      if (existingHistory.length > 0) {
-        await db2.update(auditHistory).set({ lastAuditedWeek: weekStart }).where(eq7(auditHistory.id, existingHistory[0].id));
-      } else {
-        await db2.insert(auditHistory).values({
-          coachId: coach.id,
-          clientName: s.name,
-          lastAuditedWeek: weekStart
-        });
-      }
-    }
-    const DAY_LABELS = { monday: "Monday", tuesday: "Tuesday", wednesday: "Wednesday", thursday: "Thursday", friday: "Friday" };
-    const clientList = selected.map((s) => `\u2022 *${s.name}* (${DAY_LABELS[s.day] ?? s.day})`).join("\n");
-    const message = `\u{1F4CB} *Friday Quality Audit*
-
-These 3 clients have been randomly selected for review this week:
-
-${clientList}
-
-Please submit a Loom link or notes for each client's check-in by *8:00pm today*.
-
-\u{1F449} <${appUrl}/audit|Submit your audit>`;
-    await sendSlackDM(coach.slackUserId, message);
-    console.log(`[Friday Audit] ${coach.name}: sent audit for ${selected.map((s) => s.name).join(", ")}`);
-  }
-}
-async function checkMissedAudits() {
-  const db2 = await getDb();
-  if (!db2) return;
-  const managerSlackId = ENV.managerSlackId;
-  if (!managerSlackId) return;
-  const weekStart = getMonday4(getTodayMelbourne3());
-  const audits = await db2.select().from(fridayAudits).where(and5(eq7(fridayAudits.weekStart, weekStart), isNull3(fridayAudits.allSubmittedAt)));
-  for (const audit of audits) {
-    const clients = audit.selectedClients;
-    const pending = clients.filter((c) => !c.submitted);
-    if (pending.length === 0) continue;
-    const message = `\u26A0\uFE0F *${audit.coachName}* has not completed their Friday audit
-
-${pending.length} of ${clients.length} clients still pending:
-` + pending.map((c) => `\u2022 ${c.name}`).join("\n");
-    const claimed = await claimReminderSlot(audit.coachId, getTodayMelbourne3(), 21);
-    if (claimed) {
-      await sendSlackDM(managerSlackId, message);
-    }
-  }
-}
-
 // server/_core/index.ts
+init_slackFridayAudit();
 function isPortAvailable(port) {
   return new Promise((resolve) => {
     const server = net.createServer();

@@ -3417,6 +3417,13 @@ const auditsRouter = t.router({
       return db.select().from(fridayAudits).where(eq(fridayAudits.weekStart, input.weekStart));
     }),
 
+  /** Manually trigger audit (admin — for testing). */
+  triggerNow: adminProcedure.mutation(async () => {
+    const { sendFridayAudit } = await import("./slackFridayAudit");
+    await sendFridayAudit();
+    return { triggered: true };
+  }),
+
   /** Get audit history (admin view). */
   getHistory: adminProcedure
     .input(z.object({ limit: z.number().optional() }).optional())
@@ -3432,6 +3439,7 @@ const auditsRouter = t.router({
       clientName: z.string(),
       loomLink: z.string().optional(),
       notes: z.string().optional(),
+      rating: z.enum(["green", "yellow", "red"]).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await requireDb();
@@ -3439,11 +3447,11 @@ const auditsRouter = t.router({
         .where(eq(fridayAudits.id, input.auditId)).limit(1);
       if (!audit) throw new TRPCError({ code: "NOT_FOUND", message: "Audit not found" });
 
-      const clients = audit.selectedClients as Array<{ name: string; day: string; loomLink?: string; notes?: string; submitted?: boolean }>;
+      const clients = audit.selectedClients as Array<{ name: string; day: string; loomLink?: string; notes?: string; rating?: string; submitted?: boolean }>;
       const idx = clients.findIndex(c => c.name === input.clientName);
       if (idx === -1) throw new TRPCError({ code: "BAD_REQUEST", message: "Client not in audit" });
 
-      clients[idx] = { ...clients[idx], loomLink: input.loomLink, notes: input.notes, submitted: true };
+      clients[idx] = { ...clients[idx], loomLink: input.loomLink, notes: input.notes, rating: input.rating, submitted: true };
       const allDone = clients.every(c => c.submitted);
 
       await db.update(fridayAudits).set({
@@ -3455,8 +3463,9 @@ const auditsRouter = t.router({
       if (allDone) {
         const managerSlackId = ENV.managerSlackId;
         if (managerSlackId && ENV.slackBotToken) {
+          const ratingEmojis: Record<string, string> = { green: "🟢 On Track", yellow: "🟡 Neutral", red: "🔴 Off Track" };
           const summary = clients.map(c =>
-            `• *${c.name}* (${c.day})${c.loomLink ? ` — <${c.loomLink}|Loom>` : ""}${c.notes ? ` — ${c.notes}` : ""}`
+            `• *${c.name}* (${c.day}) — ${ratingEmojis[c.rating ?? ""] ?? "No rating"}${c.loomLink ? ` — <${c.loomLink}|Loom/Fireflies>` : ""}${c.notes ? `\n  _${c.notes}_` : ""}`
           ).join("\n");
           const message = `✅ *${audit.coachName}* completed their Friday audit\n\n${summary}`;
           sendSlackDM(managerSlackId, message).catch(() => {});

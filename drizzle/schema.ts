@@ -256,7 +256,7 @@ export const fridayAudits = mysqlTable("friday_audits", {
   coachId: int("coachId").notNull(),
   coachName: varchar("coachName", { length: 128 }).notNull(),
   weekStart: varchar("weekStart", { length: 10 }).notNull(),
-  selectedClients: json("selectedClients").$type<Array<{ name: string; day: string; loomLink?: string; notes?: string; submitted?: boolean }>>().notNull(),
+  selectedClients: json("selectedClients").$type<Array<{ name: string; day: string; loomLink?: string; notes?: string; rating?: "green" | "yellow" | "red"; submitted?: boolean }>>().notNull(),
   allSubmittedAt: timestamp("allSubmittedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

@@ -3417,6 +3417,19 @@ const auditsRouter = t.router({
       return db.select().from(fridayAudits).where(eq(fridayAudits.weekStart, input.weekStart));
     }),
 
+  /** Admin: add a client to an existing audit. */
+  addClientToAudit: adminProcedure
+    .input(z.object({ auditId: z.number(), clientName: z.string(), day: z.string() }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      const [audit] = await db.select().from(fridayAudits).where(eq(fridayAudits.id, input.auditId)).limit(1);
+      if (!audit) throw new TRPCError({ code: "NOT_FOUND" });
+      const clients = audit.selectedClients as any[];
+      clients.push({ name: input.clientName, day: input.day, submitted: false });
+      await db.update(fridayAudits).set({ selectedClients: clients, allSubmittedAt: null }).where(eq(fridayAudits.id, input.auditId));
+      return { success: true };
+    }),
+
   /** Manually trigger audit (admin — for testing). */
   triggerNow: adminProcedure.mutation(async () => {
     const { sendFridayAudit } = await import("./slackFridayAudit");

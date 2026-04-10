@@ -14,6 +14,16 @@ import { fetchRosterForCoach, DAYS, type DayKey } from "./rosterUtils";
 import { sendSlackDM, claimReminderSlot } from "./slackReminders";
 import { ENV } from "./env";
 
+/** Day number to DayKey mapping (0=Sun, 1=Mon, ..., 6=Sat) */
+const DAY_NUM_TO_KEY: Record<number, DayKey> = { 1: "monday", 2: "tuesday", 3: "wednesday", 4: "thursday", 5: "friday" };
+
+function getLocalDayOfWeek(timezone: string): number {
+  const now = new Date();
+  const day = new Intl.DateTimeFormat("en-AU", { timeZone: timezone, weekday: "short" }).format(now);
+  const map: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return map[day] ?? 0;
+}
+
 function getMonday(dateStr?: string): string {
   const d = dateStr ? new Date(dateStr + "T00:00:00") : new Date(new Date().toLocaleString("en-US", { timeZone: "Australia/Melbourne" }));
   const day = d.getDay();
@@ -38,8 +48,16 @@ export async function sendFridayAudit(): Promise<void> {
   for (const coach of allCoaches) {
     if (!coach.slackUserId) continue;
 
-    // Dedup: use reminderIndex 20 for Friday audit
-    const claimed = await claimReminderSlot(coach.id, getTodayMelbourne(), 20);
+    // Check if today is this coach's LAST workday of the week
+    const timezone = coach.timezone ?? "Australia/Melbourne";
+    const todayDow = getLocalDayOfWeek(timezone);
+    const workdays: number[] = Array.isArray(coach.workdays) ? coach.workdays as number[] : [1, 2, 3, 4, 5];
+    const lastWorkday = Math.max(...workdays);
+    if (todayDow !== lastWorkday) continue; // not their last day — skip
+
+    // Dedup: use reminderIndex 20 for weekly audit
+    const localDate = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date());
+    const claimed = await claimReminderSlot(coach.id, localDate, 20);
     if (!claimed) continue;
 
     // Check if audit already exists for this week
@@ -194,12 +212,21 @@ export async function checkMissedAudits(): Promise<void> {
     .where(and(eq(fridayAudits.weekStart, weekStart), isNull(fridayAudits.allSubmittedAt)));
 
   for (const audit of audits) {
+    // Only check on the coach's last workday
+    const [coach] = await db.select().from(coaches).where(eq(coaches.id, audit.coachId)).limit(1);
+    if (!coach) continue;
+    const timezone = coach.timezone ?? "Australia/Melbourne";
+    const todayDow = getLocalDayOfWeek(timezone);
+    const workdays: number[] = Array.isArray(coach.workdays) ? coach.workdays as number[] : [1, 2, 3, 4, 5];
+    const lastWorkday = Math.max(...workdays);
+    if (todayDow !== lastWorkday) continue;
+
     const clients = audit.selectedClients as Array<{ name: string; day: string; submitted?: boolean }>;
     const pending = clients.filter(c => !c.submitted);
     if (pending.length === 0) continue;
 
     const message =
-      `⚠️ *${audit.coachName}* has not completed their Friday audit\n\n` +
+      `⚠️ *${audit.coachName}* has not completed their weekly audit\n\n` +
       `${pending.length} of ${clients.length} clients still pending:\n` +
       pending.map(c => `• ${c.name}`).join("\n");
 

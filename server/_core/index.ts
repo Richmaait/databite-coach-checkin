@@ -122,15 +122,19 @@ async function startServer() {
       sendFortnightlySweepReportReminder().catch(err => console.error("[Slack Sweep Reminder] error:", err));
     }
 
-    // Friday 14:30 AEST — Friday quality audit (select 3 clients per coach)
-    if (weekday === "Fri" && hour === "14" && minuteInt >= 25 && minuteInt < 35) {
-      sendFridayAudit().catch(err => console.error("[Friday Audit] error:", err));
+    // Weekday 14:30 AEST — quality audit (fires on each coach's last workday)
+    if (["Mon","Tue","Wed","Thu","Fri"].includes(weekday ?? "") && hour === "14" && minuteInt >= 25 && minuteInt < 35) {
+      sendFridayAudit().catch(err => console.error("[Weekly Audit] error:", err));
     }
 
-    // Friday 20:00 AEST — current-week client check-in summary + missed audit check
+    // Friday 20:00 AEST — current-week client check-in summary
     if (weekday === "Fri" && hour === "20" && minuteInt < 5) {
       sendFridayWeeklySummary().catch(err => console.error("[Slack Friday Summary] error:", err));
-      checkMissedAudits().catch(err => console.error("[Friday Audit] missed check error:", err));
+    }
+
+    // Weekday 20:00 AEST — missed audit check (fires on each coach's last workday)
+    if (["Mon","Tue","Wed","Thu","Fri"].includes(weekday ?? "") && hour === "20" && minuteInt < 5) {
+      checkMissedAudits().catch(err => console.error("[Weekly Audit] missed check error:", err));
     }
 
     // Sunday 23:59 AEST — snapshot the current week's roster stats

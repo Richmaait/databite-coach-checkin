@@ -871,6 +871,12 @@ __export(slackFridayAudit_exports, {
   sendFridayAudit: () => sendFridayAudit
 });
 import { eq as eq4, and as and2, isNull } from "drizzle-orm";
+function getLocalDayOfWeek2(timezone) {
+  const now = /* @__PURE__ */ new Date();
+  const day = new Intl.DateTimeFormat("en-AU", { timeZone: timezone, weekday: "short" }).format(now);
+  const map = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return map[day] ?? 0;
+}
 function getMonday2(dateStr) {
   const d = dateStr ? /* @__PURE__ */ new Date(dateStr + "T00:00:00") : new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "Australia/Melbourne" }));
   const day = d.getDay();
@@ -889,7 +895,13 @@ async function sendFridayAudit() {
   const allCoaches = await db2.select().from(coaches).where(eq4(coaches.isActive, 1));
   for (const coach of allCoaches) {
     if (!coach.slackUserId) continue;
-    const claimed = await claimReminderSlot(coach.id, getTodayMelbourne(), 20);
+    const timezone = coach.timezone ?? "Australia/Melbourne";
+    const todayDow = getLocalDayOfWeek2(timezone);
+    const workdays = Array.isArray(coach.workdays) ? coach.workdays : [1, 2, 3, 4, 5];
+    const lastWorkday = Math.max(...workdays);
+    if (todayDow !== lastWorkday) continue;
+    const localDate = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(/* @__PURE__ */ new Date());
+    const claimed = await claimReminderSlot(coach.id, localDate, 20);
     if (!claimed) continue;
     const existing = await db2.select().from(fridayAudits).where(and2(eq4(fridayAudits.coachId, coach.id), eq4(fridayAudits.weekStart, weekStart))).limit(1);
     if (existing.length > 0) continue;
@@ -1003,10 +1015,17 @@ async function checkMissedAudits() {
   const weekStart = getMonday2(getTodayMelbourne());
   const audits = await db2.select().from(fridayAudits).where(and2(eq4(fridayAudits.weekStart, weekStart), isNull(fridayAudits.allSubmittedAt)));
   for (const audit of audits) {
+    const [coach] = await db2.select().from(coaches).where(eq4(coaches.id, audit.coachId)).limit(1);
+    if (!coach) continue;
+    const timezone = coach.timezone ?? "Australia/Melbourne";
+    const todayDow = getLocalDayOfWeek2(timezone);
+    const workdays = Array.isArray(coach.workdays) ? coach.workdays : [1, 2, 3, 4, 5];
+    const lastWorkday = Math.max(...workdays);
+    if (todayDow !== lastWorkday) continue;
     const clients = audit.selectedClients;
     const pending = clients.filter((c) => !c.submitted);
     if (pending.length === 0) continue;
-    const message = `\u26A0\uFE0F *${audit.coachName}* has not completed their Friday audit
+    const message = `\u26A0\uFE0F *${audit.coachName}* has not completed their weekly audit
 
 ${pending.length} of ${clients.length} clients still pending:
 ` + pending.map((c) => `\u2022 ${c.name}`).join("\n");
@@ -5304,12 +5323,14 @@ async function startServer() {
     if (weekday === "Mon" && hour === "09" && minuteInt < 5) {
       sendFortnightlySweepReportReminder().catch((err) => console.error("[Slack Sweep Reminder] error:", err));
     }
-    if (weekday === "Fri" && hour === "14" && minuteInt >= 25 && minuteInt < 35) {
-      sendFridayAudit().catch((err) => console.error("[Friday Audit] error:", err));
+    if (["Mon", "Tue", "Wed", "Thu", "Fri"].includes(weekday ?? "") && hour === "14" && minuteInt >= 25 && minuteInt < 35) {
+      sendFridayAudit().catch((err) => console.error("[Weekly Audit] error:", err));
     }
     if (weekday === "Fri" && hour === "20" && minuteInt < 5) {
       sendFridayWeeklySummary().catch((err) => console.error("[Slack Friday Summary] error:", err));
-      checkMissedAudits().catch((err) => console.error("[Friday Audit] missed check error:", err));
+    }
+    if (["Mon", "Tue", "Wed", "Thu", "Fri"].includes(weekday ?? "") && hour === "20" && minuteInt < 5) {
+      checkMissedAudits().catch((err) => console.error("[Weekly Audit] missed check error:", err));
     }
     if (weekday === "Sun" && hour === "23" && minuteInt >= 55) {
       snapshotCurrentWeek().catch((err) => console.error("[Snapshot] error:", err));

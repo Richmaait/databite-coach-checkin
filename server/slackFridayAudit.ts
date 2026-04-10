@@ -101,15 +101,38 @@ export async function sendFridayAudit(): Promise<void> {
       }
     }
 
-    // Pick 1 client from each of 3 random days
-    const daysWithClients = DAYS.filter(d => (eligibleByDay[d]?.length ?? 0) > 0);
-    const shuffledDays = daysWithClients.sort(() => Math.random() - 0.5).slice(0, 3);
+    // Pick 3 clients — spread across days where possible, but always pick 3
+    const allEligible: Array<{ name: string; day: string }> = [];
+    for (const day of DAYS) {
+      for (const name of (eligibleByDay[day] ?? [])) {
+        allEligible.push({ name, day });
+      }
+    }
 
+    // Try to pick from different days first, then fill from any day
     const selected: Array<{ name: string; day: string }> = [];
-    for (const day of shuffledDays) {
-      const dayClients = eligibleByDay[day]!;
-      const pick = dayClients[Math.floor(Math.random() * dayClients.length)];
-      selected.push({ name: pick, day });
+    const usedDays = new Set<string>();
+    const usedNames = new Set<string>();
+    const shuffled = allEligible.sort(() => Math.random() - 0.5);
+
+    // First pass: 1 per day
+    for (const item of shuffled) {
+      if (selected.length >= 3) break;
+      if (!usedDays.has(item.day) && !usedNames.has(item.name)) {
+        selected.push(item);
+        usedDays.add(item.day);
+        usedNames.add(item.name);
+      }
+    }
+    // Second pass: fill remaining from any day (different clients)
+    if (selected.length < 3) {
+      for (const item of shuffled) {
+        if (selected.length >= 3) break;
+        if (!usedNames.has(item.name)) {
+          selected.push(item);
+          usedNames.add(item.name);
+        }
+      }
     }
 
     if (selected.length === 0) {

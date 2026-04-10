@@ -930,13 +930,32 @@ async function sendFridayAudit() {
         }
       }
     }
-    const daysWithClients = DAYS2.filter((d) => (eligibleByDay[d]?.length ?? 0) > 0);
-    const shuffledDays = daysWithClients.sort(() => Math.random() - 0.5).slice(0, 3);
+    const allEligible = [];
+    for (const day of DAYS2) {
+      for (const name of eligibleByDay[day] ?? []) {
+        allEligible.push({ name, day });
+      }
+    }
     const selected = [];
-    for (const day of shuffledDays) {
-      const dayClients = eligibleByDay[day];
-      const pick = dayClients[Math.floor(Math.random() * dayClients.length)];
-      selected.push({ name: pick, day });
+    const usedDays = /* @__PURE__ */ new Set();
+    const usedNames = /* @__PURE__ */ new Set();
+    const shuffled = allEligible.sort(() => Math.random() - 0.5);
+    for (const item of shuffled) {
+      if (selected.length >= 3) break;
+      if (!usedDays.has(item.day) && !usedNames.has(item.name)) {
+        selected.push(item);
+        usedDays.add(item.day);
+        usedNames.add(item.name);
+      }
+    }
+    if (selected.length < 3) {
+      for (const item of shuffled) {
+        if (selected.length >= 3) break;
+        if (!usedNames.has(item.name)) {
+          selected.push(item);
+          usedNames.add(item.name);
+        }
+      }
     }
     if (selected.length === 0) {
       console.log(`[Friday Audit] ${coach.name}: no eligible clients this week \u2014 skipping`);

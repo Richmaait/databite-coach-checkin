@@ -483,7 +483,7 @@ export default function CoachPerformanceReport() {
               <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-semibold">Daily Breakdown — Week of {formatWeekLabel(startDate)}</CardTitle>
-                  <p className="text-xs text-white/50 mt-0.5">Scheduled / Done per coach · dimmed rows = not yet due</p>
+                  <p className="text-xs text-white/50 mt-0.5">Done / Scheduled per coach · dimmed rows = not yet due</p>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
@@ -503,11 +503,11 @@ export default function CoachPerformanceReport() {
                           <th />
                           {(dailyData?.coaches ?? []).map(coach => (
                             <React.Fragment key={coach.coachId}>
-                              <th className="text-center px-3 py-1.5 font-normal">Sched / Done</th>
+                              <th className="text-center px-3 py-1.5 font-normal">Done / Sched</th>
                               <th className="text-center px-3 py-1.5 font-normal">Eng%</th>
                             </React.Fragment>
                           ))}
-                          <th className="text-center px-3 py-1.5 font-normal">Sched / Done</th>
+                          <th className="text-center px-3 py-1.5 font-normal">Done / Sched</th>
                           <th className="text-center px-3 py-1.5 font-normal">Eng%</th>
                         </tr>
                       </thead>

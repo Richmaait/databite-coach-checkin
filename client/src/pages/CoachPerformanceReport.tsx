@@ -196,8 +196,10 @@ export default function CoachPerformanceReport() {
   const coaches = isOneWeek ? (dailyData?.coaches ?? []) : (weeklyData?.coaches ?? []);
   const grandTotalCompleted = coaches.reduce((s, c) => s + c.totalCompleted, 0);
   const grandTotalScheduled = coaches.reduce((s, c) => s + c.totalScheduled, 0);
+  const grandTotalExcused = coaches.reduce((s, c) => s + ((c as any).totalExcused ?? 0), 0);
+  const teamEffScheduled = Math.max(grandTotalScheduled - grandTotalExcused, 1);
   const teamEngagementPct = grandTotalScheduled > 0
-    ? Math.round((grandTotalCompleted / grandTotalScheduled) * 1000) / 10
+    ? Math.round((grandTotalCompleted / teamEffScheduled) * 1000) / 10
     : null;
 
   const weekCount = weeklyData?.weeks.length ?? 1;

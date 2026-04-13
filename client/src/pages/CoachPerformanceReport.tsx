@@ -528,7 +528,7 @@ export default function CoachPerformanceReport() {
                                     <td className="text-center px-3 py-3 tabular-nums">
                                       {noData
                                         ? <span className="text-white/50/30">—</span>
-                                        : <span className="font-medium">{sched ?? 0}<span className="text-white/50 font-normal">/{comp ?? 0}</span></span>
+                                        : <span className="font-medium">{comp ?? 0}<span className="text-white/50 font-normal">/{sched ?? 0}</span></span>
                                       }
                                     </td>
                                     <td className="text-center px-3 py-3 tabular-nums">
@@ -541,7 +541,7 @@ export default function CoachPerformanceReport() {
                               })}
                               <td className="text-center px-3 py-3 font-semibold tabular-nums">
                                 {rowSched > 0
-                                  ? <span>{rowSched}<span className="text-white/50 font-normal">/{rowComp}</span></span>
+                                  ? <span>{rowComp}<span className="text-white/50 font-normal">/{rowSched}</span></span>
                                   : <span className="text-white/50/30">—</span>}
                               </td>
                               <td className="text-center px-3 py-3 tabular-nums">
@@ -558,7 +558,7 @@ export default function CoachPerformanceReport() {
                             <React.Fragment key={coach.coachId}>
                               <td className="text-center px-3 py-3 tabular-nums">
                                 {coach.totalScheduled > 0
-                                  ? <span>{coach.totalScheduled}<span className="text-white/50 font-normal">/{coach.totalCompleted}</span></span>
+                                  ? <span>{coach.totalCompleted}<span className="text-white/50 font-normal">/{coach.totalScheduled}</span></span>
                                   : coach.totalCompleted}
                               </td>
                               <td className="text-center px-3 py-3 tabular-nums">
@@ -571,6 +571,7 @@ export default function CoachPerformanceReport() {
                           <td className="text-center px-3 py-3 tabular-nums">
                             {grandTotalScheduled > 0
                               ? <span>{grandTotalCompleted}<span className="text-white/50 font-normal">/{grandTotalScheduled}</span></span>
+
                               : grandTotalCompleted}
                           </td>
                           <td className="text-center px-3 py-3 tabular-nums">

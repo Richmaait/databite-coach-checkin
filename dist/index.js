@@ -2402,7 +2402,7 @@ var clientCheckinsRouter = t.router({
     })
   ).query(async ({ input }) => {
     const db2 = await requireDb();
-    const rows = await db2.select({
+    const stated = await db2.select({
       coachId: checkinRecords.coachId,
       recordDate: checkinRecords.recordDate,
       workingHours: checkinRecords.workingHours,
@@ -2415,7 +2415,50 @@ var clientCheckinsRouter = t.router({
         sql`${checkinRecords.workingHours} != ''`
       )
     ).orderBy(asc(checkinRecords.recordDate));
-    return rows;
+    const weekStart = getMonday2(input.startDate);
+    const completions = await db2.select().from(clientCheckIns).where(
+      and4(
+        gte3(clientCheckIns.weekStart, weekStart),
+        sql`${clientCheckIns.completedAt} IS NOT NULL`
+      )
+    );
+    const actualMap = /* @__PURE__ */ new Map();
+    for (const c of completions) {
+      if (!c.completedAt) continue;
+      const d = c.completedAt instanceof Date ? c.completedAt : new Date(c.completedAt);
+      const dateStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Melbourne" }).format(d);
+      if (dateStr < input.startDate || dateStr > input.endDate) continue;
+      const key = `${c.coachId}|${dateStr}`;
+      const existing = actualMap.get(key);
+      if (!existing) actualMap.set(key, { start: d, end: d });
+      else {
+        if (d < existing.start) existing.start = d;
+        if (d > existing.end) existing.end = d;
+      }
+    }
+    const formatHHMM = (d) => {
+      const parts = new Intl.DateTimeFormat("en-AU", {
+        timeZone: "Australia/Melbourne",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
+      }).formatToParts(d);
+      const h = parts.find((p) => p.type === "hour")?.value ?? "";
+      const m = parts.find((p) => p.type === "minute")?.value ?? "";
+      const a = (parts.find((p) => p.type === "dayPeriod")?.value ?? "").toLowerCase();
+      return `${h}:${m}${a}`;
+    };
+    return stated.map((r) => {
+      const key = `${r.coachId}|${r.recordDate}`;
+      const actual = actualMap.get(key);
+      return {
+        ...r,
+        statedHours: r.workingHours,
+        actualStart: actual ? formatHHMM(actual.start) : null,
+        actualEnd: actual ? formatHHMM(actual.end) : null,
+        actualHours: actual ? `${formatHHMM(actual.start)}-${formatHHMM(actual.end)}` : null
+      };
+    });
   }),
   /** Per-day stats for a week. */
   getDailyActivityBreakdown: adminProcedure.input(
@@ -2559,16 +2602,44 @@ var clientCheckinsRouter = t.router({
       coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq6(coaches.isActive, 1));
     }
     const weeklyData = [];
+    const todayMon = getMonday2(today);
     for (const week of weeks) {
       const coachEntries = [];
+      const isPastWeek = week < todayMon;
+      const weekSnapshots = await db2.select().from(rosterWeeklySnapshots).where(eq6(rosterWeeklySnapshots.weekStart, week));
+      const snapMap = new Map(weekSnapshots.map((s) => [s.coachId, s.snapshotJson]));
       for (const coach of coachList) {
-        const roster = await fetchRosterForCoach(coach.name);
-        let scheduled = 0;
-        for (const day of DAYS) scheduled += (roster[day] ?? []).length;
-        const completions = await db2.select().from(clientCheckIns).where(and4(eq6(clientCheckIns.coachId, coach.id), eq6(clientCheckIns.weekStart, week)));
-        const completed = completions.filter((c) => c.completedAt != null).length;
-        const pct = scheduled > 0 ? Math.round(completed / scheduled * 100) : 0;
-        coachEntries.push({ coachId: coach.id, coachName: coach.name, scheduled, completed, pct });
+        const snap = snapMap.get(coach.id);
+        let scheduled, completed, excusedCount;
+        if (isPastWeek && snap?.scheduled != null) {
+          scheduled = snap.scheduled;
+          completed = snap.completed ?? 0;
+          const liveExcuses = await db2.select().from(excusedClients).where(and4(
+            eq6(excusedClients.coachId, coach.id),
+            eq6(excusedClients.weekStart, week),
+            eq6(excusedClients.status, "approved")
+          ));
+          excusedCount = liveExcuses.length;
+        } else {
+          const roster = await fetchRosterForCoach(coach.name);
+          const paused = await db2.select().from(pausedClients).where(and4(eq6(pausedClients.coachId, coach.id), isNull3(pausedClients.resumedAt)));
+          const pausedSet = new Set(paused.map((p) => p.clientName));
+          scheduled = 0;
+          for (const day of DAYS) {
+            scheduled += (roster[day] ?? []).filter((c) => !pausedSet.has(c)).length;
+          }
+          const completions = await db2.select().from(clientCheckIns).where(and4(eq6(clientCheckIns.coachId, coach.id), eq6(clientCheckIns.weekStart, week)));
+          completed = completions.filter((c) => c.completedAt != null).length;
+          const excuses = await db2.select().from(excusedClients).where(and4(
+            eq6(excusedClients.coachId, coach.id),
+            eq6(excusedClients.weekStart, week),
+            eq6(excusedClients.status, "approved")
+          ));
+          excusedCount = excuses.length;
+        }
+        const effectiveScheduled = Math.max(scheduled - excusedCount, 0);
+        const pct = effectiveScheduled > 0 ? Math.round(completed / effectiveScheduled * 100) : 0;
+        coachEntries.push({ coachId: coach.id, coachName: coach.name, scheduled, completed, excused: excusedCount, pct });
       }
       weeklyData.push({ weekStart: week, coaches: coachEntries });
     }
@@ -2581,6 +2652,7 @@ var clientCheckinsRouter = t.router({
             coachName: ce.coachName,
             totalScheduled: 0,
             totalCompleted: 0,
+            totalExcused: 0,
             scheduledByWeek: {},
             completedByWeek: {},
             engagementByWeek: {},
@@ -2591,13 +2663,15 @@ var clientCheckinsRouter = t.router({
         const entry = coachMap.get(ce.coachId);
         entry.totalScheduled += ce.scheduled;
         entry.totalCompleted += ce.completed;
+        entry.totalExcused += ce.excused;
         entry.scheduledByWeek[wd.weekStart] = ce.scheduled;
         entry.completedByWeek[wd.weekStart] = ce.completed;
         entry.engagementByWeek[wd.weekStart] = ce.pct;
       }
     }
     const enrichedCoaches = [...coachMap.values()].map((c) => {
-      const overallEngagementPct = c.totalScheduled > 0 ? Math.round(c.totalCompleted / c.totalScheduled * 1e3) / 10 : 0;
+      const eff = Math.max(c.totalScheduled - (c.totalExcused ?? 0), 1);
+      const overallEngagementPct = c.totalScheduled > 0 ? Math.round(c.totalCompleted / eff * 1e3) / 10 : 0;
       const weekCount = Object.keys(c.engagementByWeek).length;
       const weeklyAvg = weekCount > 0 ? Math.round(Object.values(c.engagementByWeek).reduce((s, v) => s + v, 0) / weekCount * 10) / 10 : 0;
       return {

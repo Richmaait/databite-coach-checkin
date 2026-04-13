@@ -1343,7 +1343,8 @@ const clientCheckinsRouter = t.router({
     .query(async ({ input }) => {
       const db = await requireDb();
 
-      const rows = await db
+      // Stated hours from morning check-ins
+      const stated = await db
         .select({
           coachId: checkinRecords.coachId,
           recordDate: checkinRecords.recordDate,
@@ -1362,7 +1363,58 @@ const clientCheckinsRouter = t.router({
         )
         .orderBy(asc(checkinRecords.recordDate));
 
-      return rows;
+      // Actual hours: derive from client check-in completion timestamps
+      // Start = earliest completedAt that day, End = latest completedAt that day
+      const weekStart = getMonday(input.startDate);
+      const completions = await db
+        .select()
+        .from(clientCheckIns)
+        .where(
+          and(
+            gte(clientCheckIns.weekStart, weekStart),
+            sql`${clientCheckIns.completedAt} IS NOT NULL`,
+          ),
+        );
+
+      // Group by coachId + date (Melbourne)
+      type ActualKey = string; // `${coachId}|${yyyy-mm-dd}`
+      const actualMap = new Map<ActualKey, { start: Date; end: Date }>();
+      for (const c of completions) {
+        if (!c.completedAt) continue;
+        const d = c.completedAt instanceof Date ? c.completedAt : new Date(c.completedAt as any);
+        const dateStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Melbourne" }).format(d);
+        if (dateStr < input.startDate || dateStr > input.endDate) continue;
+        const key = `${c.coachId}|${dateStr}`;
+        const existing = actualMap.get(key);
+        if (!existing) actualMap.set(key, { start: d, end: d });
+        else {
+          if (d < existing.start) existing.start = d;
+          if (d > existing.end) existing.end = d;
+        }
+      }
+
+      const formatHHMM = (d: Date) => {
+        const parts = new Intl.DateTimeFormat("en-AU", {
+          timeZone: "Australia/Melbourne", hour: "numeric", minute: "2-digit", hour12: true,
+        }).formatToParts(d);
+        const h = parts.find(p => p.type === "hour")?.value ?? "";
+        const m = parts.find(p => p.type === "minute")?.value ?? "";
+        const a = (parts.find(p => p.type === "dayPeriod")?.value ?? "").toLowerCase();
+        return `${h}:${m}${a}`;
+      };
+
+      // Merge actual hours into rows
+      return stated.map(r => {
+        const key = `${r.coachId}|${r.recordDate}`;
+        const actual = actualMap.get(key);
+        return {
+          ...r,
+          statedHours: r.workingHours,
+          actualStart: actual ? formatHHMM(actual.start) : null,
+          actualEnd: actual ? formatHHMM(actual.end) : null,
+          actualHours: actual ? `${formatHHMM(actual.start)}-${formatHHMM(actual.end)}` : null,
+        };
+      });
     }),
 
   /** Per-day stats for a week. */
@@ -1593,9 +1645,12 @@ const clientCheckinsRouter = t.router({
           coachName: string;
           scheduled: number;
           completed: number;
+          excused: number;
           pct: number;
         }>;
       }> = [];
+
+      const todayMon = getMonday(today);
 
       for (const week of weeks) {
         const coachEntries: Array<{
@@ -1603,23 +1658,55 @@ const clientCheckinsRouter = t.router({
           coachName: string;
           scheduled: number;
           completed: number;
+          excused: number;
           pct: number;
         }> = [];
 
+        const isPastWeek = week < todayMon;
+        // Pull all snapshots for this week once
+        const weekSnapshots = await db.select().from(rosterWeeklySnapshots).where(eq(rosterWeeklySnapshots.weekStart, week));
+        const snapMap = new Map(weekSnapshots.map(s => [s.coachId, s.snapshotJson as any]));
+
         for (const coach of coachList) {
-          const roster = await fetchRosterForCoach(coach.name);
-          let scheduled = 0;
-          for (const day of DAYS) scheduled += (roster[day] ?? []).length;
+          const snap = snapMap.get(coach.id);
+          let scheduled: number, completed: number, excusedCount: number;
 
-          const completions = await db
-            .select()
-            .from(clientCheckIns)
-            .where(and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, week)));
+          if (isPastWeek && snap?.scheduled != null) {
+            // Use snapshot for past weeks
+            scheduled = snap.scheduled;
+            completed = snap.completed ?? 0;
+            // Live excuse count (can be approved retroactively)
+            const liveExcuses = await db.select().from(excusedClients).where(and(
+              eq(excusedClients.coachId, coach.id),
+              eq(excusedClients.weekStart, week),
+              eq(excusedClients.status, "approved"),
+            ));
+            excusedCount = liveExcuses.length;
+          } else {
+            // Live calculation for current week (exclude paused clients)
+            const roster = await fetchRosterForCoach(coach.name);
+            const paused = await db.select().from(pausedClients)
+              .where(and(eq(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
+            const pausedSet = new Set(paused.map(p => p.clientName));
+            scheduled = 0;
+            for (const day of DAYS) {
+              scheduled += (roster[day] ?? []).filter((c: string) => !pausedSet.has(c)).length;
+            }
+            const completions = await db.select().from(clientCheckIns)
+              .where(and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, week)));
+            completed = completions.filter(c => c.completedAt != null).length;
+            const excuses = await db.select().from(excusedClients).where(and(
+              eq(excusedClients.coachId, coach.id),
+              eq(excusedClients.weekStart, week),
+              eq(excusedClients.status, "approved"),
+            ));
+            excusedCount = excuses.length;
+          }
 
-          const completed = completions.filter((c) => c.completedAt != null).length;
-          const pct = scheduled > 0 ? Math.round((completed / scheduled) * 100) : 0;
+          const effectiveScheduled = Math.max(scheduled - excusedCount, 0);
+          const pct = effectiveScheduled > 0 ? Math.round((completed / effectiveScheduled) * 100) : 0;
 
-          coachEntries.push({ coachId: coach.id, coachName: coach.name, scheduled, completed, pct });
+          coachEntries.push({ coachId: coach.id, coachName: coach.name, scheduled, completed, excused: excusedCount, pct });
         }
 
         weeklyData.push({ weekStart: week, coaches: coachEntries });
@@ -1631,6 +1718,7 @@ const clientCheckinsRouter = t.router({
         coachName: string;
         totalScheduled: number;
         totalCompleted: number;
+        totalExcused: number;
         scheduledByWeek: Record<string, number>;
         completedByWeek: Record<string, number>;
         engagementByWeek: Record<string, number>;
@@ -1646,6 +1734,7 @@ const clientCheckinsRouter = t.router({
               coachName: ce.coachName,
               totalScheduled: 0,
               totalCompleted: 0,
+              totalExcused: 0,
               scheduledByWeek: {},
               completedByWeek: {},
               engagementByWeek: {},
@@ -1656,6 +1745,7 @@ const clientCheckinsRouter = t.router({
           const entry = coachMap.get(ce.coachId)!;
           entry.totalScheduled += ce.scheduled;
           entry.totalCompleted += ce.completed;
+          entry.totalExcused += ce.excused;
           entry.scheduledByWeek[wd.weekStart] = ce.scheduled;
           entry.completedByWeek[wd.weekStart] = ce.completed;
           entry.engagementByWeek[wd.weekStart] = ce.pct;
@@ -1664,8 +1754,9 @@ const clientCheckinsRouter = t.router({
 
       // Add computed fields the frontend expects
       const enrichedCoaches = [...coachMap.values()].map(c => {
+        const eff = Math.max(c.totalScheduled - (c.totalExcused ?? 0), 1);
         const overallEngagementPct = c.totalScheduled > 0
-          ? Math.round((c.totalCompleted / c.totalScheduled) * 1000) / 10
+          ? Math.round((c.totalCompleted / eff) * 1000) / 10
           : 0;
         const weekCount = Object.keys(c.engagementByWeek).length;
         const weeklyAvg = weekCount > 0

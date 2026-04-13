@@ -16,6 +16,7 @@ import { runTypeformBackfill } from "../typeformBackfill";
 import { registerWeeklySummaryPdfRoute } from "../weeklySummaryPdfRoute";
 import { snapshotCurrentWeek } from "../weeklySnapshot";
 import { sendFridayAudit, checkMissedAudits } from "../slackFridayAudit";
+import { sendMondayDigest } from "../slackMondayDigest";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -110,16 +111,9 @@ async function startServer() {
     const minute = aestParts.find(p => p.type === "minute")?.value;
     const minuteInt = minute ? parseInt(minute) : -1;
 
-    // Monday 08:00 AEST — last-week summary + disengagement alert + fortnightly performance review
+    // Monday 08:00 AEST — consolidated digest (replaces separate summary/disengagement/fortnightly messages)
     if (weekday === "Mon" && hour === "08" && minuteInt < 5) {
-      sendWeeklySummary().catch(err => console.error("[Slack Weekly] error:", err));
-      sendDisengagementAlert().catch(err => console.error("[Slack Disengagement] error:", err));
-      sendFortnightlyPerformanceReviewReminder().catch(err => console.error("[Slack Fortnightly] error:", err));
-    }
-
-    // Monday 09:00 AEST — fortnightly sweep report reminder (fires on alternate Mondays to the performance review)
-    if (weekday === "Mon" && hour === "09" && minuteInt < 5) {
-      sendFortnightlySweepReportReminder().catch(err => console.error("[Slack Sweep Reminder] error:", err));
+      sendMondayDigest().catch(err => console.error("[Monday Digest] error:", err));
     }
 
     // Weekday 14:30 AEST — quality audit (fires on each coach's last workday)

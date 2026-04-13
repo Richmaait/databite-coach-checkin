@@ -3446,6 +3446,13 @@ const auditsRouter = t.router({
     return { triggered: true };
   }),
 
+  /** Trigger Monday digest (admin — for testing). */
+  triggerMondayDigest: adminProcedure.mutation(async () => {
+    const { sendMondayDigest } = await import("./slackMondayDigest");
+    await sendMondayDigest();
+    return { triggered: true };
+  }),
+
   /** Get audit history (admin view). */
   getHistory: adminProcedure
     .input(z.object({ limit: z.number().optional() }).optional())

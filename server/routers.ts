@@ -1431,6 +1431,13 @@ const clientCheckinsRouter = t.router({
         .from(coaches)
         .where(eq(coaches.isActive, 1));
 
+      const todayMon = getMonday(getTodayMelbourne());
+      const isPastWeek = input.weekStart < todayMon;
+
+      // Load snapshots for past weeks
+      const weekSnapshots = await db.select().from(rosterWeeklySnapshots).where(eq(rosterWeeklySnapshots.weekStart, input.weekStart));
+      const snapMap = new Map(weekSnapshots.map(s => [s.coachId, s.snapshotJson as any]));
+
       const result: Array<{
         day: string;
         date: string;
@@ -1455,8 +1462,18 @@ const clientCheckinsRouter = t.router({
         }> = [];
 
         for (const coach of coachList) {
-          const roster = await fetchRosterForCoach(coach.name);
-          const clients = roster[day] ?? [];
+          const snap = snapMap.get(coach.id);
+          let scheduledForDay: number;
+
+          if (isPastWeek && snap?.scheduledByDay?.[day] != null) {
+            scheduledForDay = snap.scheduledByDay[day];
+          } else {
+            const roster = await fetchRosterForCoach(coach.name);
+            const paused = await db.select().from(pausedClients)
+              .where(and(eq(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
+            const pausedSet = new Set(paused.map(p => p.clientName));
+            scheduledForDay = (roster[day] ?? []).filter(c => !pausedSet.has(c)).length;
+          }
 
           const completions = await db
             .select()
@@ -1484,7 +1501,7 @@ const clientCheckinsRouter = t.router({
           dayCoaches.push({
             coachId: coach.id,
             coachName: coach.name,
-            scheduled: clients.length,
+            scheduled: scheduledForDay,
             completed: completions.filter((c) => c.completedAt != null).length,
             excused: excuses.length,
           });
@@ -1499,6 +1516,7 @@ const clientCheckinsRouter = t.router({
         coachName: string;
         totalScheduled: number;
         totalCompleted: number;
+        totalExcused: number;
         scheduledByDay: Record<string, number>;
         completedByDay: Record<string, number>;
         scheduledByWeek: Record<string, number>;
@@ -1514,6 +1532,7 @@ const clientCheckinsRouter = t.router({
               coachName: ce.coachName,
               totalScheduled: 0,
               totalCompleted: 0,
+              totalExcused: 0,
               scheduledByDay: {},
               completedByDay: {},
               scheduledByWeek: {},
@@ -1524,15 +1543,28 @@ const clientCheckinsRouter = t.router({
           const entry = coachPivot.get(ce.coachId)!;
           entry.totalScheduled += ce.scheduled;
           entry.totalCompleted += ce.completed;
+          entry.totalExcused += ce.excused;
           entry.scheduledByDay[dayEntry.day] = ce.scheduled;
           entry.completedByDay[dayEntry.day] = ce.completed;
         }
       }
 
+      // For past weeks, override totals with snapshot to match Dashboard exactly
+      if (isPastWeek) {
+        for (const entry of coachPivot.values()) {
+          const snap = snapMap.get(entry.coachId);
+          if (snap?.scheduled != null) {
+            entry.totalScheduled = snap.scheduled;
+            entry.totalCompleted = snap.completed ?? entry.totalCompleted;
+          }
+        }
+      }
+
       // Add computed fields the frontend expects
       const enrichedDaily = [...coachPivot.values()].map(c => {
+        const eff = Math.max(c.totalScheduled - c.totalExcused, 1);
         const overallEngagementPct = c.totalScheduled > 0
-          ? Math.round((c.totalCompleted / c.totalScheduled) * 1000) / 10
+          ? Math.round((c.totalCompleted / eff) * 1000) / 10
           : 0;
         const engagementByDay: Record<string, number> = {};
         for (const day of DAYS) {

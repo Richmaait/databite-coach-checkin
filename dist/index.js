@@ -2468,14 +2468,26 @@ var clientCheckinsRouter = t.router({
   ).query(async ({ input }) => {
     const db2 = await requireDb();
     const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq6(coaches.isActive, 1));
+    const todayMon = getMonday2(getTodayMelbourne2());
+    const isPastWeek = input.weekStart < todayMon;
+    const weekSnapshots = await db2.select().from(rosterWeeklySnapshots).where(eq6(rosterWeeklySnapshots.weekStart, input.weekStart));
+    const snapMap = new Map(weekSnapshots.map((s) => [s.coachId, s.snapshotJson]));
     const result = [];
     for (let i = 0; i < DAYS.length; i++) {
       const day = DAYS[i];
       const dateStr = addDays2(input.weekStart, i);
       const dayCoaches = [];
       for (const coach of coachList) {
-        const roster = await fetchRosterForCoach(coach.name);
-        const clients = roster[day] ?? [];
+        const snap = snapMap.get(coach.id);
+        let scheduledForDay;
+        if (isPastWeek && snap?.scheduledByDay?.[day] != null) {
+          scheduledForDay = snap.scheduledByDay[day];
+        } else {
+          const roster = await fetchRosterForCoach(coach.name);
+          const paused = await db2.select().from(pausedClients).where(and4(eq6(pausedClients.coachId, coach.id), isNull3(pausedClients.resumedAt)));
+          const pausedSet = new Set(paused.map((p) => p.clientName));
+          scheduledForDay = (roster[day] ?? []).filter((c) => !pausedSet.has(c)).length;
+        }
         const completions = await db2.select().from(clientCheckIns).where(
           and4(
             eq6(clientCheckIns.coachId, coach.id),
@@ -2494,7 +2506,7 @@ var clientCheckinsRouter = t.router({
         dayCoaches.push({
           coachId: coach.id,
           coachName: coach.name,
-          scheduled: clients.length,
+          scheduled: scheduledForDay,
           completed: completions.filter((c) => c.completedAt != null).length,
           excused: excuses.length
         });
@@ -2510,6 +2522,7 @@ var clientCheckinsRouter = t.router({
             coachName: ce.coachName,
             totalScheduled: 0,
             totalCompleted: 0,
+            totalExcused: 0,
             scheduledByDay: {},
             completedByDay: {},
             scheduledByWeek: {},
@@ -2520,12 +2533,23 @@ var clientCheckinsRouter = t.router({
         const entry = coachPivot.get(ce.coachId);
         entry.totalScheduled += ce.scheduled;
         entry.totalCompleted += ce.completed;
+        entry.totalExcused += ce.excused;
         entry.scheduledByDay[dayEntry.day] = ce.scheduled;
         entry.completedByDay[dayEntry.day] = ce.completed;
       }
     }
+    if (isPastWeek) {
+      for (const entry of coachPivot.values()) {
+        const snap = snapMap.get(entry.coachId);
+        if (snap?.scheduled != null) {
+          entry.totalScheduled = snap.scheduled;
+          entry.totalCompleted = snap.completed ?? entry.totalCompleted;
+        }
+      }
+    }
     const enrichedDaily = [...coachPivot.values()].map((c) => {
-      const overallEngagementPct = c.totalScheduled > 0 ? Math.round(c.totalCompleted / c.totalScheduled * 1e3) / 10 : 0;
+      const eff = Math.max(c.totalScheduled - c.totalExcused, 1);
+      const overallEngagementPct = c.totalScheduled > 0 ? Math.round(c.totalCompleted / eff * 1e3) / 10 : 0;
       const engagementByDay = {};
       for (const day of DAYS) {
         const s = c.scheduledByDay[day] ?? 0;

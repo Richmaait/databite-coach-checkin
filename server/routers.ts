@@ -861,7 +861,11 @@ const clientCheckinsRouter = t.router({
               eq(excusedClients.coachId, coach.id), eq(excusedClients.weekStart, ws), eq(excusedClients.status, "approved"),
             ));
             const liveExcusedCount = liveExcuses.length;
-            const snapScheduled = snapStats.scheduled as number;
+            // Floor scheduled with distinct check-in rows (catches mid-week roster consolidations)
+            const weekCompletions = await db.select().from(clientCheckIns)
+              .where(and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, ws)));
+            const distinctCI = new Set(weekCompletions.map(c => `${c.dayOfWeek}|${c.clientName}`)).size;
+            const snapScheduled = Math.max(snapStats.scheduled as number, distinctCI);
             const snapCompleted = snapStats.completed as number ?? 0;
             const effSched = Math.max(snapScheduled - liveExcusedCount, 1);
             const recalcPct = effSched > 0 ? Math.round((snapCompleted / effSched) * 1000) / 10 : 0;
@@ -1498,10 +1502,14 @@ const clientCheckinsRouter = t.router({
               ),
             );
 
+          // Floor with distinct check-in rows — a row existing proves the client was scheduled that day
+          const distinctCI = new Set(completions.map(c => c.clientName)).size;
+          const scheduledFloored = Math.max(scheduledForDay, distinctCI);
+
           dayCoaches.push({
             coachId: coach.id,
             coachName: coach.name,
-            scheduled: scheduledForDay,
+            scheduled: scheduledFloored,
             completed: completions.filter((c) => c.completedAt != null).length,
             excused: excuses.length,
           });
@@ -1554,7 +1562,11 @@ const clientCheckinsRouter = t.router({
         for (const entry of coachPivot.values()) {
           const snap = snapMap.get(entry.coachId);
           if (snap?.scheduled != null) {
-            entry.totalScheduled = snap.scheduled;
+            // Floor snapshot scheduled with distinct check-in rows for the week
+            const weekCI = await db.select().from(clientCheckIns)
+              .where(and(eq(clientCheckIns.coachId, entry.coachId), eq(clientCheckIns.weekStart, input.weekStart)));
+            const distinctCI = new Set(weekCI.map(c => `${c.dayOfWeek}|${c.clientName}`)).size;
+            entry.totalScheduled = Math.max(snap.scheduled, distinctCI);
             entry.totalCompleted = snap.completed ?? entry.totalCompleted;
           }
         }
@@ -1705,8 +1717,12 @@ const clientCheckinsRouter = t.router({
 
           if (isPastWeek && snap?.scheduled != null) {
             // Use snapshot for past weeks
-            scheduled = snap.scheduled;
             completed = snap.completed ?? 0;
+            // Floor scheduled with distinct check-in rows (catches mid-week roster consolidations)
+            const weekCompletions = await db.select().from(clientCheckIns)
+              .where(and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, week)));
+            const distinctCI = new Set(weekCompletions.map(c => `${c.dayOfWeek}|${c.clientName}`)).size;
+            scheduled = Math.max(snap.scheduled, distinctCI);
             // Live excuse count (can be approved retroactively)
             const liveExcuses = await db.select().from(excusedClients).where(and(
               eq(excusedClients.coachId, coach.id),

@@ -50,9 +50,9 @@ export async function snapshotCurrentWeek(): Promise<void> {
       .where(and(eq(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
     const pausedSet = new Set(paused.map(p => p.clientName));
 
-    let scheduled = 0;
+    let rosterScheduled = 0;
     for (const day of DAYS) {
-      scheduled += (roster[day] ?? []).filter((c: string) => !pausedSet.has(c)).length;
+      rosterScheduled += (roster[day] ?? []).filter((c: string) => !pausedSet.has(c)).length;
     }
 
     // Get completions
@@ -60,6 +60,10 @@ export async function snapshotCurrentWeek(): Promise<void> {
       .where(and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, weekStart)));
     const completed = completions.filter(c => c.completedAt != null).length;
     const clientSubmitted = completions.filter(c => c.clientSubmitted === 1).length;
+
+    // Floor scheduled with distinct check-in rows — captures clients moved off roster mid-week
+    const distinctCheckIns = new Set(completions.map(c => `${c.dayOfWeek}|${c.clientName}`)).size;
+    const scheduled = Math.max(rosterScheduled, distinctCheckIns);
 
     // Get excuses
     const excuses = await db.select().from(excusedClients)

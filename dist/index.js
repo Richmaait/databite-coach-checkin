@@ -2071,7 +2071,9 @@ var clientCheckinsRouter = t.router({
             eq6(excusedClients.status, "approved")
           ));
           const liveExcusedCount = liveExcuses.length;
-          const snapScheduled = snapStats.scheduled;
+          const weekCompletions = await db2.select().from(clientCheckIns).where(and4(eq6(clientCheckIns.coachId, coach.id), eq6(clientCheckIns.weekStart, ws)));
+          const distinctCI = new Set(weekCompletions.map((c) => `${c.dayOfWeek}|${c.clientName}`)).size;
+          const snapScheduled = Math.max(snapStats.scheduled, distinctCI);
           const snapCompleted = snapStats.completed ?? 0;
           const effSched = Math.max(snapScheduled - liveExcusedCount, 1);
           const recalcPct = effSched > 0 ? Math.round(snapCompleted / effSched * 1e3) / 10 : 0;
@@ -2503,10 +2505,12 @@ var clientCheckinsRouter = t.router({
             eq6(excusedClients.status, "approved")
           )
         );
+        const distinctCI = new Set(completions.map((c) => c.clientName)).size;
+        const scheduledFloored = Math.max(scheduledForDay, distinctCI);
         dayCoaches.push({
           coachId: coach.id,
           coachName: coach.name,
-          scheduled: scheduledForDay,
+          scheduled: scheduledFloored,
           completed: completions.filter((c) => c.completedAt != null).length,
           excused: excuses.length
         });
@@ -2542,7 +2546,9 @@ var clientCheckinsRouter = t.router({
       for (const entry of coachPivot.values()) {
         const snap = snapMap.get(entry.coachId);
         if (snap?.scheduled != null) {
-          entry.totalScheduled = snap.scheduled;
+          const weekCI = await db2.select().from(clientCheckIns).where(and4(eq6(clientCheckIns.coachId, entry.coachId), eq6(clientCheckIns.weekStart, input.weekStart)));
+          const distinctCI = new Set(weekCI.map((c) => `${c.dayOfWeek}|${c.clientName}`)).size;
+          entry.totalScheduled = Math.max(snap.scheduled, distinctCI);
           entry.totalCompleted = snap.completed ?? entry.totalCompleted;
         }
       }
@@ -2636,8 +2642,10 @@ var clientCheckinsRouter = t.router({
         const snap = snapMap.get(coach.id);
         let scheduled, completed, excusedCount;
         if (isPastWeek && snap?.scheduled != null) {
-          scheduled = snap.scheduled;
           completed = snap.completed ?? 0;
+          const weekCompletions = await db2.select().from(clientCheckIns).where(and4(eq6(clientCheckIns.coachId, coach.id), eq6(clientCheckIns.weekStart, week)));
+          const distinctCI = new Set(weekCompletions.map((c) => `${c.dayOfWeek}|${c.clientName}`)).size;
+          scheduled = Math.max(snap.scheduled, distinctCI);
           const liveExcuses = await db2.select().from(excusedClients).where(and4(
             eq6(excusedClients.coachId, coach.id),
             eq6(excusedClients.weekStart, week),
@@ -5092,13 +5100,15 @@ async function snapshotCurrentWeek() {
     const roster = await fetchRosterForCoach(coach.name);
     const paused = await db2.select().from(pausedClients).where(and6(eq8(pausedClients.coachId, coach.id), isNull4(pausedClients.resumedAt)));
     const pausedSet = new Set(paused.map((p) => p.clientName));
-    let scheduled = 0;
+    let rosterScheduled = 0;
     for (const day of DAYS2) {
-      scheduled += (roster[day] ?? []).filter((c) => !pausedSet.has(c)).length;
+      rosterScheduled += (roster[day] ?? []).filter((c) => !pausedSet.has(c)).length;
     }
     const completions = await db2.select().from(clientCheckIns).where(and6(eq8(clientCheckIns.coachId, coach.id), eq8(clientCheckIns.weekStart, weekStart)));
     const completed = completions.filter((c) => c.completedAt != null).length;
     const clientSubmitted = completions.filter((c) => c.clientSubmitted === 1).length;
+    const distinctCheckIns = new Set(completions.map((c) => `${c.dayOfWeek}|${c.clientName}`)).size;
+    const scheduled = Math.max(rosterScheduled, distinctCheckIns);
     const excuses = await db2.select().from(excusedClients).where(and6(eq8(excusedClients.coachId, coach.id), eq8(excusedClients.weekStart, weekStart), eq8(excusedClients.status, "approved")));
     const excusedCount = excuses.length;
     const effectiveScheduled = Math.max(scheduled - excusedCount, 0);

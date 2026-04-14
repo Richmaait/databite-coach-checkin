@@ -7,9 +7,9 @@
  */
 
 import { getDb } from "./db";
-import { coaches, clientCheckIns, excusedClients, pausedClients, rosterWeeklySnapshots } from "../drizzle/schema";
-import { eq, and, isNull } from "drizzle-orm";
-import { fetchRosterForCoach, DAYS } from "./rosterUtils";
+import { coaches, rosterWeeklySnapshots } from "../drizzle/schema";
+import { eq, and } from "drizzle-orm";
+import { computeCoachWeekStats, engagementPct } from "./engagementStats";
 
 function getMonday(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
@@ -42,44 +42,16 @@ export async function snapshotCurrentWeek(): Promise<void> {
     .where(eq(coaches.isActive, 1));
 
   for (const coach of coachList) {
-    // Get live roster
-    const roster = await fetchRosterForCoach(coach.name);
-
-    // Get paused clients
-    const paused = await db.select().from(pausedClients)
-      .where(and(eq(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
-    const pausedSet = new Set(paused.map(p => p.clientName));
-
-    let rosterScheduled = 0;
-    for (const day of DAYS) {
-      rosterScheduled += (roster[day] ?? []).filter((c: string) => !pausedSet.has(c)).length;
-    }
-
-    // Get completions
-    const completions = await db.select().from(clientCheckIns)
-      .where(and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, weekStart)));
-    const completed = completions.filter(c => c.completedAt != null).length;
-    const clientSubmitted = completions.filter(c => c.clientSubmitted === 1).length;
-
-    // Floor scheduled with distinct check-in rows — captures clients moved off roster mid-week
-    const distinctCheckIns = new Set(completions.map(c => `${c.dayOfWeek}|${c.clientName}`)).size;
-    const scheduled = Math.max(rosterScheduled, distinctCheckIns);
-
-    // Get excuses
-    const excuses = await db.select().from(excusedClients)
-      .where(and(eq(excusedClients.coachId, coach.id), eq(excusedClients.weekStart, weekStart), eq(excusedClients.status, "approved")));
-    const excusedCount = excuses.length;
-
-    const effectiveScheduled = Math.max(scheduled - excusedCount, 0);
-    const engagementPct = effectiveScheduled > 0 ? Math.round((completed / effectiveScheduled) * 1000) / 10 : 0;
-
+    const stats = await computeCoachWeekStats(db, coach.id, coach.name, weekStart);
     const snap = {
-      scheduled,
-      completed,
-      excused: excusedCount,
-      clientSubmitted,
-      missed: scheduled - completed,
-      engagementPct,
+      scheduled: stats.scheduled,
+      completed: stats.completed,
+      excused: stats.excused,
+      clientSubmitted: stats.clientSubmitted,
+      scheduledByDay: stats.scheduledByDay,
+      completedByDay: stats.completedByDay,
+      missed: stats.scheduled - stats.completed,
+      engagementPct: engagementPct(stats.completed, stats.scheduled, stats.excused),
       source: "auto-snapshot",
     };
 
@@ -101,7 +73,7 @@ export async function snapshotCurrentWeek(): Promise<void> {
       });
     }
 
-    console.log(`[Snapshot] ${coach.name}: ${completed}/${scheduled} (${engagementPct}%)`);
+    console.log(`[Snapshot] ${coach.name}: ${snap.completed}/${snap.scheduled} (${snap.engagementPct}%)`);
   }
 
   console.log(`[Snapshot] Week ${weekStart} snapshot complete.`);

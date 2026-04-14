@@ -38,6 +38,7 @@ import {
   auditHistory,
 } from "../drizzle/schema";
 import { runTypeformBackfill } from "./typeformBackfill";
+import { computeCoachWeekStats, engagementPct } from "./engagementStats";
 import { sendSlackDM } from "./slackReminders";
 
 // Re-export fetchRosterForCoach under the alias used by weeklySummaryPdfRoute
@@ -824,95 +825,22 @@ const clientCheckinsRouter = t.router({
         pct: number;
       }> = [];
 
-      // Determine the current week Monday
-      const todayMelb = getTodayMelbourne();
-      const currentWeekMon = getMonday(todayMelb);
-
-      // Check for snapshots for past weeks
-      const allSnapshots = await db.select().from(rosterWeeklySnapshots)
-        .where(inArray(rosterWeeklySnapshots.weekStart, weekStartList));
-      const snapshotMap = new Map<string, typeof allSnapshots[0]>();
-      for (const s of allSnapshots) snapshotMap.set(`${s.coachId}|${s.weekStart}`, s);
-
-      // Pre-fetch roster and paused data per coach (for current week live calculation)
-      const coachData = await Promise.all(coachList.map(async (coach) => {
-        const roster = await fetchRosterForCoach(coach.name);
-        const paused = await db.select().from(pausedClients)
-          .where(and(eq(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
-        const pausedSet = new Set(paused.map(p => p.clientName));
-        let scheduled = 0;
-        for (const day of DAYS) {
-          scheduled += (roster[day] ?? []).filter((c: string) => !pausedSet.has(c)).length;
-        }
-        return { coach, scheduled };
-      }));
+      const currentWeekMon = getMonday(getTodayMelbourne());
 
       for (const ws of weekStartList) {
         const isPastWeek = ws < currentWeekMon;
-
-        for (const { coach, scheduled: liveScheduled } of coachData) {
-          // Check if we have a snapshot for this coach/week
-          const snapshot = snapshotMap.get(`${coach.id}|${ws}`);
-          const snapStats = snapshot?.snapshotJson as any;
-
-          if (isPastWeek && snapStats?.scheduled != null) {
-            // Use snapshot for scheduled/completed but LIVE excuse count (excuses can be approved retroactively)
-            const liveExcuses = await db.select().from(excusedClients).where(and(
-              eq(excusedClients.coachId, coach.id), eq(excusedClients.weekStart, ws), eq(excusedClients.status, "approved"),
-            ));
-            const liveExcusedCount = liveExcuses.length;
-            // Floor scheduled with distinct check-in rows (catches mid-week roster consolidations)
-            const weekCompletions = await db.select().from(clientCheckIns)
-              .where(and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, ws)));
-            const distinctCI = new Set(weekCompletions.map(c => `${c.dayOfWeek}|${c.clientName}`)).size;
-            const snapScheduled = Math.max(snapStats.scheduled as number, distinctCI);
-            const snapCompleted = snapStats.completed as number ?? 0;
-            const effSched = Math.max(snapScheduled - liveExcusedCount, 1);
-            const recalcPct = effSched > 0 ? Math.round((snapCompleted / effSched) * 1000) / 10 : 0;
-            results.push({
-              coachId: coach.id,
-              coachName: coach.name,
-              weekStart: ws,
-              scheduled: snapScheduled,
-              completed: snapCompleted,
-              excused: liveExcusedCount,
-              clientSubmitted: snapStats.clientSubmitted ?? 0,
-              pct: Math.round(recalcPct),
-            });
-          } else {
-            // Calculate from live data (current week or no snapshot available)
-            const completions = await db
-              .select()
-              .from(clientCheckIns)
-              .where(and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, ws)));
-
-            const completed = completions.filter((c) => c.completedAt != null).length;
-            const clientSubmittedCount = completions.filter((c) => c.clientSubmitted === 1).length;
-
-            const excuses = await db
-              .select()
-              .from(excusedClients)
-              .where(and(
-                eq(excusedClients.coachId, coach.id),
-                eq(excusedClients.weekStart, ws),
-                eq(excusedClients.status, "approved"),
-              ));
-
-            const excusedCount = excuses.length;
-            const effectiveScheduled = Math.max(liveScheduled - excusedCount, 0);
-            const pct = effectiveScheduled > 0 ? Math.round((completed / effectiveScheduled) * 100) : 0;
-
-            results.push({
-              coachId: coach.id,
-              coachName: coach.name,
-              weekStart: ws,
-              scheduled: liveScheduled,
-              completed,
-              excused: excusedCount,
-              clientSubmitted: clientSubmittedCount,
-              pct,
-            });
-          }
+        for (const coach of coachList) {
+          const stats = await computeCoachWeekStats(db, coach.id, coach.name, ws, { preferSnapshot: isPastWeek });
+          results.push({
+            coachId: coach.id,
+            coachName: coach.name,
+            weekStart: ws,
+            scheduled: stats.scheduled,
+            completed: stats.completed,
+            excused: stats.excused,
+            clientSubmitted: stats.clientSubmitted,
+            pct: Math.round(engagementPct(stats.completed, stats.scheduled, stats.excused)),
+          });
         }
       }
 
@@ -1438,154 +1366,51 @@ const clientCheckinsRouter = t.router({
       const todayMon = getMonday(getTodayMelbourne());
       const isPastWeek = input.weekStart < todayMon;
 
-      // Load snapshots for past weeks
-      const weekSnapshots = await db.select().from(rosterWeeklySnapshots).where(eq(rosterWeeklySnapshots.weekStart, input.weekStart));
-      const snapMap = new Map(weekSnapshots.map(s => [s.coachId, s.snapshotJson as any]));
+      const statsPerCoach = await Promise.all(coachList.map(async (coach) => ({
+        coach,
+        stats: await computeCoachWeekStats(db, coach.id, coach.name, input.weekStart, { preferSnapshot: isPastWeek }),
+      })));
 
       const result: Array<{
         day: string;
         date: string;
-        coaches: Array<{
-          coachId: number;
-          coachName: string;
-          scheduled: number;
-          completed: number;
-          excused: number;
-        }>;
+        coaches: Array<{ coachId: number; coachName: string; scheduled: number; completed: number; excused: number }>;
       }> = [];
-
       for (let i = 0; i < DAYS.length; i++) {
         const day = DAYS[i];
         const dateStr = addDays(input.weekStart, i);
-        const dayCoaches: Array<{
-          coachId: number;
-          coachName: string;
-          scheduled: number;
-          completed: number;
-          excused: number;
-        }> = [];
-
-        for (const coach of coachList) {
-          const snap = snapMap.get(coach.id);
-          let scheduledForDay: number;
-
-          if (isPastWeek && snap?.scheduledByDay?.[day] != null) {
-            scheduledForDay = snap.scheduledByDay[day];
-          } else {
-            const roster = await fetchRosterForCoach(coach.name);
-            const paused = await db.select().from(pausedClients)
-              .where(and(eq(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
-            const pausedSet = new Set(paused.map(p => p.clientName));
-            scheduledForDay = (roster[day] ?? []).filter(c => !pausedSet.has(c)).length;
-          }
-
-          const completions = await db
-            .select()
-            .from(clientCheckIns)
-            .where(
-              and(
-                eq(clientCheckIns.coachId, coach.id),
-                eq(clientCheckIns.weekStart, input.weekStart),
-                eq(clientCheckIns.dayOfWeek, day),
-              ),
-            );
-
-          const excuses = await db
-            .select()
-            .from(excusedClients)
-            .where(
-              and(
-                eq(excusedClients.coachId, coach.id),
-                eq(excusedClients.weekStart, input.weekStart),
-                eq(excusedClients.dayOfWeek, day),
-                eq(excusedClients.status, "approved"),
-              ),
-            );
-
-          // Floor with distinct check-in rows — a row existing proves the client was scheduled that day
-          const distinctCI = new Set(completions.map(c => c.clientName)).size;
-          const scheduledFloored = Math.max(scheduledForDay, distinctCI);
-
-          dayCoaches.push({
+        result.push({
+          day,
+          date: dateStr,
+          coaches: statsPerCoach.map(({ coach, stats }) => ({
             coachId: coach.id,
             coachName: coach.name,
-            scheduled: scheduledFloored,
-            completed: completions.filter((c) => c.completedAt != null).length,
-            excused: excuses.length,
-          });
-        }
-
-        result.push({ day, date: dateStr, coaches: dayCoaches });
+            scheduled: stats.scheduledByDay[day] ?? 0,
+            completed: stats.completedByDay[day] ?? 0,
+            excused: stats.excusedByDay[day] ?? 0,
+          })),
+        });
       }
 
-      // Pivot: frontend expects { coaches: [{ coachName, totalScheduled, totalCompleted, scheduledByDay, completedByDay }] }
-      const coachPivot = new Map<number, {
-        coachId: number;
-        coachName: string;
-        totalScheduled: number;
-        totalCompleted: number;
-        totalExcused: number;
-        scheduledByDay: Record<string, number>;
-        completedByDay: Record<string, number>;
-        scheduledByWeek: Record<string, number>;
-        completedByWeek: Record<string, number>;
-        engagementByWeek: Record<string, number>;
-      }>();
-
-      for (const dayEntry of result) {
-        for (const ce of dayEntry.coaches) {
-          if (!coachPivot.has(ce.coachId)) {
-            coachPivot.set(ce.coachId, {
-              coachId: ce.coachId,
-              coachName: ce.coachName,
-              totalScheduled: 0,
-              totalCompleted: 0,
-              totalExcused: 0,
-              scheduledByDay: {},
-              completedByDay: {},
-              scheduledByWeek: {},
-              completedByWeek: {},
-              engagementByWeek: {},
-            });
-          }
-          const entry = coachPivot.get(ce.coachId)!;
-          entry.totalScheduled += ce.scheduled;
-          entry.totalCompleted += ce.completed;
-          entry.totalExcused += ce.excused;
-          entry.scheduledByDay[dayEntry.day] = ce.scheduled;
-          entry.completedByDay[dayEntry.day] = ce.completed;
-        }
-      }
-
-      // For past weeks, override totals with snapshot to match Dashboard exactly
-      if (isPastWeek) {
-        for (const entry of coachPivot.values()) {
-          const snap = snapMap.get(entry.coachId);
-          if (snap?.scheduled != null) {
-            // Floor snapshot scheduled with distinct check-in rows for the week
-            const weekCI = await db.select().from(clientCheckIns)
-              .where(and(eq(clientCheckIns.coachId, entry.coachId), eq(clientCheckIns.weekStart, input.weekStart)));
-            const distinctCI = new Set(weekCI.map(c => `${c.dayOfWeek}|${c.clientName}`)).size;
-            entry.totalScheduled = Math.max(snap.scheduled, distinctCI);
-            entry.totalCompleted = snap.completed ?? entry.totalCompleted;
-          }
-        }
-      }
-
-      // Add computed fields the frontend expects
-      const enrichedDaily = [...coachPivot.values()].map(c => {
-        const eff = Math.max(c.totalScheduled - c.totalExcused, 1);
-        const overallEngagementPct = c.totalScheduled > 0
-          ? Math.round((c.totalCompleted / eff) * 1000) / 10
-          : 0;
+      const enrichedDaily = statsPerCoach.map(({ coach, stats }) => {
+        const overallEngagementPct = engagementPct(stats.completed, stats.scheduled, stats.excused);
         const engagementByDay: Record<string, number> = {};
         for (const day of DAYS) {
-          const s = c.scheduledByDay[day] ?? 0;
-          const comp = c.completedByDay[day] ?? 0;
+          const s = stats.scheduledByDay[day] ?? 0;
+          const comp = stats.completedByDay[day] ?? 0;
           engagementByDay[day] = s > 0 ? Math.round((comp / s) * 100) : 0;
         }
         return {
-          ...c,
+          coachId: coach.id,
+          coachName: coach.name,
+          totalScheduled: stats.scheduled,
+          totalCompleted: stats.completed,
+          totalExcused: stats.excused,
+          scheduledByDay: stats.scheduledByDay,
+          completedByDay: stats.completedByDay,
+          scheduledByWeek: {} as Record<string, number>,
+          completedByWeek: {} as Record<string, number>,
+          engagementByWeek: {} as Record<string, number>,
           overallEngagementPct,
           weeklyAvg: overallEngagementPct,
           engagementByDay,
@@ -1707,54 +1532,10 @@ const clientCheckinsRouter = t.router({
         }> = [];
 
         const isPastWeek = week < todayMon;
-        // Pull all snapshots for this week once
-        const weekSnapshots = await db.select().from(rosterWeeklySnapshots).where(eq(rosterWeeklySnapshots.weekStart, week));
-        const snapMap = new Map(weekSnapshots.map(s => [s.coachId, s.snapshotJson as any]));
-
         for (const coach of coachList) {
-          const snap = snapMap.get(coach.id);
-          let scheduled: number, completed: number, excusedCount: number;
-
-          if (isPastWeek && snap?.scheduled != null) {
-            // Use snapshot for past weeks
-            completed = snap.completed ?? 0;
-            // Floor scheduled with distinct check-in rows (catches mid-week roster consolidations)
-            const weekCompletions = await db.select().from(clientCheckIns)
-              .where(and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, week)));
-            const distinctCI = new Set(weekCompletions.map(c => `${c.dayOfWeek}|${c.clientName}`)).size;
-            scheduled = Math.max(snap.scheduled, distinctCI);
-            // Live excuse count (can be approved retroactively)
-            const liveExcuses = await db.select().from(excusedClients).where(and(
-              eq(excusedClients.coachId, coach.id),
-              eq(excusedClients.weekStart, week),
-              eq(excusedClients.status, "approved"),
-            ));
-            excusedCount = liveExcuses.length;
-          } else {
-            // Live calculation for current week (exclude paused clients)
-            const roster = await fetchRosterForCoach(coach.name);
-            const paused = await db.select().from(pausedClients)
-              .where(and(eq(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
-            const pausedSet = new Set(paused.map(p => p.clientName));
-            scheduled = 0;
-            for (const day of DAYS) {
-              scheduled += (roster[day] ?? []).filter((c: string) => !pausedSet.has(c)).length;
-            }
-            const completions = await db.select().from(clientCheckIns)
-              .where(and(eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, week)));
-            completed = completions.filter(c => c.completedAt != null).length;
-            const excuses = await db.select().from(excusedClients).where(and(
-              eq(excusedClients.coachId, coach.id),
-              eq(excusedClients.weekStart, week),
-              eq(excusedClients.status, "approved"),
-            ));
-            excusedCount = excuses.length;
-          }
-
-          const effectiveScheduled = Math.max(scheduled - excusedCount, 0);
-          const pct = effectiveScheduled > 0 ? Math.round((completed / effectiveScheduled) * 100) : 0;
-
-          coachEntries.push({ coachId: coach.id, coachName: coach.name, scheduled, completed, excused: excusedCount, pct });
+          const stats = await computeCoachWeekStats(db, coach.id, coach.name, week, { preferSnapshot: isPastWeek });
+          const pct = Math.round(engagementPct(stats.completed, stats.scheduled, stats.excused));
+          coachEntries.push({ coachId: coach.id, coachName: coach.name, scheduled: stats.scheduled, completed: stats.completed, excused: stats.excused, pct });
         }
 
         weeklyData.push({ weekStart: week, coaches: coachEntries });

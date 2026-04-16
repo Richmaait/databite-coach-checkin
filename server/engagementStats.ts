@@ -59,23 +59,29 @@ export async function computeCoachWeekStats(
     if (excusedByDay[day] != null) excusedByDay[day]++;
   }
 
-  // Try snapshot first when asked
+  // Try snapshot first when asked (past weeks)
   let rosterByDay: Record<DayKey, number> | null = null;
+  let snapCompleted: number | null = null;
+  let snapCompletedByDay: Record<DayKey, number> | null = null;
   if (opts.preferSnapshot) {
     const snapRows = await db.select().from(rosterWeeklySnapshots)
       .where(and(eq(rosterWeeklySnapshots.coachId, coachId), eq(rosterWeeklySnapshots.weekStart, weekStart)))
       .limit(1);
     const snap = snapRows[0]?.snapshotJson as any;
-    if (snap?.scheduledByDay) {
-      rosterByDay = snap.scheduledByDay;
-    } else if (snap?.scheduled != null) {
-      // Older snapshots only stored the total — distribute back to days using check-in rows as a hint
-      rosterByDay = { monday: 0, tuesday: 0, wednesday: 0, thursday: 0, friday: 0 };
-      for (const d of DAYS) rosterByDay[d] = checkInClientsByDay[d].size;
-      const checkInTotal = DAYS.reduce((s, d) => s + checkInClientsByDay[d].size, 0);
-      const extra = Math.max(snap.scheduled - checkInTotal, 0);
-      // Put unaccounted scheduled on Monday as a fallback
-      if (extra > 0) rosterByDay.monday += extra;
+    if (snap) {
+      // Use snapshot completed — live count includes backdated completions from later weeks
+      if (snap.completed != null) snapCompleted = snap.completed;
+      if (snap.completedByDay) snapCompletedByDay = snap.completedByDay;
+
+      if (snap.scheduledByDay) {
+        rosterByDay = snap.scheduledByDay;
+      } else if (snap.scheduled != null) {
+        rosterByDay = { monday: 0, tuesday: 0, wednesday: 0, thursday: 0, friday: 0 };
+        for (const d of DAYS) rosterByDay[d] = checkInClientsByDay[d].size;
+        const checkInTotal = DAYS.reduce((s, d) => s + checkInClientsByDay[d].size, 0);
+        const extra = Math.max(snap.scheduled - checkInTotal, 0);
+        if (extra > 0) rosterByDay.monday += extra;
+      }
     }
   }
 
@@ -99,13 +105,18 @@ export async function computeCoachWeekStats(
   const scheduled = DAYS.reduce((s, d) => s + scheduledByDay[d], 0);
   const excused = excuses.length;
 
+  // For past weeks with a snapshot, use snapshot's completed count — live count
+  // includes backdated completions added weeks later which inflate engagement
+  const finalCompleted = snapCompleted ?? completed;
+  const finalCompletedByDay = snapCompletedByDay ?? completedByDay;
+
   return {
     scheduled,
-    completed,
+    completed: finalCompleted,
     excused,
     clientSubmitted,
     scheduledByDay,
-    completedByDay,
+    completedByDay: finalCompletedByDay,
     excusedByDay,
     source: opts.preferSnapshot ? "snapshot+live-ci" : "live",
   };

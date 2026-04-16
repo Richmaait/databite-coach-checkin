@@ -1515,17 +1515,23 @@ async function computeCoachWeekStats(db2, coachId, coachName, weekStart, opts = 
     if (excusedByDay[day] != null) excusedByDay[day]++;
   }
   let rosterByDay = null;
+  let snapCompleted = null;
+  let snapCompletedByDay = null;
   if (opts.preferSnapshot) {
     const snapRows = await db2.select().from(rosterWeeklySnapshots).where(and2(eq3(rosterWeeklySnapshots.coachId, coachId), eq3(rosterWeeklySnapshots.weekStart, weekStart))).limit(1);
     const snap = snapRows[0]?.snapshotJson;
-    if (snap?.scheduledByDay) {
-      rosterByDay = snap.scheduledByDay;
-    } else if (snap?.scheduled != null) {
-      rosterByDay = { monday: 0, tuesday: 0, wednesday: 0, thursday: 0, friday: 0 };
-      for (const d of DAYS2) rosterByDay[d] = checkInClientsByDay[d].size;
-      const checkInTotal = DAYS2.reduce((s, d) => s + checkInClientsByDay[d].size, 0);
-      const extra = Math.max(snap.scheduled - checkInTotal, 0);
-      if (extra > 0) rosterByDay.monday += extra;
+    if (snap) {
+      if (snap.completed != null) snapCompleted = snap.completed;
+      if (snap.completedByDay) snapCompletedByDay = snap.completedByDay;
+      if (snap.scheduledByDay) {
+        rosterByDay = snap.scheduledByDay;
+      } else if (snap.scheduled != null) {
+        rosterByDay = { monday: 0, tuesday: 0, wednesday: 0, thursday: 0, friday: 0 };
+        for (const d of DAYS2) rosterByDay[d] = checkInClientsByDay[d].size;
+        const checkInTotal = DAYS2.reduce((s, d) => s + checkInClientsByDay[d].size, 0);
+        const extra = Math.max(snap.scheduled - checkInTotal, 0);
+        if (extra > 0) rosterByDay.monday += extra;
+      }
     }
   }
   if (!rosterByDay) {
@@ -1543,13 +1549,15 @@ async function computeCoachWeekStats(db2, coachId, coachName, weekStart, opts = 
   }
   const scheduled = DAYS2.reduce((s, d) => s + scheduledByDay[d], 0);
   const excused = excuses.length;
+  const finalCompleted = snapCompleted ?? completed;
+  const finalCompletedByDay = snapCompletedByDay ?? completedByDay;
   return {
     scheduled,
-    completed,
+    completed: finalCompleted,
     excused,
     clientSubmitted,
     scheduledByDay,
-    completedByDay,
+    completedByDay: finalCompletedByDay,
     excusedByDay,
     source: opts.preferSnapshot ? "snapshot+live-ci" : "live"
   };

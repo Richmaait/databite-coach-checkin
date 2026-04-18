@@ -49,8 +49,8 @@ export default function Onboarding() {
     onError: (e) => toast.error(e.message),
   });
 
-  const assignMutation = trpc.roster.assign.useMutation({
-    onSuccess: () => toast.success("Client assigned to roster"),
+  const finaliseMutation = trpc.onboarding.finalise.useMutation({
+    onSuccess: () => { refetch(); toast.success("Client finalised and moved to roster"); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -120,9 +120,9 @@ export default function Onboarding() {
                 onToggle={() => setExpandedId(expandedId === client.id ? null : client.id)}
                 onUpdate={(field, value) => updateMutation.mutate({ id: client.id, [field]: value })}
                 coaches={allCoaches ?? []}
-                onAssignToRoster={(coachId, coachName, day) => assignMutation.mutate({
-                  coachId, coachName, clientName: client.clientName.replace(/\s*\(.*\)\s*$/, "").trim(), dayOfWeek: day,
-                })}
+                onFinalise={(coachId, coachName, day, paymentType, upfrontWeeks) =>
+                  finaliseMutation.mutate({ id: client.id, coachId, coachName, dayOfWeek: day as any, paymentType, upfrontWeeks })
+                }
               />
             ))}
           </div>
@@ -176,13 +176,13 @@ function AddClientForm({ onSubmit, onCancel, isPending }: {
 const DAY_OPTIONS = ["monday", "tuesday", "wednesday", "thursday", "friday"] as const;
 const DAY_LABELS: Record<string, string> = { monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu", friday: "Fri" };
 
-function ClientRow({ client, isExpanded, onToggle, onUpdate, coaches, onAssignToRoster }: {
+function ClientRow({ client, isExpanded, onToggle, onUpdate, coaches, onFinalise }: {
   client: any;
   isExpanded: boolean;
   onToggle: () => void;
   onUpdate: (field: string, value: any) => void;
   coaches: Array<{ id: number; name: string }>;
-  onAssignToRoster: (coachId: number, coachName: string, day: string) => void;
+  onFinalise: (coachId: number, coachName: string, day: string, paymentType: "subscription" | "upfront", upfrontWeeks?: number) => void;
 }) {
   const checklistTotal = CHECKLIST_FIELDS.length;
   const checklistDone = CHECKLIST_FIELDS.filter(f => {
@@ -213,11 +213,18 @@ function ClientRow({ client, isExpanded, onToggle, onUpdate, coaches, onAssignTo
 
       {isExpanded && (
         <div className="px-4 pb-4 pt-1 border-t border-white/[0.06] space-y-3">
-          {/* Dates */}
-          <div className="flex gap-4 text-xs text-white/50">
-            {client.datePaid && <span>Paid: {client.datePaid}</span>}
-            {client.dateDue && <span>Due: {client.dateDue}</span>}
-            {client.sentToClient && <span>Started: {client.sentToClient}</span>}
+          {/* Editable Dates */}
+          <div className="flex gap-3 items-center">
+            <label className="text-xs text-white/50">
+              Paid:
+              <input type="date" value={client.datePaid || ""} onChange={e => { e.stopPropagation(); onUpdate("datePaid", e.target.value || null); }}
+                className="ml-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-white/70 text-xs focus:outline-none" />
+            </label>
+            <label className="text-xs text-white/50">
+              Due:
+              <input type="date" value={client.dateDue || ""} onChange={e => { e.stopPropagation(); onUpdate("dateDue", e.target.value || null); }}
+                className="ml-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-white/70 text-xs focus:outline-none" />
+            </label>
           </div>
 
           {/* Checklist */}
@@ -232,10 +239,7 @@ function ClientRow({ client, isExpanded, onToggle, onUpdate, coaches, onAssignTo
                     e.stopPropagation();
                     if (f.isDate) {
                       if (val) onUpdate(f.key, null);
-                      else {
-                        const today = new Date().toISOString().slice(0, 10);
-                        onUpdate(f.key, today);
-                      }
+                      else onUpdate(f.key, new Date().toISOString().slice(0, 10));
                     } else {
                       onUpdate(f.key, !checked);
                     }
@@ -253,35 +257,8 @@ function ClientRow({ client, isExpanded, onToggle, onUpdate, coaches, onAssignTo
             })}
           </div>
 
-          {/* Notes */}
-          {/* Coach + Day assignment */}
-          <div className="flex items-center gap-3 pt-1">
-            <span className="text-xs text-white/50">Assign to roster:</span>
-            <select
-              value={client.coach || ""}
-              onChange={e => { e.stopPropagation(); onUpdate("coach", e.target.value || null); }}
-              className="px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/70 text-xs focus:outline-none"
-            >
-              <option value="">Select coach</option>
-              {coaches.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-            </select>
-            {client.coach && (
-              <div className="flex gap-1">
-                {DAY_OPTIONS.map(day => {
-                  const coach = coaches.find(c => c.name === client.coach);
-                  return (
-                    <button
-                      key={day}
-                      onClick={e => { e.stopPropagation(); if (coach) onAssignToRoster(coach.id, coach.name, day); }}
-                      className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-white/50 text-[10px] font-medium hover:bg-violet-500/20 hover:text-violet-300 hover:border-violet-500/30 transition-colors"
-                    >
-                      {DAY_LABELS[day]}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          {/* Finalise: Coach + Day + Payment type */}
+          <FinaliseSection client={client} coaches={coaches} onUpdate={onUpdate} onFinalise={onFinalise} />
 
           {client.notes && (
             <p className="text-xs text-white/40 italic">{client.notes}</p>
@@ -289,6 +266,82 @@ function ClientRow({ client, isExpanded, onToggle, onUpdate, coaches, onAssignTo
 
         </div>
       )}
+    </div>
+  );
+}
+
+function FinaliseSection({ client, coaches, onUpdate, onFinalise }: {
+  client: any;
+  coaches: Array<{ id: number; name: string }>;
+  onUpdate: (field: string, value: any) => void;
+  onFinalise: (coachId: number, coachName: string, day: string, paymentType: "subscription" | "upfront", upfrontWeeks?: number) => void;
+}) {
+  const [selectedDay, setSelectedDay] = useState("");
+  const [paymentType, setPaymentType] = useState<"subscription" | "upfront">("subscription");
+  const [upfrontWeeks, setUpfrontWeeks] = useState(12);
+
+  const coach = coaches.find(c => c.name === client.coach);
+  const canFinalise = client.coach && selectedDay && coach;
+
+  return (
+    <div className="rounded-xl bg-white/[0.03] border border-white/[0.08] p-3 space-y-3">
+      <span className="text-xs font-semibold text-white/60">Move to Roster</span>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <select
+          value={client.coach || ""}
+          onChange={e => { e.stopPropagation(); onUpdate("coach", e.target.value || null); }}
+          className="px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/70 text-xs focus:outline-none"
+        >
+          <option value="">Select coach</option>
+          {coaches.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+        </select>
+
+        <select
+          value={selectedDay}
+          onChange={e => setSelectedDay(e.target.value)}
+          className="px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/70 text-xs focus:outline-none"
+        >
+          <option value="">Select day</option>
+          {DAY_OPTIONS.map(d => <option key={d} value={d}>{DAY_LABELS[d]}</option>)}
+        </select>
+
+        <div className="flex rounded-lg overflow-hidden border border-white/10">
+          <button
+            onClick={e => { e.stopPropagation(); setPaymentType("subscription"); }}
+            className={`px-3 py-1.5 text-[10px] font-semibold transition-colors ${paymentType === "subscription" ? "bg-violet-500/25 text-violet-300" : "bg-white/5 text-white/40"}`}
+          >
+            Subscription
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); setPaymentType("upfront"); }}
+            className={`px-3 py-1.5 text-[10px] font-semibold transition-colors ${paymentType === "upfront" ? "bg-amber-500/25 text-amber-300" : "bg-white/5 text-white/40"}`}
+          >
+            Upfront
+          </button>
+        </div>
+
+        {paymentType === "upfront" && (
+          <label className="flex items-center gap-1 text-xs text-white/50">
+            <input type="number" min={1} max={52} value={upfrontWeeks}
+              onChange={e => setUpfrontWeeks(parseInt(e.target.value) || 12)}
+              onClick={e => e.stopPropagation()}
+              className="w-12 px-1.5 py-1 rounded-lg bg-white/5 border border-white/10 text-white/70 text-xs text-center focus:outline-none" />
+            weeks
+          </label>
+        )}
+      </div>
+
+      <button
+        disabled={!canFinalise}
+        onClick={e => {
+          e.stopPropagation();
+          if (canFinalise) onFinalise(coach!.id, coach!.name, selectedDay, paymentType, paymentType === "upfront" ? upfrontWeeks : undefined);
+        }}
+        className="w-full px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-sm font-semibold hover:bg-emerald-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+      >
+        Finalise &amp; Move to Roster
+      </button>
     </div>
   );
 }

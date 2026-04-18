@@ -296,6 +296,9 @@ var init_schema = __esm({
       coachName: varchar("coachName", { length: 128 }).notNull(),
       clientName: varchar("clientName", { length: 256 }).notNull(),
       dayOfWeek: mysqlEnum("dayOfWeek", ["monday", "tuesday", "wednesday", "thursday", "friday"]).notNull(),
+      paymentType: mysqlEnum("paymentType", ["subscription", "upfront"]).default("subscription").notNull(),
+      upfrontWeeks: int("upfrontWeeks"),
+      rosterStartDate: varchar("rosterStartDate", { length: 10 }),
       isActive: tinyint("isActive").default(1).notNull(),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
       updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
@@ -4223,6 +4226,51 @@ var onboardingRouter = t.router({
     await db2.update(onboardingClients).set({ status: "cancelled" }).where(eq8(onboardingClients.id, input.id));
     return { ok: true };
   }),
+  finalise: adminProcedure.input(z.object({
+    id: z.number(),
+    coachId: z.number(),
+    coachName: z.string(),
+    dayOfWeek: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday"]),
+    paymentType: z.enum(["subscription", "upfront"]),
+    upfrontWeeks: z.number().optional()
+  })).mutation(async ({ input }) => {
+    const db2 = await requireDb();
+    const [client] = await db2.select().from(onboardingClients).where(eq8(onboardingClients.id, input.id)).limit(1);
+    if (!client) throw new TRPCError({ code: "NOT_FOUND" });
+    const today = getTodayMelbourne2();
+    await db2.update(onboardingClients).set({
+      status: "active",
+      coach: input.coachName,
+      sentToClient: today
+    }).where(eq8(onboardingClients.id, input.id));
+    const cleanName = client.clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+    try {
+      await db2.insert(rosterAssignments).values({
+        coachId: input.coachId,
+        coachName: input.coachName,
+        clientName: cleanName,
+        dayOfWeek: input.dayOfWeek,
+        paymentType: input.paymentType,
+        upfrontWeeks: input.upfrontWeeks ?? null,
+        rosterStartDate: today,
+        isActive: 1
+      });
+    } catch (err) {
+      if (err.message?.includes("Duplicate")) {
+        await db2.update(rosterAssignments).set({
+          isActive: 1,
+          paymentType: input.paymentType,
+          upfrontWeeks: input.upfrontWeeks ?? null,
+          rosterStartDate: today
+        }).where(and6(
+          eq8(rosterAssignments.coachId, input.coachId),
+          eq8(rosterAssignments.clientName, cleanName),
+          eq8(rosterAssignments.dayOfWeek, input.dayOfWeek)
+        ));
+      } else throw err;
+    }
+    return { ok: true };
+  }),
   reactivate: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
     const db2 = await requireDb();
     await db2.update(onboardingClients).set({ status: "active", cancelledAt: null }).where(eq8(onboardingClients.id, input.id));
@@ -4279,20 +4327,31 @@ var rosterRouter = t.router({
     coachId: z.number(),
     coachName: z.string(),
     clientName: z.string(),
-    dayOfWeek: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday"])
+    dayOfWeek: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday"]),
+    paymentType: z.enum(["subscription", "upfront"]).optional(),
+    upfrontWeeks: z.number().optional()
   })).mutation(async ({ input }) => {
     const db2 = await requireDb();
+    const today = getTodayMelbourne2();
     try {
       await db2.insert(rosterAssignments).values({
         coachId: input.coachId,
         coachName: input.coachName,
         clientName: input.clientName,
         dayOfWeek: input.dayOfWeek,
+        paymentType: input.paymentType ?? "subscription",
+        upfrontWeeks: input.upfrontWeeks ?? null,
+        rosterStartDate: today,
         isActive: 1
       });
     } catch (err) {
       if (err.message?.includes("Duplicate")) {
-        await db2.update(rosterAssignments).set({ isActive: 1 }).where(and6(
+        await db2.update(rosterAssignments).set({
+          isActive: 1,
+          paymentType: input.paymentType ?? "subscription",
+          upfrontWeeks: input.upfrontWeeks ?? null,
+          rosterStartDate: today
+        }).where(and6(
           eq8(rosterAssignments.coachId, input.coachId),
           eq8(rosterAssignments.clientName, input.clientName),
           eq8(rosterAssignments.dayOfWeek, input.dayOfWeek)

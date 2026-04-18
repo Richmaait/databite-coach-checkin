@@ -3536,6 +3536,60 @@ const onboardingRouter = t.router({
       return { ok: true };
     }),
 
+  finalise: adminProcedure
+    .input(z.object({
+      id: z.number(),
+      coachId: z.number(),
+      coachName: z.string(),
+      dayOfWeek: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday"]),
+      paymentType: z.enum(["subscription", "upfront"]),
+      upfrontWeeks: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      const [client] = await db.select().from(onboardingClients).where(eq(onboardingClients.id, input.id)).limit(1);
+      if (!client) throw new TRPCError({ code: "NOT_FOUND" });
+
+      const today = getTodayMelbourne();
+
+      // Mark onboarding as active + set sent to client date
+      await db.update(onboardingClients).set({
+        status: "active",
+        coach: input.coachName,
+        sentToClient: today,
+      }).where(eq(onboardingClients.id, input.id));
+
+      // Add to roster
+      const cleanName = client.clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+      try {
+        await db.insert(rosterAssignments).values({
+          coachId: input.coachId,
+          coachName: input.coachName,
+          clientName: cleanName,
+          dayOfWeek: input.dayOfWeek,
+          paymentType: input.paymentType,
+          upfrontWeeks: input.upfrontWeeks ?? null,
+          rosterStartDate: today,
+          isActive: 1,
+        });
+      } catch (err: any) {
+        if (err.message?.includes("Duplicate")) {
+          await db.update(rosterAssignments).set({
+            isActive: 1,
+            paymentType: input.paymentType,
+            upfrontWeeks: input.upfrontWeeks ?? null,
+            rosterStartDate: today,
+          }).where(and(
+            eq(rosterAssignments.coachId, input.coachId),
+            eq(rosterAssignments.clientName, cleanName),
+            eq(rosterAssignments.dayOfWeek, input.dayOfWeek),
+          ));
+        } else throw err;
+      }
+
+      return { ok: true };
+    }),
+
   reactivate: adminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
@@ -3612,21 +3666,32 @@ const rosterRouter = t.router({
       coachName: z.string(),
       clientName: z.string(),
       dayOfWeek: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday"]),
+      paymentType: z.enum(["subscription", "upfront"]).optional(),
+      upfrontWeeks: z.number().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await requireDb();
+      const today = getTodayMelbourne();
       try {
         await db.insert(rosterAssignments).values({
           coachId: input.coachId,
           coachName: input.coachName,
           clientName: input.clientName,
           dayOfWeek: input.dayOfWeek,
+          paymentType: input.paymentType ?? "subscription",
+          upfrontWeeks: input.upfrontWeeks ?? null,
+          rosterStartDate: today,
           isActive: 1,
         });
       } catch (err: any) {
         if (err.message?.includes("Duplicate")) {
           await db.update(rosterAssignments)
-            .set({ isActive: 1 })
+            .set({
+              isActive: 1,
+              paymentType: input.paymentType ?? "subscription",
+              upfrontWeeks: input.upfrontWeeks ?? null,
+              rosterStartDate: today,
+            })
             .where(and(
               eq(rosterAssignments.coachId, input.coachId),
               eq(rosterAssignments.clientName, input.clientName),

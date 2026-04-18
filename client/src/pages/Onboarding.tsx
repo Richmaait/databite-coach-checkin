@@ -74,7 +74,7 @@ export default function Onboarding() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-4 p-6 pt-20 max-w-[1400px] mx-auto">
+      <div className="flex flex-col gap-4 p-6 pt-20 w-full">
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white/90" style={{ fontFamily: "'Comfortaa', cursive" }}>Onboarding</h1>

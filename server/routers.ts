@@ -3447,8 +3447,8 @@ const onboardingRouter = t.router({
       if (input?.status) conditions.push(eq(onboardingClients.status, input.status));
       if (input?.coach) conditions.push(eq(onboardingClients.coach, input.coach));
       const rows = conditions.length > 0
-        ? await query.where(and(...conditions)).orderBy(desc(onboardingClients.createdAt))
-        : await query.orderBy(desc(onboardingClients.createdAt));
+        ? await query.where(and(...conditions)).orderBy(asc(onboardingClients.dateDue))
+        : await query.orderBy(asc(onboardingClients.dateDue));
 
       const todayMon = getMonday(getTodayMelbourne());
       return rows.map(r => {

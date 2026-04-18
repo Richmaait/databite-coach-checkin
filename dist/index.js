@@ -4151,7 +4151,7 @@ var onboardingRouter = t.router({
     const conditions = [];
     if (input?.status) conditions.push(eq8(onboardingClients.status, input.status));
     if (input?.coach) conditions.push(eq8(onboardingClients.coach, input.coach));
-    const rows = conditions.length > 0 ? await query.where(and6(...conditions)).orderBy(desc(onboardingClients.createdAt)) : await query.orderBy(desc(onboardingClients.createdAt));
+    const rows = conditions.length > 0 ? await query.where(and6(...conditions)).orderBy(asc(onboardingClients.dateDue)) : await query.orderBy(asc(onboardingClients.dateDue));
     const todayMon = getMonday2(getTodayMelbourne2());
     return rows.map((r) => {
       let weekNumber = null;

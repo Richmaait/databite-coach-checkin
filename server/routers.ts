@@ -3723,9 +3723,10 @@ const milestonesRouter = t.router({
       const diff = new Date(todayMon + "T00:00:00").getTime() - new Date(startMon + "T00:00:00").getTime();
       const weekNumber = Math.floor(diff / (7 * 86400000)) + 1;
       if (alerts[weekNumber]) {
-        const contactedField = `milestone${weekNumber}ContactedAt` as keyof typeof c;
-        const contactedAt = (c as any)[contactedField] ?? null;
-        alerts[weekNumber].clients.push({ id: c.id, clientName: c.clientName, coach: c.coach, sentToClient: c.sentToClient, weekNumber, contactedAt });
+        const contactedAt = (c as any)[`milestone${weekNumber}ContactedAt`] ?? null;
+        const rating = (c as any)[`milestone${weekNumber}Rating`] ?? null;
+        const notes = (c as any)[`milestone${weekNumber}Notes`] ?? null;
+        alerts[weekNumber].clients.push({ id: c.id, clientName: c.clientName, coach: c.coach, sentToClient: c.sentToClient, weekNumber, contactedAt, rating, notes });
       }
     }
 
@@ -3739,6 +3740,24 @@ const milestonesRouter = t.router({
       const field = `milestone${input.week}ContactedAt` as any;
       const today = getTodayMelbourne();
       await db.update(onboardingClients).set({ [field]: today }).where(eq(onboardingClients.id, input.id));
+      return { ok: true };
+    }),
+
+  setRating: adminProcedure
+    .input(z.object({ id: z.number(), week: z.number(), rating: z.enum(["green", "yellow", "red"]) }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      const field = `milestone${input.week}Rating` as any;
+      await db.update(onboardingClients).set({ [field]: input.rating }).where(eq(onboardingClients.id, input.id));
+      return { ok: true };
+    }),
+
+  setNotes: adminProcedure
+    .input(z.object({ id: z.number(), week: z.number(), notes: z.string() }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      const field = `milestone${input.week}Notes` as any;
+      await db.update(onboardingClients).set({ [field]: input.notes || null }).where(eq(onboardingClients.id, input.id));
       return { ok: true };
     }),
 });

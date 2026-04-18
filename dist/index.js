@@ -285,9 +285,17 @@ var init_schema = __esm({
       subscription: tinyint("subscription").default(0).notNull(),
       videoAlertSentAt: varchar("videoAlertSentAt", { length: 10 }),
       milestone2ContactedAt: varchar("milestone2ContactedAt", { length: 10 }),
+      milestone2Rating: varchar("milestone2Rating", { length: 16 }),
+      milestone2Notes: text("milestone2Notes"),
       milestone4ContactedAt: varchar("milestone4ContactedAt", { length: 10 }),
+      milestone4Rating: varchar("milestone4Rating", { length: 16 }),
+      milestone4Notes: text("milestone4Notes"),
       milestone8ContactedAt: varchar("milestone8ContactedAt", { length: 10 }),
+      milestone8Rating: varchar("milestone8Rating", { length: 16 }),
+      milestone8Notes: text("milestone8Notes"),
       milestone12ContactedAt: varchar("milestone12ContactedAt", { length: 10 }),
+      milestone12Rating: varchar("milestone12Rating", { length: 16 }),
+      milestone12Notes: text("milestone12Notes"),
       assignedDay: mysqlEnum("assignedDay", ["monday", "tuesday", "wednesday", "thursday", "friday"]),
       paymentType: mysqlEnum("paymentType", ["subscription", "upfront"]).default("subscription"),
       salesPerson: varchar("salesPerson", { length: 64 }),
@@ -4389,9 +4397,10 @@ var milestonesRouter = t.router({
       const diff = (/* @__PURE__ */ new Date(todayMon + "T00:00:00")).getTime() - (/* @__PURE__ */ new Date(startMon + "T00:00:00")).getTime();
       const weekNumber = Math.floor(diff / (7 * 864e5)) + 1;
       if (alerts[weekNumber]) {
-        const contactedField = `milestone${weekNumber}ContactedAt`;
-        const contactedAt = c[contactedField] ?? null;
-        alerts[weekNumber].clients.push({ id: c.id, clientName: c.clientName, coach: c.coach, sentToClient: c.sentToClient, weekNumber, contactedAt });
+        const contactedAt = c[`milestone${weekNumber}ContactedAt`] ?? null;
+        const rating = c[`milestone${weekNumber}Rating`] ?? null;
+        const notes = c[`milestone${weekNumber}Notes`] ?? null;
+        alerts[weekNumber].clients.push({ id: c.id, clientName: c.clientName, coach: c.coach, sentToClient: c.sentToClient, weekNumber, contactedAt, rating, notes });
       }
     }
     return MILESTONES.map((m) => ({ ...alerts[m.week] })).filter((a) => a.clients.length > 0);
@@ -4401,6 +4410,18 @@ var milestonesRouter = t.router({
     const field = `milestone${input.week}ContactedAt`;
     const today = getTodayMelbourne2();
     await db2.update(onboardingClients).set({ [field]: today }).where(eq8(onboardingClients.id, input.id));
+    return { ok: true };
+  }),
+  setRating: adminProcedure.input(z.object({ id: z.number(), week: z.number(), rating: z.enum(["green", "yellow", "red"]) })).mutation(async ({ input }) => {
+    const db2 = await requireDb();
+    const field = `milestone${input.week}Rating`;
+    await db2.update(onboardingClients).set({ [field]: input.rating }).where(eq8(onboardingClients.id, input.id));
+    return { ok: true };
+  }),
+  setNotes: adminProcedure.input(z.object({ id: z.number(), week: z.number(), notes: z.string() })).mutation(async ({ input }) => {
+    const db2 = await requireDb();
+    const field = `milestone${input.week}Notes`;
+    await db2.update(onboardingClients).set({ [field]: input.notes || null }).where(eq8(onboardingClients.id, input.id));
     return { ok: true };
   })
 });

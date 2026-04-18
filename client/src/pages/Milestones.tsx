@@ -24,7 +24,14 @@ export default function Milestones() {
   const { data: allClients } = trpc.milestones.getAll.useQuery();
 
   const contactMutation = trpc.milestones.markContacted.useMutation({
-    onSuccess: () => { refetchAlerts(); toast.success("Marked as contacted"); },
+    onSuccess: () => { refetchAlerts(); toast.success("Contacted"); },
+    onError: (e) => toast.error(e.message),
+  });
+  const ratingMutation = trpc.milestones.setRating.useMutation({
+    onSuccess: () => refetchAlerts(),
+    onError: (e) => toast.error(e.message),
+  });
+  const notesMutation = trpc.milestones.setNotes.useMutation({
     onError: (e) => toast.error(e.message),
   });
 
@@ -70,25 +77,44 @@ export default function Milestones() {
                       <span className={`text-xs font-semibold ${colors.text}`}>— {alert.milestone.label}</span>
                       <span className="text-xs text-white/40 ml-1">{alert.milestone.description}</span>
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       {alert.clients.map((c: any) => (
-                        <div key={c.id} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-white/80 font-medium">{c.clientName}</span>
-                            <span className="text-xs text-white/40">{c.coach}</span>
-                          </div>
+                        <div key={c.id} className="flex items-center gap-3">
+                          <span className="text-sm text-white/80 font-medium min-w-[140px]">{c.clientName}</span>
+                          <span className="text-xs text-white/40 min-w-[50px]">{c.coach}</span>
+
                           {c.contactedAt ? (
-                            <span className="text-[10px] font-semibold text-emerald-300 bg-emerald-400/15 border border-emerald-400/25 px-2 py-0.5 rounded-full">
-                              ✓ Contacted {c.contactedAt.split("-").reverse().join("/")}
+                            <span className="text-[10px] font-semibold text-emerald-300 bg-emerald-400/15 border border-emerald-400/25 px-2 py-0.5 rounded-full whitespace-nowrap">
+                              ✓ {c.contactedAt.split("-").reverse().join("/")}
                             </span>
                           ) : (
                             <button
                               onClick={() => contactMutation.mutate({ id: c.id, week: alert.milestone.week })}
                               disabled={contactMutation.isPending}
-                              className="text-[10px] font-semibold text-white/50 bg-white/10 border border-white/20 px-2 py-0.5 rounded-full hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/30 transition-colors">
+                              className="text-[10px] font-semibold text-white/50 bg-white/10 border border-white/20 px-2 py-0.5 rounded-full hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/30 transition-colors whitespace-nowrap">
                               Contacted
                             </button>
                           )}
+
+                          <div className="flex rounded-lg overflow-hidden border border-white/10">
+                            {([["green", "🟢", "On Track"], ["yellow", "🟡", "Neutral"], ["red", "🔴", "Off Track"]] as const).map(([val, emoji, label]) => (
+                              <button key={val}
+                                onClick={() => ratingMutation.mutate({ id: c.id, week: alert.milestone.week, rating: val })}
+                                className={`px-1.5 py-0.5 text-[9px] font-semibold transition-colors ${c.rating === val
+                                  ? val === "green" ? "bg-emerald-500/25 text-emerald-300"
+                                    : val === "yellow" ? "bg-amber-500/25 text-amber-300"
+                                    : "bg-red-500/25 text-red-300"
+                                  : "bg-white/5 text-white/30 hover:bg-white/10"
+                                }`}>
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+
+                          <input type="text" defaultValue={c.notes || ""} placeholder="Notes..."
+                            onBlur={e => { const v = e.target.value; if (v !== (c.notes || "")) notesMutation.mutate({ id: c.id, week: alert.milestone.week, notes: v }); }}
+                            onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                            className="flex-1 px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/60 text-[10px] placeholder:text-white/20 focus:outline-none focus:border-violet-500/30" />
                         </div>
                       ))}
                     </div>

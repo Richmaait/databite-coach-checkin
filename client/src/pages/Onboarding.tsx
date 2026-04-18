@@ -142,7 +142,6 @@ function AddClientForm({ onSubmit, onCancel, isPending }: {
   isPending: boolean;
 }) {
   const [name, setName] = useState("");
-  const [coach, setCoach] = useState("");
   const [datePaid, setDatePaid] = useState("");
   const [dateDue, setDateDue] = useState("");
 
@@ -152,17 +151,21 @@ function AddClientForm({ onSubmit, onCancel, isPending }: {
       <div className="grid grid-cols-2 gap-3">
         <input placeholder="Client Name *" value={name} onChange={e => setName(e.target.value)}
           className="col-span-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/90 text-sm placeholder:text-white/30 focus:outline-none focus:border-violet-500/40" />
-        <input placeholder="Coach" value={coach} onChange={e => setCoach(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/90 text-sm placeholder:text-white/30 focus:outline-none" />
-        <input type="date" placeholder="Date Paid" value={datePaid} onChange={e => setDatePaid(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/90 text-sm focus:outline-none" />
-        <input type="date" placeholder="Date Due" value={dateDue} onChange={e => setDateDue(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/90 text-sm focus:outline-none" />
+        <label className="flex flex-col gap-1">
+          <span className="text-[10px] text-white/40 font-medium">Date Paid</span>
+          <input type="date" value={datePaid} onChange={e => setDatePaid(e.target.value)}
+            className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/90 text-sm focus:outline-none" />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[10px] text-white/40 font-medium">Date Due</span>
+          <input type="date" value={dateDue} onChange={e => setDateDue(e.target.value)}
+            className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white/90 text-sm focus:outline-none" />
+        </label>
       </div>
       <div className="flex gap-2 justify-end">
         <button onClick={onCancel} className="px-4 py-2 text-sm text-white/50 hover:text-white/70">Cancel</button>
         <button
-          onClick={() => name.trim() && onSubmit({ clientName: name.trim(), coach: coach || undefined, datePaid: datePaid || undefined, dateDue: dateDue || undefined })}
+          onClick={() => name.trim() && onSubmit({ clientName: name.trim(), datePaid: datePaid || undefined, dateDue: dateDue || undefined })}
           disabled={!name.trim() || isPending}
           className="px-4 py-2 rounded-xl bg-violet-500/20 border border-violet-500/30 text-violet-300 text-sm font-semibold hover:bg-violet-500/30 transition-colors disabled:opacity-40"
         >

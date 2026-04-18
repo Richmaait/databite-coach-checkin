@@ -360,8 +360,9 @@ function OnboardingRow({ client, coaches, tab, onUpdate, onAlertVideo, onFinalis
         {isCompleted ? (
           <span className="text-[10px] text-white/40">{client.notes || ""}</span>
         ) : (
-          <input type="text" value={client.notes || ""} placeholder="..."
-            onChange={e => onUpdate("notes", e.target.value || null)}
+          <input type="text" defaultValue={client.notes || ""} placeholder="..."
+            onBlur={e => { const v = e.target.value || null; if (v !== (client.notes || null)) onUpdate("notes", v); }}
+            onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
             className="w-full px-1.5 py-1 rounded bg-white/5 border border-white/10 text-white/60 text-[10px] placeholder:text-white/20 focus:outline-none focus:border-violet-500/30" />
         )}
       </td>

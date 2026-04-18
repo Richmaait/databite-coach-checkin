@@ -18,6 +18,7 @@ import Login from "./pages/Login";
 import ClientCheckin from "./pages/ClientCheckin";
 import Sales from "./pages/Sales";
 import FridayAudit from "./pages/FridayAudit";
+import Onboarding from "./pages/Onboarding";
 
 function Router() {
   return (
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/sweep-report/:id" component={SweepReport} />
       <Route path="/sales" component={Sales} />
       <Route path="/audit" component={FridayAudit} />
+      <Route path="/onboarding" component={Onboarding} />
       <Route path="/client-performance"><Redirect to="/client-progress" /></Route>
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

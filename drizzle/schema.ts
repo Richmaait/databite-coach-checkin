@@ -31,6 +31,7 @@ export const coaches = mysqlTable("coaches", {
   leaveStartDate: varchar("leaveStartDate", { length: 10 }),
   leaveEndDate: varchar("leaveEndDate", { length: 10 }),
   isActive: tinyint("isActive").default(1).notNull(),
+  excludeFromEngagement: tinyint("excludeFromEngagement").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -281,3 +282,31 @@ export const auditHistory = mysqlTable("audit_history", {
 }));
 
 export type AuditHistory = typeof auditHistory.$inferSelect;
+
+// ─── Onboarding Clients ───────────────────────────────────────────────────
+// Client onboarding checklist — replaces the ONBOARDING Google Sheet.
+export const onboardingClients = mysqlTable("onboarding_clients", {
+  id: int("id").autoincrement().primaryKey(),
+  clientName: varchar("clientName", { length: 256 }).notNull(),
+  coach: varchar("coach", { length: 128 }),
+  status: mysqlEnum("status", ["onboarding", "active", "cancelled"]).default("onboarding").notNull(),
+  datePaid: varchar("datePaid", { length: 10 }),
+  dateDue: varchar("dateDue", { length: 10 }),
+  appInviteSent: tinyint("appInviteSent").default(0).notNull(),
+  contractSent: tinyint("contractSent").default(0).notNull(),
+  requestedPhotos: varchar("requestedPhotos", { length: 10 }),
+  mealPlan: tinyint("mealPlan").default(0).notNull(),
+  training: tinyint("training").default(0).notNull(),
+  sentToRich: tinyint("sentToRich").default(0).notNull(),
+  welcomeVideo: tinyint("welcomeVideo").default(0).notNull(),
+  sentToClient: varchar("sentToClient", { length: 10 }),
+  subscription: tinyint("subscription").default(0).notNull(),
+  notes: text("notes"),
+  cancelledAt: datetime("cancelledAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (t) => ({
+  uqClientCoach: uniqueIndex("uq_onboarding_client_coach").on(t.clientName, t.coach),
+}));
+
+export type OnboardingClient = typeof onboardingClients.$inferSelect;

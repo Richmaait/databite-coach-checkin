@@ -48,6 +48,7 @@ __export(schema_exports, {
   excusedClients: () => excusedClients,
   fridayAudits: () => fridayAudits,
   kudos: () => kudos,
+  onboardingClients: () => onboardingClients,
   pausedClients: () => pausedClients,
   rosterClientStarts: () => rosterClientStarts,
   rosterWeeklySnapshots: () => rosterWeeklySnapshots,
@@ -57,7 +58,7 @@ __export(schema_exports, {
   users: () => users
 });
 import { mysqlTable, int, varchar, text, timestamp, datetime, mysqlEnum, uniqueIndex, json, tinyint } from "drizzle-orm/mysql-core";
-var users, coaches, checkinRecords, clientCheckIns, excusedClients, rosterClientStarts, rosterWeeklySnapshots, kudos, sweepReports, clientRatings, slackReminderLog, pausedClients, salesCheckins, fridayAudits, auditHistory;
+var users, coaches, checkinRecords, clientCheckIns, excusedClients, rosterClientStarts, rosterWeeklySnapshots, kudos, sweepReports, clientRatings, slackReminderLog, pausedClients, salesCheckins, fridayAudits, auditHistory, onboardingClients;
 var init_schema = __esm({
   "drizzle/schema.ts"() {
     "use strict";
@@ -84,6 +85,7 @@ var init_schema = __esm({
       leaveStartDate: varchar("leaveStartDate", { length: 10 }),
       leaveEndDate: varchar("leaveEndDate", { length: 10 }),
       isActive: tinyint("isActive").default(1).notNull(),
+      excludeFromEngagement: tinyint("excludeFromEngagement").default(0).notNull(),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
       updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
     });
@@ -263,6 +265,29 @@ var init_schema = __esm({
       createdAt: timestamp("createdAt").defaultNow().notNull()
     }, (t2) => ({
       uqCoachClient: uniqueIndex("uq_audit_coach_client").on(t2.coachId, t2.clientName)
+    }));
+    onboardingClients = mysqlTable("onboarding_clients", {
+      id: int("id").autoincrement().primaryKey(),
+      clientName: varchar("clientName", { length: 256 }).notNull(),
+      coach: varchar("coach", { length: 128 }),
+      status: mysqlEnum("status", ["onboarding", "active", "cancelled"]).default("onboarding").notNull(),
+      datePaid: varchar("datePaid", { length: 10 }),
+      dateDue: varchar("dateDue", { length: 10 }),
+      appInviteSent: tinyint("appInviteSent").default(0).notNull(),
+      contractSent: tinyint("contractSent").default(0).notNull(),
+      requestedPhotos: varchar("requestedPhotos", { length: 10 }),
+      mealPlan: tinyint("mealPlan").default(0).notNull(),
+      training: tinyint("training").default(0).notNull(),
+      sentToRich: tinyint("sentToRich").default(0).notNull(),
+      welcomeVideo: tinyint("welcomeVideo").default(0).notNull(),
+      sentToClient: varchar("sentToClient", { length: 10 }),
+      subscription: tinyint("subscription").default(0).notNull(),
+      notes: text("notes"),
+      cancelledAt: datetime("cancelledAt"),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    }, (t2) => ({
+      uqClientCoach: uniqueIndex("uq_onboarding_client_coach").on(t2.clientName, t2.coach)
     }));
   }
 });
@@ -1572,6 +1597,69 @@ async function computeCoachWeekStats(db2, coachId, coachName, weekStart, opts = 
 function engagementPct(completed, scheduled, excused) {
   const eff = Math.max(scheduled - excused, 0);
   return eff > 0 ? Math.round(completed / eff * 1e3) / 10 : 0;
+}
+
+// server/onboardingUtils.ts
+init_env();
+var SHEET_ID2 = "1gaBzRTfxwaWc3iEIa4NAqffAPJJpc47A7B_1yffyduI";
+var SHEET_TAB2 = "ONBOARDING";
+var _cachedRows2 = null;
+var _cacheTime2 = 0;
+var CACHE_TTL_MS2 = 5 * 60 * 1e3;
+async function fetchOnboardingRows() {
+  if (_cachedRows2 && Date.now() - _cacheTime2 < CACHE_TTL_MS2) return _cachedRows2;
+  const apiKey = ENV.googleSheetsApiKey;
+  if (!apiKey) throw new Error("GOOGLE_SHEETS_API_KEY not set");
+  const range = `${SHEET_TAB2}!B6:O1000`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID2}/values/${encodeURIComponent(range)}?key=${apiKey}`;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Sheets API ${res.status}: ${await res.text()}`);
+      const data = await res.json();
+      _cachedRows2 = data.values ?? [];
+      _cacheTime2 = Date.now();
+      return _cachedRows2;
+    } catch (err) {
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 1e3 * (attempt + 1)));
+      else throw err;
+    }
+  }
+  return [];
+}
+function parseDDMMYYYY(s) {
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+}
+function toBool(v) {
+  const u = (v ?? "").trim().toUpperCase();
+  return u === "TRUE" || u === "YES";
+}
+async function fetchOnboardingClients() {
+  const rows = await fetchOnboardingRows();
+  const results = [];
+  for (const row of rows) {
+    const name = (row[0] ?? "").trim();
+    if (!name) continue;
+    results.push({
+      clientName: name,
+      datePaid: parseDDMMYYYY(row[1] ?? ""),
+      dateDue: parseDDMMYYYY(row[2] ?? ""),
+      appInviteSent: toBool(row[3] ?? ""),
+      contractSent: toBool(row[4] ?? ""),
+      requestedPhotos: parseDDMMYYYY(row[5] ?? ""),
+      mealPlan: toBool(row[6] ?? ""),
+      training: toBool(row[7] ?? ""),
+      sentToRich: toBool(row[8] ?? ""),
+      welcomeVideo: toBool(row[9] ?? ""),
+      sentToClient: parseDDMMYYYY(row[10] ?? ""),
+      subscription: toBool(row[11] ?? ""),
+      coach: (row[12] ?? "").trim(),
+      notes: (row[13] ?? "").trim()
+    });
+  }
+  return results;
 }
 
 // server/routers.ts
@@ -3997,6 +4085,146 @@ ${summary}`;
     return { allDone };
   })
 });
+var onboardingRouter = t.router({
+  list: adminProcedure.input(z.object({
+    status: z.enum(["onboarding", "active", "cancelled"]).optional(),
+    coach: z.string().optional()
+  }).optional()).query(async ({ input }) => {
+    const db2 = await requireDb();
+    let query = db2.select().from(onboardingClients);
+    const conditions = [];
+    if (input?.status) conditions.push(eq7(onboardingClients.status, input.status));
+    if (input?.coach) conditions.push(eq7(onboardingClients.coach, input.coach));
+    const rows = conditions.length > 0 ? await query.where(and5(...conditions)).orderBy(desc(onboardingClients.createdAt)) : await query.orderBy(desc(onboardingClients.createdAt));
+    const todayMon = getMonday2(getTodayMelbourne2());
+    return rows.map((r) => {
+      let weekNumber = null;
+      if (r.sentToClient && r.status === "active") {
+        const startMon = getMonday2(r.sentToClient);
+        const diff = (/* @__PURE__ */ new Date(todayMon + "T00:00:00")).getTime() - (/* @__PURE__ */ new Date(startMon + "T00:00:00")).getTime();
+        weekNumber = Math.floor(diff / (7 * 864e5)) + 1;
+      }
+      return { ...r, weekNumber };
+    });
+  }),
+  create: adminProcedure.input(z.object({
+    clientName: z.string().min(1),
+    coach: z.string().optional(),
+    datePaid: z.string().optional(),
+    dateDue: z.string().optional(),
+    notes: z.string().optional()
+  })).mutation(async ({ input }) => {
+    const db2 = await requireDb();
+    const [result] = await db2.insert(onboardingClients).values({
+      clientName: input.clientName,
+      coach: input.coach ?? null,
+      datePaid: input.datePaid ?? null,
+      dateDue: input.dateDue ?? null,
+      notes: input.notes ?? null,
+      status: "onboarding"
+    });
+    return { id: result.insertId };
+  }),
+  update: adminProcedure.input(z.object({
+    id: z.number(),
+    clientName: z.string().optional(),
+    coach: z.string().optional(),
+    datePaid: z.string().optional(),
+    dateDue: z.string().optional(),
+    appInviteSent: z.boolean().optional(),
+    contractSent: z.boolean().optional(),
+    requestedPhotos: z.string().nullable().optional(),
+    mealPlan: z.boolean().optional(),
+    training: z.boolean().optional(),
+    sentToRich: z.boolean().optional(),
+    welcomeVideo: z.boolean().optional(),
+    sentToClient: z.string().nullable().optional(),
+    subscription: z.boolean().optional(),
+    notes: z.string().nullable().optional(),
+    status: z.enum(["onboarding", "active", "cancelled"]).optional()
+  })).mutation(async ({ input }) => {
+    const db2 = await requireDb();
+    const { id, ...fields } = input;
+    const update = {};
+    if (fields.clientName !== void 0) update.clientName = fields.clientName;
+    if (fields.coach !== void 0) update.coach = fields.coach;
+    if (fields.datePaid !== void 0) update.datePaid = fields.datePaid;
+    if (fields.dateDue !== void 0) update.dateDue = fields.dateDue;
+    if (fields.appInviteSent !== void 0) update.appInviteSent = fields.appInviteSent ? 1 : 0;
+    if (fields.contractSent !== void 0) update.contractSent = fields.contractSent ? 1 : 0;
+    if (fields.requestedPhotos !== void 0) update.requestedPhotos = fields.requestedPhotos;
+    if (fields.mealPlan !== void 0) update.mealPlan = fields.mealPlan ? 1 : 0;
+    if (fields.training !== void 0) update.training = fields.training ? 1 : 0;
+    if (fields.sentToRich !== void 0) update.sentToRich = fields.sentToRich ? 1 : 0;
+    if (fields.welcomeVideo !== void 0) update.welcomeVideo = fields.welcomeVideo ? 1 : 0;
+    if (fields.sentToClient !== void 0) update.sentToClient = fields.sentToClient;
+    if (fields.subscription !== void 0) update.subscription = fields.subscription ? 1 : 0;
+    if (fields.notes !== void 0) update.notes = fields.notes;
+    if (fields.status !== void 0) update.status = fields.status;
+    if (Object.keys(update).length === 0) return { ok: true };
+    await db2.update(onboardingClients).set(update).where(eq7(onboardingClients.id, id));
+    return { ok: true };
+  }),
+  cancel: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+    const db2 = await requireDb();
+    await db2.update(onboardingClients).set({ status: "cancelled", cancelledAt: /* @__PURE__ */ new Date() }).where(eq7(onboardingClients.id, input.id));
+    return { ok: true };
+  }),
+  reactivate: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+    const db2 = await requireDb();
+    await db2.update(onboardingClients).set({ status: "active", cancelledAt: null }).where(eq7(onboardingClients.id, input.id));
+    return { ok: true };
+  }),
+  importFromSheet: adminProcedure.mutation(async () => {
+    const db2 = await requireDb();
+    const sheetClients = await fetchOnboardingClients();
+    const allCoaches = await db2.select().from(coaches).where(eq7(coaches.isActive, 1));
+    const rosterNames = /* @__PURE__ */ new Set();
+    for (const coach of allCoaches) {
+      try {
+        const roster = await fetchRosterForCoach(coach.name);
+        for (const day of DAYS) {
+          for (const name of roster[day] ?? []) {
+            rosterNames.add(name.toLowerCase().trim());
+          }
+        }
+      } catch {
+      }
+    }
+    let imported = 0, skipped = 0;
+    for (const row of sheetClients) {
+      const cleanName = row.clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+      const isOnRoster = rosterNames.has(cleanName.toLowerCase());
+      const status = !row.sentToClient ? "onboarding" : isOnRoster ? "active" : "cancelled";
+      try {
+        await db2.insert(onboardingClients).values({
+          clientName: row.clientName,
+          coach: row.coach || null,
+          status,
+          datePaid: row.datePaid,
+          dateDue: row.dateDue,
+          appInviteSent: row.appInviteSent ? 1 : 0,
+          contractSent: row.contractSent ? 1 : 0,
+          requestedPhotos: row.requestedPhotos,
+          mealPlan: row.mealPlan ? 1 : 0,
+          training: row.training ? 1 : 0,
+          sentToRich: row.sentToRich ? 1 : 0,
+          welcomeVideo: row.welcomeVideo ? 1 : 0,
+          sentToClient: row.sentToClient,
+          subscription: row.subscription ? 1 : 0,
+          notes: row.notes || null,
+          cancelledAt: status === "cancelled" ? /* @__PURE__ */ new Date() : null
+        });
+        imported++;
+      } catch (err) {
+        if (err.code === "ER_DUP_ENTRY") skipped++;
+        else throw err;
+      }
+    }
+    const [counts] = await db2.execute(sql`SELECT status, COUNT(*) as c FROM onboarding_clients GROUP BY status`);
+    return { imported, skipped, counts };
+  })
+});
 var appRouter = t.router({
   checkins: checkinsRouter,
   clientCheckins: clientCheckinsRouter,
@@ -4006,7 +4234,8 @@ var appRouter = t.router({
   users: usersRouter,
   kudos: kudosRouter,
   sales: salesRouter,
-  audits: auditsRouter
+  audits: auditsRouter,
+  onboarding: onboardingRouter
 });
 
 // server/_core/context.ts
@@ -4092,8 +4321,8 @@ var FORM_TO_COACH = {
   lRvWjdgl: "Steve"
   // Rich's form is excluded — he is the founder, not a tracked coach
 };
-var SHEET_ID2 = "1puu4oLAmC5jV_GEmRrMxvXuTak_dl6pOJ6iWC44Nfl4";
-var SHEET_TAB2 = "CLIENT ROSTER";
+var SHEET_ID3 = "1puu4oLAmC5jV_GEmRrMxvXuTak_dl6pOJ6iWC44Nfl4";
+var SHEET_TAB3 = "CLIENT ROSTER";
 var DAYS3 = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 function getAESTWeekStart(date2) {
   const aest = new Date(date2.getTime() + 10 * 60 * 60 * 1e3);
@@ -4237,8 +4466,8 @@ function matchScore(submitted, rosterName) {
 async function fetchRosterClients(coachName) {
   const API_KEY = ENV.googleSheetsApiKey;
   if (!API_KEY) return [];
-  const range = encodeURIComponent(`${SHEET_TAB2}!A1:J200`);
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID2}/values/${range}?key=${API_KEY}`;
+  const range = encodeURIComponent(`${SHEET_TAB3}!A1:J200`);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID3}/values/${range}?key=${API_KEY}`;
   let rows = [];
   try {
     const res = await fetch(url);

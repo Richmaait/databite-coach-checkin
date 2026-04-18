@@ -36,9 +36,11 @@ import {
   salesCheckins,
   fridayAudits,
   auditHistory,
+  onboardingClients,
 } from "../drizzle/schema";
 import { runTypeformBackfill } from "./typeformBackfill";
 import { computeCoachWeekStats, engagementPct } from "./engagementStats";
+import { fetchOnboardingClients } from "./onboardingUtils";
 import { sendSlackDM } from "./slackReminders";
 
 // Re-export fetchRosterForCoach under the alias used by weeklySummaryPdfRoute
@@ -3429,6 +3431,176 @@ const auditsRouter = t.router({
     }),
 });
 
+// ─── Onboarding Router ─────────────────────────────────────────────────────────
+
+const onboardingRouter = t.router({
+  list: adminProcedure
+    .input(z.object({
+      status: z.enum(["onboarding", "active", "cancelled"]).optional(),
+      coach: z.string().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      const db = await requireDb();
+      let query = db.select().from(onboardingClients);
+      const conditions: any[] = [];
+      if (input?.status) conditions.push(eq(onboardingClients.status, input.status));
+      if (input?.coach) conditions.push(eq(onboardingClients.coach, input.coach));
+      const rows = conditions.length > 0
+        ? await query.where(and(...conditions)).orderBy(desc(onboardingClients.createdAt))
+        : await query.orderBy(desc(onboardingClients.createdAt));
+
+      const todayMon = getMonday(getTodayMelbourne());
+      return rows.map(r => {
+        let weekNumber: number | null = null;
+        if (r.sentToClient && r.status === "active") {
+          const startMon = getMonday(r.sentToClient);
+          const diff = new Date(todayMon + "T00:00:00").getTime() - new Date(startMon + "T00:00:00").getTime();
+          weekNumber = Math.floor(diff / (7 * 86400000)) + 1;
+        }
+        return { ...r, weekNumber };
+      });
+    }),
+
+  create: adminProcedure
+    .input(z.object({
+      clientName: z.string().min(1),
+      coach: z.string().optional(),
+      datePaid: z.string().optional(),
+      dateDue: z.string().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      const [result] = await db.insert(onboardingClients).values({
+        clientName: input.clientName,
+        coach: input.coach ?? null,
+        datePaid: input.datePaid ?? null,
+        dateDue: input.dateDue ?? null,
+        notes: input.notes ?? null,
+        status: "onboarding",
+      });
+      return { id: result.insertId };
+    }),
+
+  update: adminProcedure
+    .input(z.object({
+      id: z.number(),
+      clientName: z.string().optional(),
+      coach: z.string().optional(),
+      datePaid: z.string().optional(),
+      dateDue: z.string().optional(),
+      appInviteSent: z.boolean().optional(),
+      contractSent: z.boolean().optional(),
+      requestedPhotos: z.string().nullable().optional(),
+      mealPlan: z.boolean().optional(),
+      training: z.boolean().optional(),
+      sentToRich: z.boolean().optional(),
+      welcomeVideo: z.boolean().optional(),
+      sentToClient: z.string().nullable().optional(),
+      subscription: z.boolean().optional(),
+      notes: z.string().nullable().optional(),
+      status: z.enum(["onboarding", "active", "cancelled"]).optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      const { id, ...fields } = input;
+      const update: Record<string, any> = {};
+      if (fields.clientName !== undefined) update.clientName = fields.clientName;
+      if (fields.coach !== undefined) update.coach = fields.coach;
+      if (fields.datePaid !== undefined) update.datePaid = fields.datePaid;
+      if (fields.dateDue !== undefined) update.dateDue = fields.dateDue;
+      if (fields.appInviteSent !== undefined) update.appInviteSent = fields.appInviteSent ? 1 : 0;
+      if (fields.contractSent !== undefined) update.contractSent = fields.contractSent ? 1 : 0;
+      if (fields.requestedPhotos !== undefined) update.requestedPhotos = fields.requestedPhotos;
+      if (fields.mealPlan !== undefined) update.mealPlan = fields.mealPlan ? 1 : 0;
+      if (fields.training !== undefined) update.training = fields.training ? 1 : 0;
+      if (fields.sentToRich !== undefined) update.sentToRich = fields.sentToRich ? 1 : 0;
+      if (fields.welcomeVideo !== undefined) update.welcomeVideo = fields.welcomeVideo ? 1 : 0;
+      if (fields.sentToClient !== undefined) update.sentToClient = fields.sentToClient;
+      if (fields.subscription !== undefined) update.subscription = fields.subscription ? 1 : 0;
+      if (fields.notes !== undefined) update.notes = fields.notes;
+      if (fields.status !== undefined) update.status = fields.status;
+      if (Object.keys(update).length === 0) return { ok: true };
+      await db.update(onboardingClients).set(update).where(eq(onboardingClients.id, id));
+      return { ok: true };
+    }),
+
+  cancel: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      await db.update(onboardingClients)
+        .set({ status: "cancelled", cancelledAt: new Date() })
+        .where(eq(onboardingClients.id, input.id));
+      return { ok: true };
+    }),
+
+  reactivate: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      await db.update(onboardingClients)
+        .set({ status: "active", cancelledAt: null })
+        .where(eq(onboardingClients.id, input.id));
+      return { ok: true };
+    }),
+
+  importFromSheet: adminProcedure
+    .mutation(async () => {
+      const db = await requireDb();
+
+      const sheetClients = await fetchOnboardingClients();
+
+      const allCoaches = await db.select().from(coaches).where(eq(coaches.isActive, 1));
+      const rosterNames = new Set<string>();
+      for (const coach of allCoaches) {
+        try {
+          const roster = await fetchRosterForCoach(coach.name);
+          for (const day of DAYS) {
+            for (const name of (roster[day] ?? [])) {
+              rosterNames.add(name.toLowerCase().trim());
+            }
+          }
+        } catch {}
+      }
+
+      let imported = 0, skipped = 0;
+      for (const row of sheetClients) {
+        const cleanName = row.clientName.replace(/\s*\(.*\)\s*$/, "").trim();
+        const isOnRoster = rosterNames.has(cleanName.toLowerCase());
+        const status = !row.sentToClient ? "onboarding" : isOnRoster ? "active" : "cancelled";
+
+        try {
+          await db.insert(onboardingClients).values({
+            clientName: row.clientName,
+            coach: row.coach || null,
+            status,
+            datePaid: row.datePaid,
+            dateDue: row.dateDue,
+            appInviteSent: row.appInviteSent ? 1 : 0,
+            contractSent: row.contractSent ? 1 : 0,
+            requestedPhotos: row.requestedPhotos,
+            mealPlan: row.mealPlan ? 1 : 0,
+            training: row.training ? 1 : 0,
+            sentToRich: row.sentToRich ? 1 : 0,
+            welcomeVideo: row.welcomeVideo ? 1 : 0,
+            sentToClient: row.sentToClient,
+            subscription: row.subscription ? 1 : 0,
+            notes: row.notes || null,
+            cancelledAt: status === "cancelled" ? new Date() : null,
+          });
+          imported++;
+        } catch (err: any) {
+          if (err.code === "ER_DUP_ENTRY") skipped++;
+          else throw err;
+        }
+      }
+
+      const [counts] = await db.execute(sql`SELECT status, COUNT(*) as c FROM onboarding_clients GROUP BY status`);
+      return { imported, skipped, counts };
+    }),
+});
+
 // ─── App Router ────────────────────────────────────────────────────────────────
 
 export const appRouter = t.router({
@@ -3441,6 +3613,7 @@ export const appRouter = t.router({
   kudos: kudosRouter,
   sales: salesRouter,
   audits: auditsRouter,
+  onboarding: onboardingRouter,
 });
 
 export type AppRouter = typeof appRouter;

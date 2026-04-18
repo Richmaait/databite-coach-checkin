@@ -3723,12 +3723,25 @@ const milestonesRouter = t.router({
       const diff = new Date(todayMon + "T00:00:00").getTime() - new Date(startMon + "T00:00:00").getTime();
       const weekNumber = Math.floor(diff / (7 * 86400000)) + 1;
       if (alerts[weekNumber]) {
-        alerts[weekNumber].clients.push({ id: c.id, clientName: c.clientName, coach: c.coach, sentToClient: c.sentToClient, weekNumber });
+        const contactedField = `milestone${weekNumber}ContactedAt` as keyof typeof c;
+        const contactedAt = (c as any)[contactedField] ?? null;
+        alerts[weekNumber].clients.push({ id: c.id, clientName: c.clientName, coach: c.coach, sentToClient: c.sentToClient, weekNumber, contactedAt });
       }
     }
 
     return MILESTONES.map(m => ({ ...alerts[m.week] })).filter(a => a.clients.length > 0);
   }),
+});
+
+  markContacted: adminProcedure
+    .input(z.object({ id: z.number(), week: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      const field = `milestone${input.week}ContactedAt` as any;
+      const today = getTodayMelbourne();
+      await db.update(onboardingClients).set({ [field]: today }).where(eq(onboardingClients.id, input.id));
+      return { ok: true };
+    }),
 });
 
 const rosterRouter = t.router({

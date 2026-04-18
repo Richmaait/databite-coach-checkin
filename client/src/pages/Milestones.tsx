@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
+import { toast } from "sonner";
 import { useLocation } from "wouter";
 
 const MILESTONE_COLORS: Record<number, { bg: string; border: string; text: string }> = {
@@ -19,8 +20,13 @@ export default function Milestones() {
   const [search, setSearch] = useState("");
   const [coachFilter, setCoachFilter] = useState("");
 
-  const { data: alerts } = trpc.milestones.getAlerts.useQuery();
+  const { data: alerts, refetch: refetchAlerts } = trpc.milestones.getAlerts.useQuery();
   const { data: allClients } = trpc.milestones.getAll.useQuery();
+
+  const contactMutation = trpc.milestones.markContacted.useMutation({
+    onSuccess: () => { refetchAlerts(); toast.success("Marked as contacted"); },
+    onError: (e) => toast.error(e.message),
+  });
 
   const totalAlerts = alerts?.reduce((s, a) => s + a.clients.length, 0) ?? 0;
 
@@ -65,10 +71,24 @@ export default function Milestones() {
                     </div>
                     <p className="text-xs text-white/50 mb-3">{alert.milestone.description}</p>
                     <div className="space-y-1.5">
-                      {alert.clients.map(c => (
+                      {alert.clients.map((c: any) => (
                         <div key={c.id} className="flex items-center justify-between">
-                          <span className="text-sm text-white/80 font-medium">{c.clientName}</span>
-                          <span className="text-xs text-white/40">{c.coach}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-white/80 font-medium">{c.clientName}</span>
+                            <span className="text-xs text-white/40">{c.coach}</span>
+                          </div>
+                          {c.contactedAt ? (
+                            <span className="text-[10px] font-semibold text-emerald-300 bg-emerald-400/15 border border-emerald-400/25 px-2 py-0.5 rounded-full">
+                              ✓ Contacted {c.contactedAt.split("-").reverse().join("/")}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => contactMutation.mutate({ id: c.id, week: alert.milestone.week })}
+                              disabled={contactMutation.isPending}
+                              className="text-[10px] font-semibold text-white/50 bg-white/10 border border-white/20 px-2 py-0.5 rounded-full hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/30 transition-colors">
+                              Mark Contacted
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>

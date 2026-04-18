@@ -120,9 +120,9 @@ export default function Onboarding() {
               <thead>
                 <tr className="border-b border-white/[0.08]">
                   <th className="text-left px-3 py-2 font-medium text-white/50 min-w-[160px]">Client</th>
-                  <th className="text-left px-2 py-2 font-medium text-white/50 min-w-[90px]">Paid</th>
-                  <th className="text-left px-2 py-2 font-medium text-white/50 min-w-[90px]">Due</th>
-                  <th className="text-left px-2 py-2 font-medium text-white/50 min-w-[90px]">Photos</th>
+                  <th className="text-left px-2 py-2 font-medium text-white/50 min-w-[75px]">Paid</th>
+                  <th className="text-left px-2 py-2 font-medium text-white/50 min-w-[75px]">Due</th>
+                  <th className="text-left px-2 py-2 font-medium text-white/50 min-w-[75px]">Photos</th>
                   {BOOL_FIELDS.map(f => (
                     <th key={f.key} className="text-center px-1 py-2 font-medium text-white/50 min-w-[60px]">{f.label}</th>
                   ))}
@@ -194,32 +194,32 @@ function OnboardingRow({ client, coaches, tab, onUpdate, onAlertVideo, onFinalis
       <td className="px-3 py-2 font-medium text-white/80">{client.clientName}</td>
 
       {/* Paid */}
-      <td className="px-2 py-2">
+      <td className="px-1 py-1.5">
         {isCompleted ? (
-          <span className="text-[11px] text-white/50">{client.datePaid ? client.datePaid.split("-").reverse().join("/") : "—"}</span>
+          <span className="text-[10px] text-white/50">{client.datePaid ? client.datePaid.split("-").reverse().join("/") : "—"}</span>
         ) : (
           <input type="date" value={client.datePaid || ""} onChange={e => onUpdate("datePaid", e.target.value || null)}
-            className="w-full px-1.5 py-1 rounded bg-white/5 border border-white/10 text-white/70 text-[11px] focus:outline-none" />
+            className="w-full px-1 py-0.5 rounded bg-white/5 border border-white/10 text-white/70 text-[10px] focus:outline-none" />
         )}
       </td>
 
       {/* Due */}
-      <td className="px-2 py-2">
+      <td className="px-1 py-1.5">
         {isCompleted ? (
-          <span className="text-[11px] text-white/50">{client.dateDue ? client.dateDue.split("-").reverse().join("/") : "—"}</span>
+          <span className="text-[10px] text-white/50">{client.dateDue ? client.dateDue.split("-").reverse().join("/") : "—"}</span>
         ) : (
           <input type="date" value={client.dateDue || ""} onChange={e => onUpdate("dateDue", e.target.value || null)}
-            className="w-full px-1.5 py-1 rounded bg-white/5 border border-white/10 text-white/70 text-[11px] focus:outline-none" />
+            className="w-full px-1 py-0.5 rounded bg-white/5 border border-white/10 text-white/70 text-[10px] focus:outline-none" />
         )}
       </td>
 
       {/* Photos */}
-      <td className="px-2 py-2">
+      <td className="px-1 py-1.5">
         {isCompleted ? (
-          <span className="text-[11px] text-white/50">{client.requestedPhotos ? client.requestedPhotos.split("-").reverse().join("/") : "—"}</span>
+          <span className="text-[10px] text-white/50">{client.requestedPhotos ? client.requestedPhotos.split("-").reverse().join("/") : "—"}</span>
         ) : (
           <input type="date" value={client.requestedPhotos || ""} onChange={e => onUpdate("requestedPhotos", e.target.value || null)}
-            className="w-full px-1.5 py-1 rounded bg-white/5 border border-white/10 text-white/70 text-[11px] focus:outline-none" />
+            className="w-full px-1 py-0.5 rounded bg-white/5 border border-white/10 text-white/70 text-[10px] focus:outline-none" />
         )}
       </td>
 

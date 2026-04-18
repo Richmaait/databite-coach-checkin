@@ -1333,7 +1333,7 @@ init_rosterUtils();
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { z } from "zod";
-import { eq as eq7, and as and5, gte as gte3, lte as lte2, desc, sql, asc, isNull as isNull4 } from "drizzle-orm";
+import { eq as eq7, and as and5, gte as gte3, lte as lte2, desc, sql, asc, isNull as isNull4, ne } from "drizzle-orm";
 init_env();
 init_schema();
 
@@ -3956,7 +3956,8 @@ var auditsRouter = t.router({
   /** Get audit history (admin view). */
   getHistory: adminProcedure.input(z.object({ limit: z.number().optional() }).optional()).query(async ({ input }) => {
     const db2 = await requireDb();
-    return db2.select().from(fridayAudits).orderBy(desc(fridayAudits.createdAt)).limit(input?.limit ?? 20);
+    const currentWeek = getMonday2(getTodayMelbourne2());
+    return db2.select().from(fridayAudits).where(ne(fridayAudits.weekStart, currentWeek)).orderBy(desc(fridayAudits.createdAt)).limit(input?.limit ?? 20);
   }),
   /** Submit audit for one client (coach submits Loom/notes for a single selected client). */
   submitClient: protectedProcedure.input(z.object({

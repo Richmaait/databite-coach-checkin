@@ -3378,7 +3378,11 @@ const auditsRouter = t.router({
     .input(z.object({ limit: z.number().optional() }).optional())
     .query(async ({ input }) => {
       const db = await requireDb();
-      return db.select().from(fridayAudits).orderBy(desc(fridayAudits.createdAt)).limit(input?.limit ?? 20);
+      const currentWeek = getMonday(getTodayMelbourne());
+      return db.select().from(fridayAudits)
+        .where(ne(fridayAudits.weekStart, currentWeek))
+        .orderBy(desc(fridayAudits.createdAt))
+        .limit(input?.limit ?? 20);
     }),
 
   /** Submit audit for one client (coach submits Loom/notes for a single selected client). */

@@ -3571,24 +3571,13 @@ const onboardingRouter = t.router({
         const status = !row.sentToClient ? "onboarding" : isOnRoster ? "active" : "cancelled";
 
         try {
-          await db.insert(onboardingClients).values({
-            clientName: row.clientName,
-            coach: row.coach || null,
-            status,
-            datePaid: row.datePaid,
-            dateDue: row.dateDue,
-            appInviteSent: row.appInviteSent ? 1 : 0,
-            contractSent: row.contractSent ? 1 : 0,
-            requestedPhotos: row.requestedPhotos,
-            mealPlan: row.mealPlan ? 1 : 0,
-            training: row.training ? 1 : 0,
-            sentToRich: row.sentToRich ? 1 : 0,
-            welcomeVideo: row.welcomeVideo ? 1 : 0,
-            sentToClient: row.sentToClient,
-            subscription: row.subscription ? 1 : 0,
-            notes: row.notes || null,
-            cancelledAt: null,
-          });
+          await db.execute(sql`INSERT INTO onboarding_clients
+            (clientName, coach, status, datePaid, dateDue, appInviteSent, contractSent, requestedPhotos, mealPlan, training, sentToRich, welcomeVideo, sentToClient, subscription, notes)
+            VALUES (${row.clientName}, ${row.coach || null}, ${status}, ${row.datePaid}, ${row.dateDue},
+              ${row.appInviteSent ? 1 : 0}, ${row.contractSent ? 1 : 0}, ${row.requestedPhotos},
+              ${row.mealPlan ? 1 : 0}, ${row.training ? 1 : 0}, ${row.sentToRich ? 1 : 0},
+              ${row.welcomeVideo ? 1 : 0}, ${row.sentToClient}, ${row.subscription ? 1 : 0},
+              ${row.notes || null})`);
           imported++;
         } catch (err: any) {
           const msg = err?.message ?? "";

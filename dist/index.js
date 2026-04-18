@@ -50,6 +50,7 @@ __export(schema_exports, {
   kudos: () => kudos,
   onboardingClients: () => onboardingClients,
   pausedClients: () => pausedClients,
+  rosterAssignments: () => rosterAssignments,
   rosterClientStarts: () => rosterClientStarts,
   rosterWeeklySnapshots: () => rosterWeeklySnapshots,
   salesCheckins: () => salesCheckins,
@@ -58,7 +59,7 @@ __export(schema_exports, {
   users: () => users
 });
 import { mysqlTable, int, varchar, text, timestamp, datetime, mysqlEnum, uniqueIndex, json, tinyint } from "drizzle-orm/mysql-core";
-var users, coaches, checkinRecords, clientCheckIns, excusedClients, rosterClientStarts, rosterWeeklySnapshots, kudos, sweepReports, clientRatings, slackReminderLog, pausedClients, salesCheckins, fridayAudits, auditHistory, onboardingClients;
+var users, coaches, checkinRecords, clientCheckIns, excusedClients, rosterClientStarts, rosterWeeklySnapshots, kudos, sweepReports, clientRatings, slackReminderLog, pausedClients, salesCheckins, fridayAudits, auditHistory, onboardingClients, rosterAssignments;
 var init_schema = __esm({
   "drizzle/schema.ts"() {
     "use strict";
@@ -289,6 +290,18 @@ var init_schema = __esm({
     }, (t2) => ({
       uqClientCoach: uniqueIndex("uq_onboarding_client_coach").on(t2.clientName, t2.coach)
     }));
+    rosterAssignments = mysqlTable("roster_assignments", {
+      id: int("id").autoincrement().primaryKey(),
+      coachId: int("coachId").notNull(),
+      coachName: varchar("coachName", { length: 128 }).notNull(),
+      clientName: varchar("clientName", { length: 256 }).notNull(),
+      dayOfWeek: mysqlEnum("dayOfWeek", ["monday", "tuesday", "wednesday", "thursday", "friday"]).notNull(),
+      isActive: tinyint("isActive").default(1).notNull(),
+      createdAt: timestamp("createdAt").defaultNow().notNull(),
+      updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+    }, (t2) => ({
+      uqRosterAssignment: uniqueIndex("uq_roster_assignment").on(t2.coachId, t2.clientName, t2.dayOfWeek)
+    }));
   }
 });
 
@@ -420,6 +433,7 @@ var init_db = __esm({
 });
 
 // server/rosterUtils.ts
+import { eq as eq3, and as and2 } from "drizzle-orm";
 async function fetchSheetRows() {
   const now = Date.now();
   if (_cachedRows && now - _cacheTime < CACHE_TTL_MS) return _cachedRows;
@@ -441,6 +455,31 @@ async function fetchSheetRows() {
   return [];
 }
 async function fetchRosterForCoach(coachName) {
+  const empty = {
+    monday: [],
+    tuesday: [],
+    wednesday: [],
+    thursday: [],
+    friday: []
+  };
+  const db2 = await getDb();
+  if (db2) {
+    const rows = await db2.select().from(rosterAssignments).where(and2(
+      eq3(rosterAssignments.coachName, coachName),
+      eq3(rosterAssignments.isActive, 1)
+    ));
+    if (rows.length > 0) {
+      const days = { ...empty };
+      for (const r of rows) {
+        const day = r.dayOfWeek;
+        days[day].push(cleanClientName(r.clientName));
+      }
+      return days;
+    }
+  }
+  return fetchRosterForCoachFromSheet(coachName);
+}
+async function fetchRosterForCoachFromSheet(coachName) {
   const empty = {
     monday: [],
     tuesday: [],
@@ -513,6 +552,18 @@ async function fetchRawRosterForCoach(coachName) {
     thursday: [],
     friday: []
   };
+  const db2 = await getDb();
+  if (db2) {
+    const rows2 = await db2.select().from(rosterAssignments).where(and2(
+      eq3(rosterAssignments.coachName, coachName),
+      eq3(rosterAssignments.isActive, 1)
+    ));
+    if (rows2.length > 0) {
+      const days2 = { ...empty };
+      for (const r of rows2) days2[r.dayOfWeek].push(r.clientName);
+      return days2;
+    }
+  }
   const rows = await fetchSheetRows();
   if (rows.length === 0) return empty;
   const upperName = coachName.toUpperCase();
@@ -562,6 +613,8 @@ var init_rosterUtils = __esm({
   "server/rosterUtils.ts"() {
     "use strict";
     init_env();
+    init_db();
+    init_schema();
     SHEET_ID = "1puu4oLAmC5jV_GEmRrMxvXuTak_dl6pOJ6iWC44Nfl4";
     SHEET_TAB = "CLIENT ROSTER";
     DAYS2 = ["monday", "tuesday", "wednesday", "thursday", "friday"];
@@ -572,7 +625,7 @@ var init_rosterUtils = __esm({
 });
 
 // server/slackReminders.ts
-import { eq as eq4 } from "drizzle-orm";
+import { eq as eq5 } from "drizzle-orm";
 async function sendSlackDM(slackUserId, text2) {
   if (!SLACK_BOT_TOKEN) {
     console.warn("[Slack] SLACK_BOT_TOKEN not set \u2014 skipping DM");
@@ -666,7 +719,7 @@ async function claimReminderSlot(coachId, reminderDate, reminderIndex) {
 async function runReminderTick() {
   const db2 = await getDb();
   if (!db2) return;
-  const allCoaches = await db2.select().from(coaches).where(eq4(coaches.isActive, 1));
+  const allCoaches = await db2.select().from(coaches).where(eq5(coaches.isActive, 1));
   for (const coach of allCoaches) {
     if (!coach.slackUserId || !coach.remindersEnabled) continue;
     const timezone = coach.timezone ?? "Australia/Melbourne";
@@ -759,7 +812,7 @@ __export(slackFridayAudit_exports, {
   checkMissedAudits: () => checkMissedAudits,
   sendFridayAudit: () => sendFridayAudit
 });
-import { eq as eq5, and as and3, isNull as isNull2 } from "drizzle-orm";
+import { eq as eq6, and as and4, isNull as isNull2 } from "drizzle-orm";
 function getLocalTimeParts(timezone) {
   const now = /* @__PURE__ */ new Date();
   const parts = new Intl.DateTimeFormat("en-AU", {
@@ -792,7 +845,7 @@ async function sendFridayAudit() {
   if (!db2) return;
   const weekStart = getMonday(getTodayMelbourne());
   const appUrl = ENV.appUrl || "https://coach.databite.com.au";
-  const allCoaches = await db2.select().from(coaches).where(eq5(coaches.isActive, 1));
+  const allCoaches = await db2.select().from(coaches).where(eq6(coaches.isActive, 1));
   for (const coach of allCoaches) {
     if (!coach.slackUserId) continue;
     const timezone = coach.timezone ?? "Australia/Melbourne";
@@ -804,10 +857,10 @@ async function sendFridayAudit() {
     const localDate = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(/* @__PURE__ */ new Date());
     const claimed = await claimReminderSlot(coach.id, localDate, 20);
     if (!claimed) continue;
-    const existing = await db2.select().from(fridayAudits).where(and3(eq5(fridayAudits.coachId, coach.id), eq5(fridayAudits.weekStart, weekStart))).limit(1);
+    const existing = await db2.select().from(fridayAudits).where(and4(eq6(fridayAudits.coachId, coach.id), eq6(fridayAudits.weekStart, weekStart))).limit(1);
     if (existing.length > 0) continue;
     const roster = await fetchRosterForCoach(coach.name);
-    const completions = await db2.select().from(clientCheckIns).where(and3(eq5(clientCheckIns.coachId, coach.id), eq5(clientCheckIns.weekStart, weekStart)));
+    const completions = await db2.select().from(clientCheckIns).where(and4(eq6(clientCheckIns.coachId, coach.id), eq6(clientCheckIns.weekStart, weekStart)));
     const completedSet = new Set(
       completions.filter((c) => c.completedAt != null && c.clientSubmitted === 1).map((c) => `${c.clientName}|${c.dayOfWeek}`)
     );
@@ -817,7 +870,7 @@ async function sendFridayAudit() {
         if (base !== c.clientName) completedSet.add(`${base}|${c.dayOfWeek}`);
       }
     }
-    const prevAudited = await db2.select().from(auditHistory).where(eq5(auditHistory.coachId, coach.id));
+    const prevAudited = await db2.select().from(auditHistory).where(eq6(auditHistory.coachId, coach.id));
     const auditedSet = new Set(prevAudited.map((a) => a.clientName));
     const eligibleByDay = {};
     let totalEligible = 0;
@@ -833,7 +886,7 @@ async function sendFridayAudit() {
       }
     }
     if (totalEligible === 0) {
-      await db2.delete(auditHistory).where(eq5(auditHistory.coachId, coach.id));
+      await db2.delete(auditHistory).where(eq6(auditHistory.coachId, coach.id));
       for (const day of DAYS2) {
         const clients = roster[day] ?? [];
         const eligible = clients.filter((name) => completedSet.has(`${name}|${day}`));
@@ -882,9 +935,9 @@ async function sendFridayAudit() {
       selectedClients: selectedWithSubmission
     });
     for (const s of selected) {
-      const existingHistory = await db2.select().from(auditHistory).where(and3(eq5(auditHistory.coachId, coach.id), eq5(auditHistory.clientName, s.name))).limit(1);
+      const existingHistory = await db2.select().from(auditHistory).where(and4(eq6(auditHistory.coachId, coach.id), eq6(auditHistory.clientName, s.name))).limit(1);
       if (existingHistory.length > 0) {
-        await db2.update(auditHistory).set({ lastAuditedWeek: weekStart }).where(eq5(auditHistory.id, existingHistory[0].id));
+        await db2.update(auditHistory).set({ lastAuditedWeek: weekStart }).where(eq6(auditHistory.id, existingHistory[0].id));
       } else {
         await db2.insert(auditHistory).values({
           coachId: coach.id,
@@ -914,9 +967,9 @@ async function checkMissedAudits() {
   const managerSlackId = ENV.managerSlackId;
   if (!managerSlackId) return;
   const weekStart = getMonday(getTodayMelbourne());
-  const audits = await db2.select().from(fridayAudits).where(and3(eq5(fridayAudits.weekStart, weekStart), isNull2(fridayAudits.allSubmittedAt)));
+  const audits = await db2.select().from(fridayAudits).where(and4(eq6(fridayAudits.weekStart, weekStart), isNull2(fridayAudits.allSubmittedAt)));
   for (const audit of audits) {
-    const [coach] = await db2.select().from(coaches).where(eq5(coaches.id, audit.coachId)).limit(1);
+    const [coach] = await db2.select().from(coaches).where(eq6(coaches.id, audit.coachId)).limit(1);
     if (!coach) continue;
     const timezone = coach.timezone ?? "Australia/Melbourne";
     const todayDow = getLocalTimeParts(timezone).dow;
@@ -952,7 +1005,7 @@ var slackMondayDigest_exports = {};
 __export(slackMondayDigest_exports, {
   sendMondayDigest: () => sendMondayDigest
 });
-import { eq as eq6, and as and4 } from "drizzle-orm";
+import { eq as eq7, and as and5 } from "drizzle-orm";
 function getMondayLocal(date2) {
   const d = new Date(date2);
   const dow = d.getDay();
@@ -983,8 +1036,8 @@ async function sendMondayDigest() {
   const thisMonday = getMondayLocal(todayMelb);
   const lastWeekStart = addDays(thisMonday, -7);
   const weekLabel = formatDateRange(lastWeekStart);
-  const allCoaches = await db2.select().from(coaches).where(eq6(coaches.isActive, 1));
-  const snapshots = await db2.select().from(rosterWeeklySnapshots).where(eq6(rosterWeeklySnapshots.weekStart, lastWeekStart));
+  const allCoaches = await db2.select().from(coaches).where(eq7(coaches.isActive, 1));
+  const snapshots = await db2.select().from(rosterWeeklySnapshots).where(eq7(rosterWeeklySnapshots.weekStart, lastWeekStart));
   const snapMap = new Map(snapshots.map((s) => [s.coachId, s.snapshotJson]));
   let totalScheduled = 0;
   let totalCompleted = 0;
@@ -996,10 +1049,10 @@ async function sendMondayDigest() {
     if (snap?.scheduled != null) {
       scheduled = snap.scheduled;
       completed = snap.completed ?? 0;
-      const liveExcuses = await db2.select().from(excusedClients).where(and4(
-        eq6(excusedClients.coachId, coach.id),
-        eq6(excusedClients.weekStart, lastWeekStart),
-        eq6(excusedClients.status, "approved")
+      const liveExcuses = await db2.select().from(excusedClients).where(and5(
+        eq7(excusedClients.coachId, coach.id),
+        eq7(excusedClients.weekStart, lastWeekStart),
+        eq7(excusedClients.status, "approved")
       ));
       excusedCount = liveExcuses.length;
     } else {
@@ -1358,7 +1411,7 @@ init_rosterUtils();
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { z } from "zod";
-import { eq as eq7, and as and5, gte as gte3, lte as lte2, desc, sql, asc, isNull as isNull4, ne } from "drizzle-orm";
+import { eq as eq8, and as and6, gte as gte3, lte as lte2, desc, sql, asc, isNull as isNull4, ne } from "drizzle-orm";
 init_env();
 init_schema();
 
@@ -1513,13 +1566,13 @@ async function runTypeformBackfill() {
 // server/engagementStats.ts
 init_schema();
 init_rosterUtils();
-import { and as and2, eq as eq3, isNull } from "drizzle-orm";
+import { and as and3, eq as eq4, isNull } from "drizzle-orm";
 async function computeCoachWeekStats(db2, coachId, coachName, weekStart, opts = {}) {
-  const completions = await db2.select().from(clientCheckIns).where(and2(eq3(clientCheckIns.coachId, coachId), eq3(clientCheckIns.weekStart, weekStart)));
-  const excuses = await db2.select().from(excusedClients).where(and2(
-    eq3(excusedClients.coachId, coachId),
-    eq3(excusedClients.weekStart, weekStart),
-    eq3(excusedClients.status, "approved")
+  const completions = await db2.select().from(clientCheckIns).where(and3(eq4(clientCheckIns.coachId, coachId), eq4(clientCheckIns.weekStart, weekStart)));
+  const excuses = await db2.select().from(excusedClients).where(and3(
+    eq4(excusedClients.coachId, coachId),
+    eq4(excusedClients.weekStart, weekStart),
+    eq4(excusedClients.status, "approved")
   ));
   const completedByDay = { monday: 0, tuesday: 0, wednesday: 0, thursday: 0, friday: 0 };
   const excusedByDay = { monday: 0, tuesday: 0, wednesday: 0, thursday: 0, friday: 0 };
@@ -1550,7 +1603,7 @@ async function computeCoachWeekStats(db2, coachId, coachName, weekStart, opts = 
   let snapCompleted = null;
   let snapCompletedByDay = null;
   if (opts.preferSnapshot) {
-    const snapRows = await db2.select().from(rosterWeeklySnapshots).where(and2(eq3(rosterWeeklySnapshots.coachId, coachId), eq3(rosterWeeklySnapshots.weekStart, weekStart))).limit(1);
+    const snapRows = await db2.select().from(rosterWeeklySnapshots).where(and3(eq4(rosterWeeklySnapshots.coachId, coachId), eq4(rosterWeeklySnapshots.weekStart, weekStart))).limit(1);
     const snap = snapRows[0]?.snapshotJson;
     if (snap) {
       if (snap.completed != null) snapCompleted = snap.completed;
@@ -1568,7 +1621,7 @@ async function computeCoachWeekStats(db2, coachId, coachName, weekStart, opts = 
   }
   if (!rosterByDay) {
     const roster = await fetchRosterForCoach(coachName);
-    const paused = await db2.select().from(pausedClients).where(and2(eq3(pausedClients.coachId, coachId), isNull(pausedClients.resumedAt)));
+    const paused = await db2.select().from(pausedClients).where(and3(eq4(pausedClients.coachId, coachId), isNull(pausedClients.resumedAt)));
     const pausedSet = new Set(paused.map((p) => p.clientName));
     rosterByDay = { monday: 0, tuesday: 0, wednesday: 0, thursday: 0, friday: 0 };
     for (const d of DAYS2) {
@@ -1684,9 +1737,9 @@ async function computeDisengagedClients(coachId, coachName, weekStart) {
   const epochWeek = getMonday2(CLIENT_CHECKINS_EPOCH);
   const roster = await fetchRosterForCoach(coachName);
   const allWeeks = getWeeksBetween(epochWeek, weekStart);
-  const completions = await db2.select().from(clientCheckIns).where(eq7(clientCheckIns.coachId, coachId));
-  const approvedExcuses = await db2.select().from(excusedClients).where(and5(eq7(excusedClients.coachId, coachId), eq7(excusedClients.status, "approved")));
-  const starts = await db2.select().from(rosterClientStarts).where(eq7(rosterClientStarts.coachId, coachId));
+  const completions = await db2.select().from(clientCheckIns).where(eq8(clientCheckIns.coachId, coachId));
+  const approvedExcuses = await db2.select().from(excusedClients).where(and6(eq8(excusedClients.coachId, coachId), eq8(excusedClients.status, "approved")));
+  const starts = await db2.select().from(rosterClientStarts).where(eq8(rosterClientStarts.coachId, coachId));
   const completionSet = new Set(
     completions.filter((c) => c.completedAt != null).map((c) => `${c.clientName}|${c.dayOfWeek}|${c.weekStart}`)
   );
@@ -1785,7 +1838,7 @@ async function notifyManagerOfSubmission(coachId, submissionType, details) {
   if (!managerSlackId || !ENV.slackBotToken) return;
   try {
     const db2 = await requireDb();
-    const [coach] = await db2.select().from(coaches).where(eq7(coaches.id, coachId)).limit(1);
+    const [coach] = await db2.select().from(coaches).where(eq8(coaches.id, coachId)).limit(1);
     if (!coach) return;
     const appUrl = ENV.appUrl || "https://coach.databite.com.au";
     const emojis = { morning: "\u{1F305}", followup: "\u{1F4E8}", disengagement: "\u{1F50D}" };
@@ -1854,7 +1907,7 @@ var checkinsRouter = t.router({
     })
   ).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    const existing = await db2.select().from(checkinRecords).where(and5(eq7(checkinRecords.coachId, input.coachId), eq7(checkinRecords.recordDate, input.recordDate))).limit(1);
+    const existing = await db2.select().from(checkinRecords).where(and6(eq8(checkinRecords.coachId, input.coachId), eq8(checkinRecords.recordDate, input.recordDate))).limit(1);
     if (existing.length > 0) {
       await db2.update(checkinRecords).set({
         scheduledCount: input.scheduledCount ?? existing[0].scheduledCount,
@@ -1864,7 +1917,7 @@ var checkinsRouter = t.router({
         workingHours: input.workingHours ?? existing[0].workingHours,
         morningNotes: input.morningNotes ?? existing[0].morningNotes,
         morningSubmittedAt: /* @__PURE__ */ new Date()
-      }).where(eq7(checkinRecords.id, existing[0].id));
+      }).where(eq8(checkinRecords.id, existing[0].id));
       notifyManagerOfSubmission(input.coachId, "morning", input).catch(() => {
       });
       return { id: existing[0].id, updated: true };
@@ -1894,13 +1947,13 @@ var checkinsRouter = t.router({
     })
   ).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    const existing = await db2.select().from(checkinRecords).where(and5(eq7(checkinRecords.coachId, input.coachId), eq7(checkinRecords.recordDate, input.recordDate))).limit(1);
+    const existing = await db2.select().from(checkinRecords).where(and6(eq8(checkinRecords.coachId, input.coachId), eq8(checkinRecords.recordDate, input.recordDate))).limit(1);
     if (existing.length > 0) {
       await db2.update(checkinRecords).set({
         followupCount: input.followupMessagesSent ?? existing[0].followupCount,
         followupNotes: input.notes ?? existing[0].followupNotes,
         followupSubmittedAt: /* @__PURE__ */ new Date()
-      }).where(eq7(checkinRecords.id, existing[0].id));
+      }).where(eq8(checkinRecords.id, existing[0].id));
       notifyManagerOfSubmission(input.coachId, "followup", input).catch(() => {
       });
       return { id: existing[0].id, updated: true };
@@ -1926,13 +1979,13 @@ var checkinsRouter = t.router({
     })
   ).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    const existing = await db2.select().from(checkinRecords).where(and5(eq7(checkinRecords.coachId, input.coachId), eq7(checkinRecords.recordDate, input.recordDate))).limit(1);
+    const existing = await db2.select().from(checkinRecords).where(and6(eq8(checkinRecords.coachId, input.coachId), eq8(checkinRecords.recordDate, input.recordDate))).limit(1);
     if (existing.length > 0) {
       await db2.update(checkinRecords).set({
         disengagementCount: input.disengagementMessagesSent ?? existing[0].disengagementCount,
         disengagementNotes: input.notes ?? existing[0].disengagementNotes,
         disengagementSubmittedAt: /* @__PURE__ */ new Date()
-      }).where(eq7(checkinRecords.id, existing[0].id));
+      }).where(eq8(checkinRecords.id, existing[0].id));
       notifyManagerOfSubmission(input.coachId, "disengagement", input).catch(() => {
       });
       return { id: existing[0].id, updated: true };
@@ -1956,7 +2009,7 @@ var checkinsRouter = t.router({
     })
   ).query(async ({ input }) => {
     const db2 = await requireDb();
-    const rows = await db2.select().from(checkinRecords).where(and5(eq7(checkinRecords.coachId, input.coachId), eq7(checkinRecords.recordDate, input.recordDate))).limit(1);
+    const rows = await db2.select().from(checkinRecords).where(and6(eq8(checkinRecords.coachId, input.coachId), eq8(checkinRecords.recordDate, input.recordDate))).limit(1);
     if (rows.length === 0) return [];
     const rec = rows[0];
     const results = [];
@@ -2022,7 +2075,7 @@ var checkinsRouter = t.router({
     const today = getTodayMelbourne2();
     const endDate = input.endDate ?? today;
     const startDate = input.startDate ?? (input.days ? addDays2(today, -(input.days - 1)) : addDays2(today, -6));
-    const rows = await db2.select().from(checkinRecords).where(and5(gte3(checkinRecords.recordDate, startDate), lte2(checkinRecords.recordDate, endDate)));
+    const rows = await db2.select().from(checkinRecords).where(and6(gte3(checkinRecords.recordDate, startDate), lte2(checkinRecords.recordDate, endDate)));
     const totalRecords = rows.length;
     const morningCount = rows.filter((r) => r.morningSubmittedAt).length;
     const followupCount = rows.filter((r) => r.followupSubmittedAt).length;
@@ -2068,7 +2121,7 @@ var checkinsRouter = t.router({
       disengagementCount: checkinRecords.disengagementCount,
       disengagementNotes: checkinRecords.disengagementNotes,
       disengagementSubmittedAt: checkinRecords.disengagementSubmittedAt
-    }).from(checkinRecords).where(and5(gte3(checkinRecords.recordDate, input.startDate), lte2(checkinRecords.recordDate, input.endDate))).orderBy(desc(checkinRecords.recordDate));
+    }).from(checkinRecords).where(and6(gte3(checkinRecords.recordDate, input.startDate), lte2(checkinRecords.recordDate, input.endDate))).orderBy(desc(checkinRecords.recordDate));
     const flat = [];
     for (const r of rows) {
       if (r.morningSubmittedAt) {
@@ -2143,7 +2196,7 @@ var checkinsRouter = t.router({
       moodScore: checkinRecords.moodScore,
       morningNotes: checkinRecords.morningNotes,
       coachName: coaches.name
-    }).from(checkinRecords).leftJoin(coaches, eq7(checkinRecords.coachId, coaches.id)).where(and5(gte3(checkinRecords.recordDate, weekAgo), lte2(checkinRecords.moodScore, 2))).orderBy(desc(checkinRecords.recordDate));
+    }).from(checkinRecords).leftJoin(coaches, eq8(checkinRecords.coachId, coaches.id)).where(and6(gte3(checkinRecords.recordDate, weekAgo), lte2(checkinRecords.moodScore, 2))).orderBy(desc(checkinRecords.recordDate));
     return rows;
   }),
   /** Last 10 morning notes with coach name. */
@@ -2160,7 +2213,7 @@ var checkinsRouter = t.router({
       followupSubmittedAt: checkinRecords.followupSubmittedAt,
       disengagementSubmittedAt: checkinRecords.disengagementSubmittedAt,
       coachName: coaches.name
-    }).from(checkinRecords).leftJoin(coaches, eq7(checkinRecords.coachId, coaches.id)).orderBy(desc(checkinRecords.recordDate)).limit(20);
+    }).from(checkinRecords).leftJoin(coaches, eq8(checkinRecords.coachId, coaches.id)).orderBy(desc(checkinRecords.recordDate)).limit(20);
     const notes = [];
     for (const r of rows) {
       if (r.morningNotes && r.morningSubmittedAt) {
@@ -2222,10 +2275,10 @@ var clientCheckinsRouter = t.router({
     const weekStart = weekStartList[0];
     let coachList;
     if (input.coachId) {
-      const [coach] = await db2.select().from(coaches).where(eq7(coaches.id, input.coachId)).limit(1);
+      const [coach] = await db2.select().from(coaches).where(eq8(coaches.id, input.coachId)).limit(1);
       coachList = coach ? [{ id: coach.id, name: coach.name }] : [];
     } else {
-      coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq7(coaches.isActive, 1));
+      coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq8(coaches.isActive, 1));
     }
     const results = [];
     const currentWeekMon = getMonday2(getTodayMelbourne2());
@@ -2260,17 +2313,17 @@ var clientCheckinsRouter = t.router({
     }
     if (!input.weekStart) throw new TRPCError({ code: "BAD_REQUEST", message: "weekStart or startDate required" });
     const db2 = await requireDb();
-    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq7(coaches.isActive, 1));
+    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq8(coaches.isActive, 1));
     const results = [];
     for (const coach of coachList) {
       const roster = await fetchRosterForCoach(coach.name);
       for (const day of DAYS) {
         const clients = roster[day] ?? [];
         const completions = await db2.select().from(clientCheckIns).where(
-          and5(
-            eq7(clientCheckIns.coachId, coach.id),
-            eq7(clientCheckIns.weekStart, input.weekStart),
-            eq7(clientCheckIns.dayOfWeek, day)
+          and6(
+            eq8(clientCheckIns.coachId, coach.id),
+            eq8(clientCheckIns.weekStart, input.weekStart),
+            eq8(clientCheckIns.dayOfWeek, day)
           )
         );
         const completed = completions.filter((c) => c.completedAt != null).length;
@@ -2308,8 +2361,8 @@ var clientCheckinsRouter = t.router({
       followupSubmittedAt: checkinRecords.followupSubmittedAt,
       disengagementSubmittedAt: checkinRecords.disengagementSubmittedAt,
       coachName: coaches.name
-    }).from(checkinRecords).leftJoin(coaches, eq7(checkinRecords.coachId, coaches.id)).where(
-      and5(
+    }).from(checkinRecords).leftJoin(coaches, eq8(checkinRecords.coachId, coaches.id)).where(
+      and6(
         gte3(checkinRecords.recordDate, startDate),
         lte2(checkinRecords.recordDate, endDate)
       )
@@ -2319,10 +2372,10 @@ var clientCheckinsRouter = t.router({
       const weekStart = getMonday2(r.recordDate);
       const dayKey = getDayKey(r.recordDate);
       const completions = dayKey ? await db2.select().from(clientCheckIns).where(
-        and5(
-          eq7(clientCheckIns.coachId, r.coachId),
-          eq7(clientCheckIns.weekStart, weekStart),
-          eq7(clientCheckIns.dayOfWeek, dayKey)
+        and6(
+          eq8(clientCheckIns.coachId, r.coachId),
+          eq8(clientCheckIns.weekStart, weekStart),
+          eq8(clientCheckIns.dayOfWeek, dayKey)
         )
       ) : [];
       const coachCompletions = completions.filter((c) => c.completedAt != null);
@@ -2358,16 +2411,16 @@ var clientCheckinsRouter = t.router({
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     })();
     const epochWeek = getMonday2(CLIENT_CHECKINS_EPOCH);
-    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq7(coaches.isActive, 1));
+    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq8(coaches.isActive, 1));
     const allWeeks = getWeeksBetween(epochWeek, lastWeek);
     const disengaged = [];
     for (const coach of coachList) {
       const roster = await fetchRosterForCoach(coach.name);
-      const completions = await db2.select().from(clientCheckIns).where(and5(eq7(clientCheckIns.coachId, coach.id)));
-      const approvedExcuses = await db2.select().from(excusedClients).where(and5(eq7(excusedClients.coachId, coach.id), eq7(excusedClients.status, "approved")));
-      const paused = await db2.select().from(pausedClients).where(and5(eq7(pausedClients.coachId, coach.id), isNull4(pausedClients.resumedAt)));
+      const completions = await db2.select().from(clientCheckIns).where(and6(eq8(clientCheckIns.coachId, coach.id)));
+      const approvedExcuses = await db2.select().from(excusedClients).where(and6(eq8(excusedClients.coachId, coach.id), eq8(excusedClients.status, "approved")));
+      const paused = await db2.select().from(pausedClients).where(and6(eq8(pausedClients.coachId, coach.id), isNull4(pausedClients.resumedAt)));
       const pausedSet = new Set(paused.map((p) => p.clientName));
-      const starts = await db2.select().from(rosterClientStarts).where(eq7(rosterClientStarts.coachId, coach.id));
+      const starts = await db2.select().from(rosterClientStarts).where(eq8(rosterClientStarts.coachId, coach.id));
       const completionSet = /* @__PURE__ */ new Set();
       for (const c of completions) {
         if (c.completedAt == null) continue;
@@ -2438,15 +2491,15 @@ var clientCheckinsRouter = t.router({
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     })();
     const epochWeek = getMonday2(CLIENT_CHECKINS_EPOCH);
-    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq7(coaches.isActive, 1));
+    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq8(coaches.isActive, 1));
     const allWeeks = getWeeksBetween(epochWeek, lastWeek);
     const streaks = [];
     for (const coach of coachList) {
       const roster = await fetchRosterForCoach(coach.name);
-      const paused = await db2.select().from(pausedClients).where(and5(eq7(pausedClients.coachId, coach.id), isNull4(pausedClients.resumedAt)));
+      const paused = await db2.select().from(pausedClients).where(and6(eq8(pausedClients.coachId, coach.id), isNull4(pausedClients.resumedAt)));
       const pausedSet = new Set(paused.map((p) => p.clientName));
-      const completions = await db2.select().from(clientCheckIns).where(eq7(clientCheckIns.coachId, coach.id));
-      const approvedExcuses = await db2.select().from(excusedClients).where(and5(eq7(excusedClients.coachId, coach.id), eq7(excusedClients.status, "approved")));
+      const completions = await db2.select().from(clientCheckIns).where(eq8(clientCheckIns.coachId, coach.id));
+      const approvedExcuses = await db2.select().from(excusedClients).where(and6(eq8(excusedClients.coachId, coach.id), eq8(excusedClients.status, "approved")));
       const completionSet = /* @__PURE__ */ new Set();
       for (const c of completions) {
         if (c.completedAt == null) continue;
@@ -2506,7 +2559,7 @@ var clientCheckinsRouter = t.router({
       morningNotes: checkinRecords.morningNotes,
       morningSubmittedAt: checkinRecords.morningSubmittedAt,
       coachName: coaches.name
-    }).from(checkinRecords).leftJoin(coaches, eq7(checkinRecords.coachId, coaches.id)).where(and5(eq7(checkinRecords.recordDate, today), sql`${checkinRecords.morningSubmittedAt} IS NOT NULL`));
+    }).from(checkinRecords).leftJoin(coaches, eq8(checkinRecords.coachId, coaches.id)).where(and6(eq8(checkinRecords.recordDate, today), sql`${checkinRecords.morningSubmittedAt} IS NOT NULL`));
     return rows;
   }),
   /** New clients from roster_client_starts — includes computed weeksOnRoster. */
@@ -2542,8 +2595,8 @@ var clientCheckinsRouter = t.router({
       recordDate: checkinRecords.recordDate,
       workingHours: checkinRecords.workingHours,
       coachName: coaches.name
-    }).from(checkinRecords).leftJoin(coaches, eq7(checkinRecords.coachId, coaches.id)).where(
-      and5(
+    }).from(checkinRecords).leftJoin(coaches, eq8(checkinRecords.coachId, coaches.id)).where(
+      and6(
         gte3(checkinRecords.recordDate, input.startDate),
         lte2(checkinRecords.recordDate, input.endDate),
         sql`${checkinRecords.workingHours} IS NOT NULL`,
@@ -2552,7 +2605,7 @@ var clientCheckinsRouter = t.router({
     ).orderBy(asc(checkinRecords.recordDate));
     const weekStart = getMonday2(input.startDate);
     const completions = await db2.select().from(clientCheckIns).where(
-      and5(
+      and6(
         gte3(clientCheckIns.weekStart, weekStart),
         sql`${clientCheckIns.completedAt} IS NOT NULL`
       )
@@ -2602,7 +2655,7 @@ var clientCheckinsRouter = t.router({
     })
   ).query(async ({ input }) => {
     const db2 = await requireDb();
-    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq7(coaches.isActive, 1));
+    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq8(coaches.isActive, 1));
     const todayMon = getMonday2(getTodayMelbourne2());
     const isPastWeek = input.weekStart < todayMon;
     const statsPerCoach = await Promise.all(coachList.map(async (coach) => ({
@@ -2666,7 +2719,7 @@ var clientCheckinsRouter = t.router({
       coachId: excusedClients.coachId,
       coachName: excusedClients.coachName,
       status: excusedClients.status
-    }).from(excusedClients).where(eq7(excusedClients.weekStart, weekStart));
+    }).from(excusedClients).where(eq8(excusedClients.weekStart, weekStart));
     const byCoach = /* @__PURE__ */ new Map();
     for (const r of rows) {
       if (!byCoach.has(r.coachId)) {
@@ -2685,7 +2738,7 @@ var clientCheckinsRouter = t.router({
   /** All pending excuse requests. */
   getPendingExcuses: adminProcedure.query(async () => {
     const db2 = await requireDb();
-    const rows = await db2.select().from(excusedClients).where(eq7(excusedClients.status, "pending")).orderBy(desc(excusedClients.submittedAt));
+    const rows = await db2.select().from(excusedClients).where(eq8(excusedClients.status, "pending")).orderBy(desc(excusedClients.submittedAt));
     return rows;
   }),
   /** Coach performance metrics over time. */
@@ -2706,10 +2759,10 @@ var clientCheckinsRouter = t.router({
     const weeks = getWeeksBetween(startWeek, endWeek).reverse();
     let coachList;
     if (input.coachId) {
-      const [coach] = await db2.select().from(coaches).where(eq7(coaches.id, input.coachId)).limit(1);
+      const [coach] = await db2.select().from(coaches).where(eq8(coaches.id, input.coachId)).limit(1);
       coachList = coach ? [{ id: coach.id, name: coach.name }] : [];
     } else {
-      coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq7(coaches.isActive, 1));
+      coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq8(coaches.isActive, 1));
     }
     const weeklyData = [];
     const todayMon = getMonday2(today);
@@ -2778,26 +2831,26 @@ var clientCheckinsRouter = t.router({
     const weekStart = getMonday2(input.date);
     const dayKey = getDayKey(input.date);
     if (!dayKey) return [];
-    const [coach] = await db2.select().from(coaches).where(eq7(coaches.id, input.coachId)).limit(1);
+    const [coach] = await db2.select().from(coaches).where(eq8(coaches.id, input.coachId)).limit(1);
     if (!coach) return [];
     const roster = await fetchRosterForCoach(coach.name);
     const todayClients = roster[dayKey] ?? [];
     const completions = await db2.select().from(clientCheckIns).where(
-      and5(
-        eq7(clientCheckIns.coachId, input.coachId),
-        eq7(clientCheckIns.weekStart, weekStart),
-        eq7(clientCheckIns.dayOfWeek, dayKey)
+      and6(
+        eq8(clientCheckIns.coachId, input.coachId),
+        eq8(clientCheckIns.weekStart, weekStart),
+        eq8(clientCheckIns.dayOfWeek, dayKey)
       )
     );
     const completedSet = new Set(
       completions.filter((c) => c.completedAt != null).map((c) => c.clientName)
     );
     const excuses = await db2.select().from(excusedClients).where(
-      and5(
-        eq7(excusedClients.coachId, input.coachId),
-        eq7(excusedClients.weekStart, weekStart),
-        eq7(excusedClients.dayOfWeek, dayKey),
-        eq7(excusedClients.status, "approved")
+      and6(
+        eq8(excusedClients.coachId, input.coachId),
+        eq8(excusedClients.weekStart, weekStart),
+        eq8(excusedClients.dayOfWeek, dayKey),
+        eq8(excusedClients.status, "approved")
       )
     );
     const excusedSet = new Set(excuses.map((e) => e.clientName));
@@ -2815,18 +2868,18 @@ var clientCheckinsRouter = t.router({
   ).mutation(async ({ input, ctx }) => {
     const db2 = await requireDb();
     const existing = await db2.select().from(clientCheckIns).where(
-      and5(
-        eq7(clientCheckIns.coachId, input.coachId),
-        eq7(clientCheckIns.clientName, input.clientName),
-        eq7(clientCheckIns.dayOfWeek, input.dayOfWeek),
-        eq7(clientCheckIns.weekStart, input.weekStart)
+      and6(
+        eq8(clientCheckIns.coachId, input.coachId),
+        eq8(clientCheckIns.clientName, input.clientName),
+        eq8(clientCheckIns.dayOfWeek, input.dayOfWeek),
+        eq8(clientCheckIns.weekStart, input.weekStart)
       )
     ).limit(1);
     if (existing.length > 0) {
       await db2.update(clientCheckIns).set({
         completedAt: /* @__PURE__ */ new Date(),
         completedByUserId: ctx.user.id
-      }).where(eq7(clientCheckIns.id, existing[0].id));
+      }).where(eq8(clientCheckIns.id, existing[0].id));
       return { id: existing[0].id };
     }
     const [result] = await db2.insert(clientCheckIns).values({
@@ -2854,11 +2907,11 @@ var clientCheckinsRouter = t.router({
       completedAt: null,
       completedByUserId: 0
     }).where(
-      and5(
-        eq7(clientCheckIns.coachId, input.coachId),
-        eq7(clientCheckIns.clientName, input.clientName),
-        eq7(clientCheckIns.dayOfWeek, input.dayOfWeek),
-        eq7(clientCheckIns.weekStart, input.weekStart)
+      and6(
+        eq8(clientCheckIns.coachId, input.coachId),
+        eq8(clientCheckIns.clientName, input.clientName),
+        eq8(clientCheckIns.dayOfWeek, input.dayOfWeek),
+        eq8(clientCheckIns.weekStart, input.weekStart)
       )
     );
     return { success: true };
@@ -2875,18 +2928,18 @@ var clientCheckinsRouter = t.router({
     const db2 = await requireDb();
     let coachId = input.coachId;
     if (!coachId) {
-      const [myCoach] = await db2.select().from(coaches).where(eq7(coaches.userId, ctx.user.id)).limit(1);
+      const [myCoach] = await db2.select().from(coaches).where(eq8(coaches.userId, ctx.user.id)).limit(1);
       if (!myCoach) throw new TRPCError({ code: "BAD_REQUEST", message: "No coach profile linked" });
       coachId = myCoach.id;
     }
-    const [coach] = await db2.select().from(coaches).where(eq7(coaches.id, coachId)).limit(1);
+    const [coach] = await db2.select().from(coaches).where(eq8(coaches.id, coachId)).limit(1);
     if (!coach) throw new TRPCError({ code: "NOT_FOUND", message: "Coach not found" });
     const existing = await db2.select().from(clientCheckIns).where(
-      and5(
-        eq7(clientCheckIns.coachId, coachId),
-        eq7(clientCheckIns.clientName, input.clientName),
-        eq7(clientCheckIns.dayOfWeek, input.dayOfWeek),
-        eq7(clientCheckIns.weekStart, input.weekStart)
+      and6(
+        eq8(clientCheckIns.coachId, coachId),
+        eq8(clientCheckIns.clientName, input.clientName),
+        eq8(clientCheckIns.dayOfWeek, input.dayOfWeek),
+        eq8(clientCheckIns.weekStart, input.weekStart)
       )
     ).limit(1);
     if (existing.length > 0) {
@@ -2894,7 +2947,7 @@ var clientCheckinsRouter = t.router({
       await db2.update(clientCheckIns).set({
         clientSubmitted: newVal,
         clientSubmittedAt: newVal === 1 ? /* @__PURE__ */ new Date() : null
-      }).where(eq7(clientCheckIns.id, existing[0].id));
+      }).where(eq8(clientCheckIns.id, existing[0].id));
       return { id: existing[0].id, clientSubmitted: newVal === 1 };
     }
     const [result] = await db2.insert(clientCheckIns).values({
@@ -2921,11 +2974,11 @@ var clientCheckinsRouter = t.router({
   ).mutation(async ({ input, ctx }) => {
     const db2 = await requireDb();
     const existing = await db2.select().from(excusedClients).where(
-      and5(
-        eq7(excusedClients.coachId, input.coachId),
-        eq7(excusedClients.clientName, input.clientName),
-        eq7(excusedClients.dayOfWeek, input.dayOfWeek),
-        eq7(excusedClients.weekStart, input.weekStart)
+      and6(
+        eq8(excusedClients.coachId, input.coachId),
+        eq8(excusedClients.clientName, input.clientName),
+        eq8(excusedClients.dayOfWeek, input.dayOfWeek),
+        eq8(excusedClients.weekStart, input.weekStart)
       )
     ).limit(1);
     if (existing.length > 0) {
@@ -2985,7 +3038,7 @@ Open the app to approve or reject.`;
       status: input.status,
       reviewedByUserId: ctx.user.id,
       reviewedAt: /* @__PURE__ */ new Date()
-    }).where(eq7(excusedClients.id, input.id));
+    }).where(eq8(excusedClients.id, input.id));
     return { success: true };
   }),
   /** Trigger Typeform backfill for current week. */
@@ -2996,7 +3049,7 @@ Open the app to approve or reject.`;
   /** Get ALL client check-in rows for a given week (across all coaches). */
   getWeekStatusAll: protectedProcedure.input(z.object({ weekStart: z.string() })).query(async ({ input }) => {
     const db2 = await requireDb();
-    const rows = await db2.select().from(clientCheckIns).where(eq7(clientCheckIns.weekStart, input.weekStart));
+    const rows = await db2.select().from(clientCheckIns).where(eq8(clientCheckIns.weekStart, input.weekStart));
     return rows.map((r) => ({
       id: r.id,
       coachId: r.coachId,
@@ -3013,7 +3066,7 @@ Open the app to approve or reject.`;
   /** Get the Google Sheets roster for a specific coach. */
   getRosterByCoach: protectedProcedure.input(z.object({ coachId: z.number(), weekStart: z.string().optional() })).query(async ({ input }) => {
     const db2 = await requireDb();
-    const [coach] = await db2.select().from(coaches).where(eq7(coaches.id, input.coachId)).limit(1);
+    const [coach] = await db2.select().from(coaches).where(eq8(coaches.id, input.coachId)).limit(1);
     if (!coach) throw new TRPCError({ code: "NOT_FOUND", message: "Coach not found" });
     const roster = await fetchRosterForCoach(coach.name);
     return roster;
@@ -3021,13 +3074,13 @@ Open the app to approve or reject.`;
   /** Get active pauses for a coach. */
   getActivePauses: protectedProcedure.input(z.object({ coachId: z.number() })).query(async ({ input }) => {
     const db2 = await requireDb();
-    const rows = await db2.select().from(pausedClients).where(and5(eq7(pausedClients.coachId, input.coachId), isNull4(pausedClients.resumedAt)));
+    const rows = await db2.select().from(pausedClients).where(and6(eq8(pausedClients.coachId, input.coachId), isNull4(pausedClients.resumedAt)));
     return rows.map((r) => r.clientName);
   }),
   /** Pause a client — excludes from disengagement tracking. */
   pauseClient: protectedProcedure.input(z.object({ coachId: z.number(), clientName: z.string() })).mutation(async ({ input, ctx }) => {
     const db2 = await requireDb();
-    const [existing] = await db2.select().from(pausedClients).where(and5(eq7(pausedClients.coachId, input.coachId), eq7(pausedClients.clientName, input.clientName), isNull4(pausedClients.resumedAt))).limit(1);
+    const [existing] = await db2.select().from(pausedClients).where(and6(eq8(pausedClients.coachId, input.coachId), eq8(pausedClients.clientName, input.clientName), isNull4(pausedClients.resumedAt))).limit(1);
     if (existing) {
       throw new TRPCError({ code: "CONFLICT", message: "Client is already paused" });
     }
@@ -3041,17 +3094,17 @@ Open the app to approve or reject.`;
   /** Resume a paused client. */
   resumeClient: protectedProcedure.input(z.object({ coachId: z.number(), clientName: z.string() })).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    await db2.update(pausedClients).set({ resumedAt: sql`NOW()` }).where(and5(eq7(pausedClients.coachId, input.coachId), eq7(pausedClients.clientName, input.clientName), isNull4(pausedClients.resumedAt)));
+    await db2.update(pausedClients).set({ resumedAt: sql`NOW()` }).where(and6(eq8(pausedClients.coachId, input.coachId), eq8(pausedClients.clientName, input.clientName), isNull4(pausedClients.resumedAt)));
     return { ok: true };
   }),
   /** Get excuses for a given week, optionally filtered by coach. */
   getExcusesForWeek: protectedProcedure.input(z.object({ weekStart: z.string(), coachId: z.number().optional() })).query(async ({ input }) => {
     const db2 = await requireDb();
-    const conditions = [eq7(excusedClients.weekStart, input.weekStart)];
+    const conditions = [eq8(excusedClients.weekStart, input.weekStart)];
     if (input.coachId != null) {
-      conditions.push(eq7(excusedClients.coachId, input.coachId));
+      conditions.push(eq8(excusedClients.coachId, input.coachId));
     }
-    const rows = await db2.select().from(excusedClients).where(and5(...conditions));
+    const rows = await db2.select().from(excusedClients).where(and6(...conditions));
     return rows;
   }),
   /** Get clients with upcoming UPFRONT end dates (parsed from client names). */
@@ -3068,9 +3121,9 @@ Open the app to approve or reject.`;
     let imported = 0;
     for (const r of input) {
       const snap = { scheduled: r.scheduled, completed: r.completed, missed: r.scheduled - r.completed, engagementPct: r.engagementPct, source: "manus" };
-      const existing = await db2.select().from(rosterWeeklySnapshots).where(and5(eq7(rosterWeeklySnapshots.coachId, r.coachId), eq7(rosterWeeklySnapshots.weekStart, r.weekStart))).limit(1);
+      const existing = await db2.select().from(rosterWeeklySnapshots).where(and6(eq8(rosterWeeklySnapshots.coachId, r.coachId), eq8(rosterWeeklySnapshots.weekStart, r.weekStart))).limit(1);
       if (existing.length > 0) {
-        await db2.update(rosterWeeklySnapshots).set({ snapshotJson: snap }).where(eq7(rosterWeeklySnapshots.id, existing[0].id));
+        await db2.update(rosterWeeklySnapshots).set({ snapshotJson: snap }).where(eq8(rosterWeeklySnapshots.id, existing[0].id));
       } else {
         await db2.insert(rosterWeeklySnapshots).values({ coachId: r.coachId, coachName: r.coachName, weekStart: r.weekStart, snapshotJson: snap });
       }
@@ -3080,7 +3133,7 @@ Open the app to approve or reject.`;
   }),
   getUpfrontAlertsAll: protectedProcedure.query(async () => {
     const db2 = await requireDb();
-    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq7(coaches.isActive, 1));
+    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq8(coaches.isActive, 1));
     const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
     const now = /* @__PURE__ */ new Date();
     const alerts = [];
@@ -3144,7 +3197,7 @@ Open the app to approve or reject.`;
       throw new TRPCError({ code: "BAD_REQUEST", message: "Check-ins are only available Monday to Friday." });
     }
     const dayOfWeek = todayName;
-    const allCoaches = await db2.select().from(coaches).where(eq7(coaches.isActive, 1));
+    const allCoaches = await db2.select().from(coaches).where(eq8(coaches.isActive, 1));
     let foundCoach = null;
     let foundClientName = null;
     const searchName = input.clientName.toLowerCase().trim();
@@ -3162,18 +3215,18 @@ Open the app to approve or reject.`;
       throw new TRPCError({ code: "NOT_FOUND", message: "Could not find your name on today's roster. Please check with your coach." });
     }
     const existing = await db2.select().from(clientCheckIns).where(
-      and5(
-        eq7(clientCheckIns.coachId, foundCoach.id),
-        eq7(clientCheckIns.clientName, foundClientName),
-        eq7(clientCheckIns.dayOfWeek, dayOfWeek),
-        eq7(clientCheckIns.weekStart, weekStart)
+      and6(
+        eq8(clientCheckIns.coachId, foundCoach.id),
+        eq8(clientCheckIns.clientName, foundClientName),
+        eq8(clientCheckIns.dayOfWeek, dayOfWeek),
+        eq8(clientCheckIns.weekStart, weekStart)
       )
     ).limit(1);
     if (existing.length > 0) {
       if (existing[0].clientSubmitted === 1) {
         return { alreadySubmitted: true, clientName: foundClientName, coachName: foundCoach.name, dayOfWeek };
       }
-      await db2.update(clientCheckIns).set({ clientSubmitted: 1, clientSubmittedAt: /* @__PURE__ */ new Date() }).where(eq7(clientCheckIns.id, existing[0].id));
+      await db2.update(clientCheckIns).set({ clientSubmitted: 1, clientSubmittedAt: /* @__PURE__ */ new Date() }).where(eq8(clientCheckIns.id, existing[0].id));
       return { alreadySubmitted: false, clientName: foundClientName, coachName: foundCoach.name, dayOfWeek };
     }
     await db2.insert(clientCheckIns).values({
@@ -3192,27 +3245,27 @@ var coachesRouter = t.router({
   /** All active coaches. */
   list: protectedProcedure.query(async () => {
     const db2 = await requireDb();
-    return db2.select().from(coaches).where(eq7(coaches.isActive, 1)).orderBy(asc(coaches.name));
+    return db2.select().from(coaches).where(eq8(coaches.isActive, 1)).orderBy(asc(coaches.name));
   }),
   /** Coach profile linked to current user. */
   myCoach: protectedProcedure.query(async ({ ctx }) => {
     const db2 = await requireDb();
-    const [coach] = await db2.select().from(coaches).where(eq7(coaches.userId, ctx.user.id)).limit(1);
+    const [coach] = await db2.select().from(coaches).where(eq8(coaches.userId, ctx.user.id)).limit(1);
     return coach ?? null;
   }),
   /** Coaches with no userId linked. */
   unclaimed: protectedProcedure.query(async () => {
     const db2 = await requireDb();
-    return db2.select().from(coaches).where(and5(eq7(coaches.isActive, 1), isNull4(coaches.userId)));
+    return db2.select().from(coaches).where(and6(eq8(coaches.isActive, 1), isNull4(coaches.userId)));
   }),
   /** Submission streaks per coach. */
   streaks: protectedProcedure.query(async () => {
     const db2 = await requireDb();
     const today = getTodayMelbourne2();
-    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq7(coaches.isActive, 1));
+    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq8(coaches.isActive, 1));
     const results = [];
     for (const coach of coachList) {
-      const records = await db2.select({ recordDate: checkinRecords.recordDate, morningSubmittedAt: checkinRecords.morningSubmittedAt }).from(checkinRecords).where(eq7(checkinRecords.coachId, coach.id)).orderBy(desc(checkinRecords.recordDate));
+      const records = await db2.select({ recordDate: checkinRecords.recordDate, morningSubmittedAt: checkinRecords.morningSubmittedAt }).from(checkinRecords).where(eq8(checkinRecords.coachId, coach.id)).orderBy(desc(checkinRecords.recordDate));
       const submittedDates = new Set(
         records.filter((r) => r.morningSubmittedAt).map((r) => r.recordDate)
       );
@@ -3295,7 +3348,7 @@ var coachesRouter = t.router({
     if (updates.email !== void 0) setObj.email = updates.email;
     if (updates.isActive !== void 0) setObj.isActive = updates.isActive;
     if (Object.keys(setObj).length > 0) {
-      await db2.update(coaches).set(setObj).where(eq7(coaches.id, id));
+      await db2.update(coaches).set(setObj).where(eq8(coaches.id, id));
     }
     return { success: true };
   }),
@@ -3306,12 +3359,12 @@ var coachesRouter = t.router({
     })
   ).mutation(async ({ input, ctx }) => {
     const db2 = await requireDb();
-    const [existing] = await db2.select().from(coaches).where(eq7(coaches.id, input.coachId)).limit(1);
+    const [existing] = await db2.select().from(coaches).where(eq8(coaches.id, input.coachId)).limit(1);
     if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Coach not found" });
     if (existing.userId) {
       throw new TRPCError({ code: "CONFLICT", message: "This coach profile is already claimed" });
     }
-    await db2.update(coaches).set({ userId: ctx.user.id, email: ctx.user.email }).where(eq7(coaches.id, input.coachId));
+    await db2.update(coaches).set({ userId: ctx.user.id, email: ctx.user.email }).where(eq8(coaches.id, input.coachId));
     return { success: true };
   }),
   /** Link a user to a coach (admin). */
@@ -3322,7 +3375,7 @@ var coachesRouter = t.router({
     })
   ).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    await db2.update(coaches).set({ userId: input.userId }).where(eq7(coaches.id, input.coachId));
+    await db2.update(coaches).set({ userId: input.userId }).where(eq8(coaches.id, input.coachId));
     return { success: true };
   }),
   /** Update coach's Slack/reminder settings. */
@@ -3351,7 +3404,7 @@ var coachesRouter = t.router({
     if (input.leaveStartDate !== void 0) setObj.leaveStartDate = input.leaveStartDate;
     if (input.leaveEndDate !== void 0) setObj.leaveEndDate = input.leaveEndDate;
     if (Object.keys(setObj).length > 0) {
-      await db2.update(coaches).set(setObj).where(eq7(coaches.id, id));
+      await db2.update(coaches).set(setObj).where(eq8(coaches.id, id));
     }
     return { success: true };
   })
@@ -3360,7 +3413,7 @@ var performanceRouter = t.router({
   /** Business-wide and per-coach green/yellow/red counts vs 70% target. */
   kpiSummary: protectedProcedure.query(async () => {
     const db2 = await requireDb();
-    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq7(coaches.isActive, 1));
+    const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq8(coaches.isActive, 1));
     const allRatings = await db2.select().from(clientRatings);
     const TARGET = 70;
     const coachStats = coachList.map((coach) => {
@@ -3409,7 +3462,7 @@ var performanceRouter = t.router({
     let coachName = input.coachName;
     if (!coachName && input.coachId) {
       const db2 = await requireDb();
-      const [coach] = await db2.select().from(coaches).where(eq7(coaches.id, input.coachId)).limit(1);
+      const [coach] = await db2.select().from(coaches).where(eq8(coaches.id, input.coachId)).limit(1);
       if (!coach) throw new TRPCError({ code: "NOT_FOUND", message: "Coach not found" });
       coachName = coach.name;
     }
@@ -3438,9 +3491,9 @@ var performanceRouter = t.router({
   /** Ratings for current user's coach. */
   myRatings: protectedProcedure.query(async ({ ctx }) => {
     const db2 = await requireDb();
-    const [myCoach] = await db2.select().from(coaches).where(eq7(coaches.userId, ctx.user.id)).limit(1);
+    const [myCoach] = await db2.select().from(coaches).where(eq8(coaches.userId, ctx.user.id)).limit(1);
     if (!myCoach) return [];
-    return db2.select().from(clientRatings).where(eq7(clientRatings.coachId, myCoach.id)).orderBy(asc(clientRatings.clientName));
+    return db2.select().from(clientRatings).where(eq8(clientRatings.coachId, myCoach.id)).orderBy(asc(clientRatings.clientName));
   }),
   /** Aggregated weekly summary. */
   getWeeklySummary: adminProcedure.input(
@@ -3449,12 +3502,12 @@ var performanceRouter = t.router({
     })
   ).query(async ({ input }) => {
     const db2 = await requireDb();
-    const coachList = await db2.select({ id: coaches.id, name: coaches.name, workdays: coaches.workdays }).from(coaches).where(eq7(coaches.isActive, 1));
+    const coachList = await db2.select({ id: coaches.id, name: coaches.name, workdays: coaches.workdays }).from(coaches).where(eq8(coaches.isActive, 1));
     const coachSummaries = [];
     const todayMelb = getTodayMelbourne2();
     const currentWeekMon = getMonday2(todayMelb);
     const isPastWeek = input.weekStart < currentWeekMon;
-    const snapshots = isPastWeek ? await db2.select().from(rosterWeeklySnapshots).where(eq7(rosterWeeklySnapshots.weekStart, input.weekStart)) : [];
+    const snapshots = isPastWeek ? await db2.select().from(rosterWeeklySnapshots).where(eq8(rosterWeeklySnapshots.weekStart, input.weekStart)) : [];
     const snapMap = new Map(snapshots.map((s) => [s.coachId, s.snapshotJson]));
     for (const coach of coachList) {
       const snap = snapMap.get(coach.id);
@@ -3465,10 +3518,10 @@ var performanceRouter = t.router({
       if (isPastWeek && snap?.scheduled != null) {
         scheduled = snap.scheduled;
         completed = snap.completed ?? 0;
-        const liveExcuses = await db2.select().from(excusedClients).where(and5(
-          eq7(excusedClients.coachId, coach.id),
-          eq7(excusedClients.weekStart, input.weekStart),
-          eq7(excusedClients.status, "approved")
+        const liveExcuses = await db2.select().from(excusedClients).where(and6(
+          eq8(excusedClients.coachId, coach.id),
+          eq8(excusedClients.weekStart, input.weekStart),
+          eq8(excusedClients.status, "approved")
         ));
         excusedCount = liveExcuses.length;
         effectiveScheduled = Math.max(scheduled - excusedCount, 0);
@@ -3476,13 +3529,13 @@ var performanceRouter = t.router({
         const roster = await fetchRosterForCoach(coach.name);
         scheduled = 0;
         for (const day of DAYS) scheduled += (roster[day] ?? []).length;
-        const completions = await db2.select().from(clientCheckIns).where(and5(eq7(clientCheckIns.coachId, coach.id), eq7(clientCheckIns.weekStart, input.weekStart)));
+        const completions = await db2.select().from(clientCheckIns).where(and6(eq8(clientCheckIns.coachId, coach.id), eq8(clientCheckIns.weekStart, input.weekStart)));
         completed = completions.filter((c) => c.completedAt != null).length;
         const excuses = await db2.select().from(excusedClients).where(
-          and5(
-            eq7(excusedClients.coachId, coach.id),
-            eq7(excusedClients.weekStart, input.weekStart),
-            eq7(excusedClients.status, "approved")
+          and6(
+            eq8(excusedClients.coachId, coach.id),
+            eq8(excusedClients.weekStart, input.weekStart),
+            eq8(excusedClients.status, "approved")
           )
         );
         excusedCount = excuses.length;
@@ -3491,8 +3544,8 @@ var performanceRouter = t.router({
       const pct = effectiveScheduled > 0 ? Math.round(completed / effectiveScheduled * 100) : 0;
       const weekEnd2 = addDays2(input.weekStart, 4);
       const records = await db2.select().from(checkinRecords).where(
-        and5(
-          eq7(checkinRecords.coachId, coach.id),
+        and6(
+          eq8(checkinRecords.coachId, coach.id),
           gte3(checkinRecords.recordDate, input.weekStart),
           lte2(checkinRecords.recordDate, weekEnd2)
         )
@@ -3520,7 +3573,7 @@ var performanceRouter = t.router({
     const overallPct = effectiveTotal > 0 ? Math.round(totalCompleted / effectiveTotal * 100) : 0;
     const weekEnd = addDays2(input.weekStart, 4);
     const allRecords = await db2.select().from(checkinRecords).where(
-      and5(
+      and6(
         gte3(checkinRecords.recordDate, input.weekStart),
         lte2(checkinRecords.recordDate, weekEnd)
       )
@@ -3579,7 +3632,7 @@ var performanceRouter = t.router({
       }
     }
     const prevWeekStart = addDays2(input.weekStart, -7);
-    const prevSnapshots = await db2.select().from(rosterWeeklySnapshots).where(eq7(rosterWeeklySnapshots.weekStart, prevWeekStart));
+    const prevSnapshots = await db2.select().from(rosterWeeklySnapshots).where(eq8(rosterWeeklySnapshots.weekStart, prevWeekStart));
     const prevSnapMap = new Map(prevSnapshots.map((s) => [s.coachId, s.snapshotJson]));
     let prevTotalScheduled = 0;
     let prevTotalCompleted = 0;
@@ -3592,7 +3645,7 @@ var performanceRouter = t.router({
         const roster = await fetchRosterForCoach(coach.name);
         let scheduled = 0;
         for (const day of DAYS) scheduled += (roster[day] ?? []).length;
-        const completions = await db2.select().from(clientCheckIns).where(and5(eq7(clientCheckIns.coachId, coach.id), eq7(clientCheckIns.weekStart, prevWeekStart)));
+        const completions = await db2.select().from(clientCheckIns).where(and6(eq8(clientCheckIns.coachId, coach.id), eq8(clientCheckIns.weekStart, prevWeekStart)));
         const completed = completions.filter((c) => c.completedAt != null).length;
         prevTotalScheduled += scheduled;
         prevTotalCompleted += completed;
@@ -3650,10 +3703,10 @@ var performanceRouter = t.router({
   ).mutation(async ({ input }) => {
     const db2 = await requireDb();
     const existing = await db2.select().from(clientRatings).where(
-      and5(eq7(clientRatings.coachId, input.coachId), eq7(clientRatings.clientName, input.clientName))
+      and6(eq8(clientRatings.coachId, input.coachId), eq8(clientRatings.clientName, input.clientName))
     ).limit(1);
     if (existing.length > 0) {
-      await db2.update(clientRatings).set({ rating: input.rating, notes: input.notes ?? existing[0].notes }).where(eq7(clientRatings.id, existing[0].id));
+      await db2.update(clientRatings).set({ rating: input.rating, notes: input.notes ?? existing[0].notes }).where(eq8(clientRatings.id, existing[0].id));
       return { id: existing[0].id };
     }
     const [result] = await db2.insert(clientRatings).values({
@@ -3673,14 +3726,14 @@ var performanceRouter = t.router({
   ).mutation(async ({ input }) => {
     const db2 = await requireDb();
     await db2.delete(clientRatings).where(
-      and5(eq7(clientRatings.coachId, input.coachId), eq7(clientRatings.clientName, input.clientName))
+      and6(eq8(clientRatings.coachId, input.coachId), eq8(clientRatings.clientName, input.clientName))
     );
     return { success: true };
   }),
   /** Clear all ratings, or for a specific coach if coachId provided. */
   resetAllRatings: adminProcedure.input(z.object({ coachId: z.number().optional() }).optional()).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    const ratingsToBackup = input?.coachId ? await db2.select().from(clientRatings).where(eq7(clientRatings.coachId, input.coachId)) : await db2.select().from(clientRatings);
+    const ratingsToBackup = input?.coachId ? await db2.select().from(clientRatings).where(eq8(clientRatings.coachId, input.coachId)) : await db2.select().from(clientRatings);
     const backupSnapshot = {
       _isRatingBackup: true,
       ratings: ratingsToBackup.map((r) => ({
@@ -3700,7 +3753,7 @@ var performanceRouter = t.router({
       scopeCoachId: input?.coachId ?? null
     });
     if (input?.coachId) {
-      await db2.delete(clientRatings).where(eq7(clientRatings.coachId, input.coachId));
+      await db2.delete(clientRatings).where(eq8(clientRatings.coachId, input.coachId));
     } else {
       await db2.delete(clientRatings);
     }
@@ -3709,7 +3762,7 @@ var performanceRouter = t.router({
   /** Undo a rating reset by restoring from backup. */
   undoResetRatings: adminProcedure.input(z.object({ backupId: z.number() })).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    const [backup] = await db2.select().from(sweepReports).where(eq7(sweepReports.id, input.backupId)).limit(1);
+    const [backup] = await db2.select().from(sweepReports).where(eq8(sweepReports.id, input.backupId)).limit(1);
     if (!backup) throw new TRPCError({ code: "NOT_FOUND", message: "Backup not found" });
     const snapshot = backup.snapshotJson;
     if (!snapshot?._isRatingBackup || !snapshot?.ratings) {
@@ -3717,9 +3770,9 @@ var performanceRouter = t.router({
     }
     let restored = 0;
     for (const r of snapshot.ratings) {
-      const existing = await db2.select().from(clientRatings).where(and5(eq7(clientRatings.coachId, r.coachId), eq7(clientRatings.clientName, r.clientName))).limit(1);
+      const existing = await db2.select().from(clientRatings).where(and6(eq8(clientRatings.coachId, r.coachId), eq8(clientRatings.clientName, r.clientName))).limit(1);
       if (existing.length > 0) {
-        await db2.update(clientRatings).set({ rating: r.rating, notes: r.notes }).where(eq7(clientRatings.id, existing[0].id));
+        await db2.update(clientRatings).set({ rating: r.rating, notes: r.notes }).where(eq8(clientRatings.id, existing[0].id));
       } else {
         await db2.insert(clientRatings).values({
           coachId: r.coachId,
@@ -3730,7 +3783,7 @@ var performanceRouter = t.router({
       }
       restored++;
     }
-    await db2.delete(sweepReports).where(eq7(sweepReports.id, input.backupId));
+    await db2.delete(sweepReports).where(eq8(sweepReports.id, input.backupId));
     return { success: true, restored };
   })
 });
@@ -3744,22 +3797,22 @@ var sweepReportRouter = t.router({
     })
   ).mutation(async ({ input, ctx }) => {
     const db2 = await requireDb();
-    const coachList = input.coachId ? await db2.select().from(coaches).where(eq7(coaches.id, input.coachId)) : await db2.select().from(coaches).where(eq7(coaches.isActive, 1));
+    const coachList = input.coachId ? await db2.select().from(coaches).where(eq8(coaches.id, input.coachId)) : await db2.select().from(coaches).where(eq8(coaches.isActive, 1));
     const snapshot = { coaches: [] };
     for (const coach of coachList) {
       const roster = await fetchRosterForCoach(coach.name);
       let scheduled = 0;
       for (const day of DAYS) scheduled += (roster[day] ?? []).length;
-      const completions = await db2.select().from(clientCheckIns).where(and5(eq7(clientCheckIns.coachId, coach.id), eq7(clientCheckIns.weekStart, input.weekStart)));
+      const completions = await db2.select().from(clientCheckIns).where(and6(eq8(clientCheckIns.coachId, coach.id), eq8(clientCheckIns.weekStart, input.weekStart)));
       const completed = completions.filter((c) => c.completedAt != null).length;
       const excuses = await db2.select().from(excusedClients).where(
-        and5(
-          eq7(excusedClients.coachId, coach.id),
-          eq7(excusedClients.weekStart, input.weekStart),
-          eq7(excusedClients.status, "approved")
+        and6(
+          eq8(excusedClients.coachId, coach.id),
+          eq8(excusedClients.weekStart, input.weekStart),
+          eq8(excusedClients.status, "approved")
         )
       );
-      const ratings = await db2.select().from(clientRatings).where(eq7(clientRatings.coachId, coach.id));
+      const ratings = await db2.select().from(clientRatings).where(eq8(clientRatings.coachId, coach.id));
       const green = ratings.filter((r) => r.rating === "green").length;
       const yellow = ratings.filter((r) => r.rating === "yellow").length;
       const red = ratings.filter((r) => r.rating === "red").length;
@@ -3793,13 +3846,13 @@ var sweepReportRouter = t.router({
   /** Mark report as saved. */
   save: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    await db2.update(sweepReports).set({ isSaved: 1 }).where(eq7(sweepReports.id, input.id));
+    await db2.update(sweepReports).set({ isSaved: 1 }).where(eq8(sweepReports.id, input.id));
     return { success: true };
   }),
   /** Get report by ID (public for sharing). */
   getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
     const db2 = await requireDb();
-    const [report] = await db2.select().from(sweepReports).where(eq7(sweepReports.id, input.id)).limit(1);
+    const [report] = await db2.select().from(sweepReports).where(eq8(sweepReports.id, input.id)).limit(1);
     if (!report) throw new TRPCError({ code: "NOT_FOUND", message: "Report not found" });
     return report;
   }),
@@ -3811,7 +3864,7 @@ var sweepReportRouter = t.router({
   /** Saved reports only. */
   listSaved: adminProcedure.query(async () => {
     const db2 = await requireDb();
-    return db2.select().from(sweepReports).where(eq7(sweepReports.isSaved, 1)).orderBy(desc(sweepReports.createdAt));
+    return db2.select().from(sweepReports).where(eq8(sweepReports.isSaved, 1)).orderBy(desc(sweepReports.createdAt));
   }),
   /** Compare two reports. */
   compare: adminProcedure.input(
@@ -3821,8 +3874,8 @@ var sweepReportRouter = t.router({
     })
   ).query(async ({ input }) => {
     const db2 = await requireDb();
-    const [reportA] = await db2.select().from(sweepReports).where(eq7(sweepReports.id, input.idA)).limit(1);
-    const [reportB] = await db2.select().from(sweepReports).where(eq7(sweepReports.id, input.idB)).limit(1);
+    const [reportA] = await db2.select().from(sweepReports).where(eq8(sweepReports.id, input.idA)).limit(1);
+    const [reportB] = await db2.select().from(sweepReports).where(eq8(sweepReports.id, input.idB)).limit(1);
     if (!reportA || !reportB) {
       throw new TRPCError({ code: "NOT_FOUND", message: "One or both reports not found" });
     }
@@ -3850,7 +3903,7 @@ var usersRouter = t.router({
     })
   ).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    await db2.update(users).set({ role: input.role }).where(eq7(users.id, input.id));
+    await db2.update(users).set({ role: input.role }).where(eq8(users.id, input.id));
     return { success: true };
   })
 });
@@ -3868,7 +3921,7 @@ var kudosRouter = t.router({
       coachId: input.coachId,
       message: input.message
     });
-    const [coach] = await db2.select().from(coaches).where(eq7(coaches.id, input.coachId)).limit(1);
+    const [coach] = await db2.select().from(coaches).where(eq8(coaches.id, input.coachId)).limit(1);
     if (coach?.slackUserId) {
       const senderName = ctx.user.name ?? ctx.user.email ?? "Your manager";
       const slackMsg = `\u2728 *Kudos from ${senderName}!*
@@ -3890,7 +3943,7 @@ ${input.message}`;
       message: kudos.message,
       createdAt: kudos.createdAt,
       coachName: coaches.name
-    }).from(kudos).leftJoin(coaches, eq7(kudos.coachId, coaches.id)).orderBy(desc(kudos.createdAt)).limit(50);
+    }).from(kudos).leftJoin(coaches, eq8(kudos.coachId, coaches.id)).orderBy(desc(kudos.createdAt)).limit(50);
   })
 });
 var salesRouter = t.router({
@@ -3902,14 +3955,14 @@ var salesRouter = t.router({
     morningNotes: z.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db2 = await requireDb();
-    const existing = await db2.select().from(salesCheckins).where(and5(eq7(salesCheckins.userId, ctx.user.id), eq7(salesCheckins.recordDate, input.recordDate))).limit(1);
+    const existing = await db2.select().from(salesCheckins).where(and6(eq8(salesCheckins.userId, ctx.user.id), eq8(salesCheckins.recordDate, input.recordDate))).limit(1);
     if (existing.length > 0) {
       await db2.update(salesCheckins).set({
         moodScore: input.moodScore ?? existing[0].moodScore,
         intendedWorkingHours: input.intendedWorkingHours ?? existing[0].intendedWorkingHours,
         morningNotes: input.morningNotes ?? existing[0].morningNotes,
         morningSubmittedAt: /* @__PURE__ */ new Date()
-      }).where(eq7(salesCheckins.id, existing[0].id));
+      }).where(eq8(salesCheckins.id, existing[0].id));
     } else {
       await db2.insert(salesCheckins).values({
         userId: ctx.user.id,
@@ -3938,7 +3991,7 @@ var salesRouter = t.router({
     eveningNotes: z.string().optional()
   })).mutation(async ({ input, ctx }) => {
     const db2 = await requireDb();
-    const existing = await db2.select().from(salesCheckins).where(and5(eq7(salesCheckins.userId, ctx.user.id), eq7(salesCheckins.recordDate, input.recordDate))).limit(1);
+    const existing = await db2.select().from(salesCheckins).where(and6(eq8(salesCheckins.userId, ctx.user.id), eq8(salesCheckins.recordDate, input.recordDate))).limit(1);
     if (existing.length > 0) {
       await db2.update(salesCheckins).set({
         howDayWent: input.howDayWent ?? existing[0].howDayWent,
@@ -3946,7 +3999,7 @@ var salesRouter = t.router({
         intendedHoursNextDay: input.intendedHoursNextDay ?? existing[0].intendedHoursNextDay,
         eveningNotes: input.eveningNotes ?? existing[0].eveningNotes,
         eveningSubmittedAt: /* @__PURE__ */ new Date()
-      }).where(eq7(salesCheckins.id, existing[0].id));
+      }).where(eq8(salesCheckins.id, existing[0].id));
     } else {
       await db2.insert(salesCheckins).values({
         userId: ctx.user.id,
@@ -3983,7 +4036,7 @@ ${summary}
   /** Get today's check-in for the current user. */
   getToday: protectedProcedure.input(z.object({ recordDate: z.string() })).query(async ({ input, ctx }) => {
     const db2 = await requireDb();
-    const [record] = await db2.select().from(salesCheckins).where(and5(eq7(salesCheckins.userId, ctx.user.id), eq7(salesCheckins.recordDate, input.recordDate))).limit(1);
+    const [record] = await db2.select().from(salesCheckins).where(and6(eq8(salesCheckins.userId, ctx.user.id), eq8(salesCheckins.recordDate, input.recordDate))).limit(1);
     return record ?? null;
   }),
   /** Get all check-ins (admin view). */
@@ -3992,18 +4045,18 @@ ${summary}
     const conditions = [];
     if (input?.startDate) conditions.push(gte3(salesCheckins.recordDate, input.startDate));
     if (input?.endDate) conditions.push(lte2(salesCheckins.recordDate, input.endDate));
-    return db2.select().from(salesCheckins).where(conditions.length > 0 ? and5(...conditions) : void 0).orderBy(desc(salesCheckins.recordDate));
+    return db2.select().from(salesCheckins).where(conditions.length > 0 ? and6(...conditions) : void 0).orderBy(desc(salesCheckins.recordDate));
   })
 });
 var auditsRouter = t.router({
   /** Get current week's audit for the logged-in coach. */
   getMyAudit: protectedProcedure.input(z.object({ weekStart: z.string() })).query(async ({ input, ctx }) => {
     const db2 = await requireDb();
-    const [myCoach] = await db2.select().from(coaches).where(eq7(coaches.userId, ctx.user.id)).limit(1);
+    const [myCoach] = await db2.select().from(coaches).where(eq8(coaches.userId, ctx.user.id)).limit(1);
     const coachId = ctx.user.role === "admin" ? null : myCoach?.id;
     if (!coachId && ctx.user.role !== "admin") return null;
     if (coachId) {
-      const [audit] = await db2.select().from(fridayAudits).where(and5(eq7(fridayAudits.coachId, coachId), eq7(fridayAudits.weekStart, input.weekStart))).limit(1);
+      const [audit] = await db2.select().from(fridayAudits).where(and6(eq8(fridayAudits.coachId, coachId), eq8(fridayAudits.weekStart, input.weekStart))).limit(1);
       return audit ?? null;
     }
     return null;
@@ -4011,22 +4064,22 @@ var auditsRouter = t.router({
   /** Get all audits for a week (admin view). */
   getAllForWeek: adminProcedure.input(z.object({ weekStart: z.string() })).query(async ({ input }) => {
     const db2 = await requireDb();
-    return db2.select().from(fridayAudits).where(eq7(fridayAudits.weekStart, input.weekStart));
+    return db2.select().from(fridayAudits).where(eq8(fridayAudits.weekStart, input.weekStart));
   }),
   /** Admin: mark audit as reviewed. */
   markReviewed: adminProcedure.input(z.object({ auditId: z.number() })).mutation(async ({ input, ctx }) => {
     const db2 = await requireDb();
-    await db2.update(fridayAudits).set({ reviewedAt: /* @__PURE__ */ new Date(), reviewedByUserId: ctx.user.id }).where(eq7(fridayAudits.id, input.auditId));
+    await db2.update(fridayAudits).set({ reviewedAt: /* @__PURE__ */ new Date(), reviewedByUserId: ctx.user.id }).where(eq8(fridayAudits.id, input.auditId));
     return { success: true };
   }),
   /** Admin: add a client to an existing audit. */
   addClientToAudit: adminProcedure.input(z.object({ auditId: z.number(), clientName: z.string(), day: z.string() })).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    const [audit] = await db2.select().from(fridayAudits).where(eq7(fridayAudits.id, input.auditId)).limit(1);
+    const [audit] = await db2.select().from(fridayAudits).where(eq8(fridayAudits.id, input.auditId)).limit(1);
     if (!audit) throw new TRPCError({ code: "NOT_FOUND" });
     const clients = audit.selectedClients;
     clients.push({ name: input.clientName, day: input.day, submitted: false });
-    await db2.update(fridayAudits).set({ selectedClients: clients, allSubmittedAt: null }).where(eq7(fridayAudits.id, input.auditId));
+    await db2.update(fridayAudits).set({ selectedClients: clients, allSubmittedAt: null }).where(eq8(fridayAudits.id, input.auditId));
     return { success: true };
   }),
   /** Manually trigger audit (admin — for testing). */
@@ -4056,7 +4109,7 @@ var auditsRouter = t.router({
     rating: z.enum(["green", "yellow", "red"]).optional()
   })).mutation(async ({ input, ctx }) => {
     const db2 = await requireDb();
-    const [audit] = await db2.select().from(fridayAudits).where(eq7(fridayAudits.id, input.auditId)).limit(1);
+    const [audit] = await db2.select().from(fridayAudits).where(eq8(fridayAudits.id, input.auditId)).limit(1);
     if (!audit) throw new TRPCError({ code: "NOT_FOUND", message: "Audit not found" });
     const clients = audit.selectedClients;
     const idx = clients.findIndex((c) => c.name === input.clientName);
@@ -4066,7 +4119,7 @@ var auditsRouter = t.router({
     await db2.update(fridayAudits).set({
       selectedClients: clients,
       ...allDone ? { allSubmittedAt: /* @__PURE__ */ new Date() } : {}
-    }).where(eq7(fridayAudits.id, input.auditId));
+    }).where(eq8(fridayAudits.id, input.auditId));
     if (allDone) {
       const managerSlackId = ENV.managerSlackId;
       if (managerSlackId && ENV.slackBotToken) {
@@ -4093,9 +4146,9 @@ var onboardingRouter = t.router({
     const db2 = await requireDb();
     let query = db2.select().from(onboardingClients);
     const conditions = [];
-    if (input?.status) conditions.push(eq7(onboardingClients.status, input.status));
-    if (input?.coach) conditions.push(eq7(onboardingClients.coach, input.coach));
-    const rows = conditions.length > 0 ? await query.where(and5(...conditions)).orderBy(desc(onboardingClients.createdAt)) : await query.orderBy(desc(onboardingClients.createdAt));
+    if (input?.status) conditions.push(eq8(onboardingClients.status, input.status));
+    if (input?.coach) conditions.push(eq8(onboardingClients.coach, input.coach));
+    const rows = conditions.length > 0 ? await query.where(and6(...conditions)).orderBy(desc(onboardingClients.createdAt)) : await query.orderBy(desc(onboardingClients.createdAt));
     const todayMon = getMonday2(getTodayMelbourne2());
     return rows.map((r) => {
       let weekNumber = null;
@@ -4162,23 +4215,23 @@ var onboardingRouter = t.router({
     if (fields.notes !== void 0) update.notes = fields.notes;
     if (fields.status !== void 0) update.status = fields.status;
     if (Object.keys(update).length === 0) return { ok: true };
-    await db2.update(onboardingClients).set(update).where(eq7(onboardingClients.id, id));
+    await db2.update(onboardingClients).set(update).where(eq8(onboardingClients.id, id));
     return { ok: true };
   }),
   cancel: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    await db2.update(onboardingClients).set({ status: "cancelled" }).where(eq7(onboardingClients.id, input.id));
+    await db2.update(onboardingClients).set({ status: "cancelled" }).where(eq8(onboardingClients.id, input.id));
     return { ok: true };
   }),
   reactivate: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    await db2.update(onboardingClients).set({ status: "active", cancelledAt: null }).where(eq7(onboardingClients.id, input.id));
+    await db2.update(onboardingClients).set({ status: "active", cancelledAt: null }).where(eq8(onboardingClients.id, input.id));
     return { ok: true };
   }),
   importFromSheet: adminProcedure.mutation(async () => {
     const db2 = await requireDb();
     const sheetClients = await fetchOnboardingClients();
-    const allCoaches = await db2.select().from(coaches).where(eq7(coaches.isActive, 1));
+    const allCoaches = await db2.select().from(coaches).where(eq8(coaches.isActive, 1));
     const rosterNames = /* @__PURE__ */ new Set();
     for (const coach of allCoaches) {
       try {
@@ -4215,6 +4268,53 @@ var onboardingRouter = t.router({
     return { imported, skipped, counts };
   })
 });
+var rosterRouter = t.router({
+  list: adminProcedure.input(z.object({ coachId: z.number().optional() }).optional()).query(async ({ input }) => {
+    const db2 = await requireDb();
+    const conditions = [eq8(rosterAssignments.isActive, 1)];
+    if (input?.coachId) conditions.push(eq8(rosterAssignments.coachId, input.coachId));
+    return db2.select().from(rosterAssignments).where(and6(...conditions)).orderBy(rosterAssignments.coachName, rosterAssignments.dayOfWeek, rosterAssignments.clientName);
+  }),
+  assign: adminProcedure.input(z.object({
+    coachId: z.number(),
+    coachName: z.string(),
+    clientName: z.string(),
+    dayOfWeek: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday"])
+  })).mutation(async ({ input }) => {
+    const db2 = await requireDb();
+    try {
+      await db2.insert(rosterAssignments).values({
+        coachId: input.coachId,
+        coachName: input.coachName,
+        clientName: input.clientName,
+        dayOfWeek: input.dayOfWeek,
+        isActive: 1
+      });
+    } catch (err) {
+      if (err.message?.includes("Duplicate")) {
+        await db2.update(rosterAssignments).set({ isActive: 1 }).where(and6(
+          eq8(rosterAssignments.coachId, input.coachId),
+          eq8(rosterAssignments.clientName, input.clientName),
+          eq8(rosterAssignments.dayOfWeek, input.dayOfWeek)
+        ));
+      } else throw err;
+    }
+    return { ok: true };
+  }),
+  unassign: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+    const db2 = await requireDb();
+    await db2.update(rosterAssignments).set({ isActive: 0 }).where(eq8(rosterAssignments.id, input.id));
+    return { ok: true };
+  }),
+  move: adminProcedure.input(z.object({
+    id: z.number(),
+    dayOfWeek: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday"])
+  })).mutation(async ({ input }) => {
+    const db2 = await requireDb();
+    await db2.update(rosterAssignments).set({ dayOfWeek: input.dayOfWeek }).where(eq8(rosterAssignments.id, input.id));
+    return { ok: true };
+  })
+});
 var appRouter = t.router({
   checkins: checkinsRouter,
   clientCheckins: clientCheckinsRouter,
@@ -4225,7 +4325,8 @@ var appRouter = t.router({
   kudos: kudosRouter,
   sales: salesRouter,
   audits: auditsRouter,
-  onboarding: onboardingRouter
+  onboarding: onboardingRouter,
+  roster: rosterRouter
 });
 
 // server/_core/context.ts
@@ -4304,7 +4405,7 @@ init_db();
 init_env();
 init_schema();
 import crypto from "crypto";
-import { and as and6, eq as eq8 } from "drizzle-orm";
+import { and as and7, eq as eq9 } from "drizzle-orm";
 var FORM_TO_COACH = {
   hrGCn0V0: "Kyah",
   i9de5jMN: "Luke",
@@ -4510,21 +4611,21 @@ async function markClientSubmitted(params) {
   const db2 = await getDb();
   if (!db2) return;
   const existing = await db2.select().from(clientCheckIns).where(
-    and6(
-      eq8(clientCheckIns.coachId, params.coachId),
-      eq8(clientCheckIns.clientName, params.clientName),
-      eq8(clientCheckIns.dayOfWeek, params.dayOfWeek),
-      eq8(clientCheckIns.weekStart, params.weekStart)
+    and7(
+      eq9(clientCheckIns.coachId, params.coachId),
+      eq9(clientCheckIns.clientName, params.clientName),
+      eq9(clientCheckIns.dayOfWeek, params.dayOfWeek),
+      eq9(clientCheckIns.weekStart, params.weekStart)
     )
   ).limit(1);
   if (existing.length > 0) {
     if (!existing[0].clientSubmitted) {
       await db2.update(clientCheckIns).set({ clientSubmitted: true, clientSubmittedAt: /* @__PURE__ */ new Date() }).where(
-        and6(
-          eq8(clientCheckIns.coachId, params.coachId),
-          eq8(clientCheckIns.clientName, params.clientName),
-          eq8(clientCheckIns.dayOfWeek, params.dayOfWeek),
-          eq8(clientCheckIns.weekStart, params.weekStart)
+        and7(
+          eq9(clientCheckIns.coachId, params.coachId),
+          eq9(clientCheckIns.clientName, params.clientName),
+          eq9(clientCheckIns.dayOfWeek, params.dayOfWeek),
+          eq9(clientCheckIns.weekStart, params.weekStart)
         )
       );
     }
@@ -4626,7 +4727,7 @@ function registerTypeformWebhook(app) {
           res.status(500).json({ error: "Database unavailable" });
           return;
         }
-        const coachRows = await db2.select().from(coaches).where(eq8(coaches.name, coachName)).limit(1);
+        const coachRows = await db2.select().from(coaches).where(eq9(coaches.name, coachName)).limit(1);
         if (!coachRows.length) {
           console.warn(`[Webhook] Coach not found in DB: ${coachName}`);
           res.status(200).json({ ok: true, skipped: true, reason: "coach_not_found" });
@@ -5114,7 +5215,7 @@ function registerWeeklySummaryPdfRoute(app) {
 // server/weeklySnapshot.ts
 init_db();
 init_schema();
-import { eq as eq9, and as and7 } from "drizzle-orm";
+import { eq as eq10, and as and8 } from "drizzle-orm";
 function getMonday3(dateStr) {
   const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
   const day = d.getDay();
@@ -5135,7 +5236,7 @@ async function snapshotCurrentWeek() {
   const today = getTodayMelbourne3();
   const weekStart = getMonday3(today);
   console.log(`[Snapshot] Snapshotting week ${weekStart}...`);
-  const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq9(coaches.isActive, 1));
+  const coachList = await db2.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq10(coaches.isActive, 1));
   for (const coach of coachList) {
     const stats = await computeCoachWeekStats(db2, coach.id, coach.name, weekStart);
     const snap = {
@@ -5149,9 +5250,9 @@ async function snapshotCurrentWeek() {
       engagementPct: engagementPct(stats.completed, stats.scheduled, stats.excused),
       source: "auto-snapshot"
     };
-    const existing = await db2.select().from(rosterWeeklySnapshots).where(and7(eq9(rosterWeeklySnapshots.coachId, coach.id), eq9(rosterWeeklySnapshots.weekStart, weekStart))).limit(1);
+    const existing = await db2.select().from(rosterWeeklySnapshots).where(and8(eq10(rosterWeeklySnapshots.coachId, coach.id), eq10(rosterWeeklySnapshots.weekStart, weekStart))).limit(1);
     if (existing.length > 0) {
-      await db2.update(rosterWeeklySnapshots).set({ snapshotJson: snap }).where(eq9(rosterWeeklySnapshots.id, existing[0].id));
+      await db2.update(rosterWeeklySnapshots).set({ snapshotJson: snap }).where(eq10(rosterWeeklySnapshots.id, existing[0].id));
     } else {
       await db2.insert(rosterWeeklySnapshots).values({
         coachId: coach.id,

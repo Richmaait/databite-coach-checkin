@@ -37,6 +37,7 @@ import {
   fridayAudits,
   auditHistory,
   onboardingClients,
+  rosterAssignments,
 } from "../drizzle/schema";
 import { runTypeformBackfill } from "./typeformBackfill";
 import { computeCoachWeekStats, engagementPct } from "./engagementStats";
@@ -3591,6 +3592,75 @@ const onboardingRouter = t.router({
     }),
 });
 
+// ─── Roster Router ─────────────────────────────────────────────────────────────
+
+const rosterRouter = t.router({
+  list: adminProcedure
+    .input(z.object({ coachId: z.number().optional() }).optional())
+    .query(async ({ input }) => {
+      const db = await requireDb();
+      const conditions: any[] = [eq(rosterAssignments.isActive, 1)];
+      if (input?.coachId) conditions.push(eq(rosterAssignments.coachId, input.coachId));
+      return db.select().from(rosterAssignments)
+        .where(and(...conditions))
+        .orderBy(rosterAssignments.coachName, rosterAssignments.dayOfWeek, rosterAssignments.clientName);
+    }),
+
+  assign: adminProcedure
+    .input(z.object({
+      coachId: z.number(),
+      coachName: z.string(),
+      clientName: z.string(),
+      dayOfWeek: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday"]),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      try {
+        await db.insert(rosterAssignments).values({
+          coachId: input.coachId,
+          coachName: input.coachName,
+          clientName: input.clientName,
+          dayOfWeek: input.dayOfWeek,
+          isActive: 1,
+        });
+      } catch (err: any) {
+        if (err.message?.includes("Duplicate")) {
+          await db.update(rosterAssignments)
+            .set({ isActive: 1 })
+            .where(and(
+              eq(rosterAssignments.coachId, input.coachId),
+              eq(rosterAssignments.clientName, input.clientName),
+              eq(rosterAssignments.dayOfWeek, input.dayOfWeek),
+            ));
+        } else throw err;
+      }
+      return { ok: true };
+    }),
+
+  unassign: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      await db.update(rosterAssignments)
+        .set({ isActive: 0 })
+        .where(eq(rosterAssignments.id, input.id));
+      return { ok: true };
+    }),
+
+  move: adminProcedure
+    .input(z.object({
+      id: z.number(),
+      dayOfWeek: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday"]),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      await db.update(rosterAssignments)
+        .set({ dayOfWeek: input.dayOfWeek })
+        .where(eq(rosterAssignments.id, input.id));
+      return { ok: true };
+    }),
+});
+
 // ─── App Router ────────────────────────────────────────────────────────────────
 
 export const appRouter = t.router({
@@ -3604,6 +3674,7 @@ export const appRouter = t.router({
   sales: salesRouter,
   audits: auditsRouter,
   onboarding: onboardingRouter,
+  roster: rosterRouter,
 });
 
 export type AppRouter = typeof appRouter;

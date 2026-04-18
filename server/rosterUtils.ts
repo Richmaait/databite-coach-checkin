@@ -16,6 +16,9 @@
  */
 
 import { ENV } from "./env";
+import { getDb } from "./db";
+import { rosterAssignments } from "../drizzle/schema";
+import { eq, and } from "drizzle-orm";
 
 const SHEET_ID = "1puu4oLAmC5jV_GEmRrMxvXuTak_dl6pOJ6iWC44Nfl4";
 const SHEET_TAB = "CLIENT ROSTER";
@@ -66,6 +69,36 @@ export async function fetchRosterForCoach(
     monday: [], tuesday: [], wednesday: [], thursday: [], friday: [],
   };
 
+  // Read from DB roster
+  const db = await getDb();
+  if (db) {
+    const rows = await db.select().from(rosterAssignments)
+      .where(and(
+        eq(rosterAssignments.coachName, coachName),
+        eq(rosterAssignments.isActive, 1),
+      ));
+
+    if (rows.length > 0) {
+      const days: Record<DayKey, string[]> = { ...empty };
+      for (const r of rows) {
+        const day = r.dayOfWeek as DayKey;
+        days[day].push(cleanClientName(r.clientName));
+      }
+      return days;
+    }
+  }
+
+  // Fallback: Google Sheets (for coaches not yet in DB roster)
+  return fetchRosterForCoachFromSheet(coachName);
+}
+
+async function fetchRosterForCoachFromSheet(
+  coachName: string,
+): Promise<Record<DayKey, string[]>> {
+  const empty: Record<DayKey, string[]> = {
+    monday: [], tuesday: [], wednesday: [], thursday: [], friday: [],
+  };
+
   const rows = await fetchSheetRows();
   if (rows.length === 0) return empty;
 
@@ -76,7 +109,6 @@ export async function fetchRosterForCoach(
     upperName.replace("STEPHEN", "STEVE"),
   ];
 
-  // Find the header row: col A starts with "COACHNAME - MONDAY"
   let sectionStart = -1;
   for (let i = 0; i < rows.length; i++) {
     const cell = (rows[i]?.[0] ?? "").trim().toUpperCase();
@@ -87,7 +119,6 @@ export async function fetchRosterForCoach(
   }
   if (sectionStart === -1) return empty;
 
-  // Build col → day mapping from the header row (and optionally the row above)
   const headerRow = rows[sectionStart];
   const prevRow = sectionStart > 0 ? (rows[sectionStart - 1] ?? []) : [];
   const colToDay: Record<number, DayKey> = { 0: "monday" };
@@ -105,7 +136,6 @@ export async function fetchRosterForCoach(
 
   const days: Record<DayKey, string[]> = { ...empty };
 
-  // Some layouts put a client in the header row itself (col > 0)
   for (const [colStr, day] of Object.entries(colToDay)) {
     const col = Number(colStr);
     if (col === 0) continue;
@@ -116,12 +146,10 @@ export async function fetchRosterForCoach(
     }
   }
 
-  // Read client rows below the header
   for (let i = sectionStart + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
     const firstCell = (row[0] ?? "").trim();
 
-    // Stop at next coach header or fully blank row
     if (/^[A-Z]+ - MONDAY$/i.test(firstCell) && i !== sectionStart) break;
     if (!firstCell && row.every(c => !c?.trim())) break;
 
@@ -164,6 +192,22 @@ export async function fetchRawRosterForCoach(
     monday: [], tuesday: [], wednesday: [], thursday: [], friday: [],
   };
 
+  // DB roster stores raw names with suffixes
+  const db = await getDb();
+  if (db) {
+    const rows = await db.select().from(rosterAssignments)
+      .where(and(
+        eq(rosterAssignments.coachName, coachName),
+        eq(rosterAssignments.isActive, 1),
+      ));
+    if (rows.length > 0) {
+      const days: Record<DayKey, string[]> = { ...empty };
+      for (const r of rows) days[r.dayOfWeek as DayKey].push(r.clientName);
+      return days;
+    }
+  }
+
+  // Fallback: Google Sheets
   const rows = await fetchSheetRows();
   if (rows.length === 0) return empty;
 

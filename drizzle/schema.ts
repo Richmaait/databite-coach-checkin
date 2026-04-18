@@ -310,3 +310,20 @@ export const onboardingClients = mysqlTable("onboarding_clients", {
 }));
 
 export type OnboardingClient = typeof onboardingClients.$inferSelect;
+
+// ─── Roster Assignments ───────────────────────────────────────────────────────
+// DB-backed roster replacing the Google Sheet CLIENT ROSTER.
+export const rosterAssignments = mysqlTable("roster_assignments", {
+  id: int("id").autoincrement().primaryKey(),
+  coachId: int("coachId").notNull(),
+  coachName: varchar("coachName", { length: 128 }).notNull(),
+  clientName: varchar("clientName", { length: 256 }).notNull(),
+  dayOfWeek: mysqlEnum("dayOfWeek", ["monday", "tuesday", "wednesday", "thursday", "friday"]).notNull(),
+  isActive: tinyint("isActive").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (t) => ({
+  uqRosterAssignment: uniqueIndex("uq_roster_assignment").on(t.coachId, t.clientName, t.dayOfWeek),
+}));
+
+export type RosterAssignment = typeof rosterAssignments.$inferSelect;

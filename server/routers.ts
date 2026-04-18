@@ -3731,7 +3731,6 @@ const milestonesRouter = t.router({
 
     return MILESTONES.map(m => ({ ...alerts[m.week] })).filter(a => a.clients.length > 0);
   }),
-});
 
   markContacted: adminProcedure
     .input(z.object({ id: z.number(), week: z.number() }))

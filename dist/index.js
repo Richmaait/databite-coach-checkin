@@ -284,6 +284,10 @@ var init_schema = __esm({
       sentToClient: varchar("sentToClient", { length: 10 }),
       subscription: tinyint("subscription").default(0).notNull(),
       videoAlertSentAt: varchar("videoAlertSentAt", { length: 10 }),
+      milestone2ContactedAt: varchar("milestone2ContactedAt", { length: 10 }),
+      milestone4ContactedAt: varchar("milestone4ContactedAt", { length: 10 }),
+      milestone8ContactedAt: varchar("milestone8ContactedAt", { length: 10 }),
+      milestone12ContactedAt: varchar("milestone12ContactedAt", { length: 10 }),
       assignedDay: mysqlEnum("assignedDay", ["monday", "tuesday", "wednesday", "thursday", "friday"]),
       paymentType: mysqlEnum("paymentType", ["subscription", "upfront"]).default("subscription"),
       salesPerson: varchar("salesPerson", { length: 64 }),
@@ -4385,10 +4389,19 @@ var milestonesRouter = t.router({
       const diff = (/* @__PURE__ */ new Date(todayMon + "T00:00:00")).getTime() - (/* @__PURE__ */ new Date(startMon + "T00:00:00")).getTime();
       const weekNumber = Math.floor(diff / (7 * 864e5)) + 1;
       if (alerts[weekNumber]) {
-        alerts[weekNumber].clients.push({ id: c.id, clientName: c.clientName, coach: c.coach, sentToClient: c.sentToClient, weekNumber });
+        const contactedField = `milestone${weekNumber}ContactedAt`;
+        const contactedAt = c[contactedField] ?? null;
+        alerts[weekNumber].clients.push({ id: c.id, clientName: c.clientName, coach: c.coach, sentToClient: c.sentToClient, weekNumber, contactedAt });
       }
     }
     return MILESTONES.map((m) => ({ ...alerts[m.week] })).filter((a) => a.clients.length > 0);
+  }),
+  markContacted: adminProcedure.input(z.object({ id: z.number(), week: z.number() })).mutation(async ({ input }) => {
+    const db2 = await requireDb();
+    const field = `milestone${input.week}ContactedAt`;
+    const today = getTodayMelbourne2();
+    await db2.update(onboardingClients).set({ [field]: today }).where(eq8(onboardingClients.id, input.id));
+    return { ok: true };
   })
 });
 var rosterRouter = t.router({

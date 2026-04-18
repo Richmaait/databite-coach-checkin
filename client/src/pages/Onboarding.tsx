@@ -190,7 +190,7 @@ function OnboardingRow({ client, coaches, tab, onUpdate, onAlertVideo, onFinalis
   const isCompleted = tab === "completed";
 
   return (
-    <tr className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+    <tr className="border-b border-white/[0.04] hover:bg-violet-500/[0.08] transition-colors">
       <td className="px-3 py-2 font-medium text-white/80">{client.clientName}</td>
 
       {/* Paid */}

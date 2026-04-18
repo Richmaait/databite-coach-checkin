@@ -60,7 +60,7 @@ export default function Milestones() {
         {totalAlerts > 0 ? (
           <div className="space-y-3">
             <h2 className="text-sm font-bold text-white/70">This Week's Milestones</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-3">
               {alerts!.map(alert => {
                 const colors = MILESTONE_COLORS[alert.milestone.week] ?? MILESTONE_COLORS[2];
                 return (
@@ -68,8 +68,8 @@ export default function Milestones() {
                     <div className="flex items-center gap-2 mb-3">
                       <span className={`text-lg font-bold ${colors.text}`}>Week {alert.milestone.week}</span>
                       <span className={`text-xs font-semibold ${colors.text}`}>— {alert.milestone.label}</span>
+                      <span className="text-xs text-white/40 ml-1">{alert.milestone.description}</span>
                     </div>
-                    <p className="text-xs text-white/50 mb-3">{alert.milestone.description}</p>
                     <div className="space-y-1.5">
                       {alert.clients.map((c: any) => (
                         <div key={c.id} className="flex items-center justify-between">
@@ -86,7 +86,7 @@ export default function Milestones() {
                               onClick={() => contactMutation.mutate({ id: c.id, week: alert.milestone.week })}
                               disabled={contactMutation.isPending}
                               className="text-[10px] font-semibold text-white/50 bg-white/10 border border-white/20 px-2 py-0.5 rounded-full hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/30 transition-colors">
-                              Mark Contacted
+                              Contacted
                             </button>
                           )}
                         </div>

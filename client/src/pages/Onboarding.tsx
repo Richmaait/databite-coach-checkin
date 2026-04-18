@@ -9,13 +9,12 @@ const BOOL_FIELDS = [
   { key: "appInviteSent", label: "App Invite" },
   { key: "contractSent", label: "Contract" },
   { key: "mealPlan", label: "Meal Plan" },
-  { key: "training", label: "Training" },
   { key: "welcomeVideo", label: "Welcome Video" },
+  { key: "training", label: "Training" },
   { key: "subscription", label: "Subscription" },
 ] as const;
 
 const DATE_FIELDS = [
-  { key: "requestedPhotos", label: "Photos" },
   { key: "sentToClient", label: "Sent to Client" },
 ] as const;
 
@@ -98,6 +97,7 @@ export default function Onboarding() {
                   <th className="text-left px-3 py-2 font-medium text-white/50 min-w-[160px]">Client</th>
                   <th className="text-left px-2 py-2 font-medium text-white/50 min-w-[90px]">Paid</th>
                   <th className="text-left px-2 py-2 font-medium text-white/50 min-w-[90px]">Due</th>
+                  <th className="text-left px-2 py-2 font-medium text-white/50 min-w-[90px]">Photos</th>
                   {BOOL_FIELDS.map(f => (
                     <th key={f.key} className="text-center px-1 py-2 font-medium text-white/50 min-w-[60px]">{f.label}</th>
                   ))}
@@ -145,7 +145,7 @@ function OnboardingRow({ client, coaches, onUpdate, onAlertVideo, onFinalise }: 
 }) {
   const [selectedDay, setSelectedDay] = useState("");
   const [paymentType, setPaymentType] = useState<"subscription" | "upfront">("subscription");
-  const [upfrontWeeks, setUpfrontWeeks] = useState(12);
+  const [upfrontWeeks, setUpfrontWeeks] = useState(14);
 
   const coach = coaches.find(c => c.name === client.coach);
   const canFinalise = client.coach && selectedDay && coach;
@@ -164,6 +164,12 @@ function OnboardingRow({ client, coaches, onUpdate, onAlertVideo, onFinalise }: 
       {/* Due date */}
       <td className="px-2 py-2">
         <input type="date" value={client.dateDue || ""} onChange={e => onUpdate("dateDue", e.target.value || null)}
+          className="w-full px-1.5 py-1 rounded bg-white/5 border border-white/10 text-white/70 text-[11px] focus:outline-none" />
+      </td>
+
+      {/* Photos date */}
+      <td className="px-2 py-2">
+        <input type="date" value={client.requestedPhotos || ""} onChange={e => onUpdate("requestedPhotos", e.target.value || null)}
           className="w-full px-1.5 py-1 rounded bg-white/5 border border-white/10 text-white/70 text-[11px] focus:outline-none" />
       </td>
 
@@ -220,11 +226,11 @@ function OnboardingRow({ client, coaches, onUpdate, onAlertVideo, onFinalise }: 
       {/* Payment type */}
       <td className="text-center px-2 py-2">
         <button onClick={() => setPaymentType(p => p === "subscription" ? "upfront" : "subscription")}
-          className={`px-2 py-1 rounded text-[9px] font-bold transition-colors ${paymentType === "upfront"
-            ? "bg-amber-500/20 border border-amber-500/30 text-amber-300"
+          className={`px-2 py-1 rounded text-[9px] font-bold transition-colors whitespace-nowrap ${paymentType === "upfront"
+            ? "bg-cyan-500/20 border border-cyan-500/30 text-cyan-300"
             : "bg-violet-500/15 border border-violet-500/25 text-violet-300"
           }`}>
-          {paymentType === "upfront" ? `UF ${upfrontWeeks}w` : "Sub"}
+          {paymentType === "upfront" ? `Upfront ${upfrontWeeks}w` : "Sub"}
         </button>
       </td>
 
@@ -232,7 +238,7 @@ function OnboardingRow({ client, coaches, onUpdate, onAlertVideo, onFinalise }: 
       <td className="px-2 py-2">
         <div className="flex gap-1">
           <button onClick={onAlertVideo}
-            className="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[9px] font-semibold hover:bg-amber-500/20 transition-colors whitespace-nowrap">
+            className="px-2 py-1 rounded bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-300 text-[9px] font-semibold hover:bg-fuchsia-500/20 transition-colors whitespace-nowrap">
             🎬 Video
           </button>
           <button disabled={!canFinalise}

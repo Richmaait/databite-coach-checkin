@@ -301,6 +301,7 @@ export const onboardingClients = mysqlTable("onboarding_clients", {
   welcomeVideo: tinyint("welcomeVideo").default(0).notNull(),
   sentToClient: varchar("sentToClient", { length: 10 }),
   subscription: tinyint("subscription").default(0).notNull(),
+  salesPerson: varchar("salesPerson", { length: 64 }),
   notes: text("notes"),
   cancelledAt: datetime("cancelledAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

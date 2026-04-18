@@ -283,6 +283,7 @@ var init_schema = __esm({
       welcomeVideo: tinyint("welcomeVideo").default(0).notNull(),
       sentToClient: varchar("sentToClient", { length: 10 }),
       subscription: tinyint("subscription").default(0).notNull(),
+      salesPerson: varchar("salesPerson", { length: 64 }),
       notes: text("notes"),
       cancelledAt: datetime("cancelledAt"),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -4197,6 +4198,7 @@ var onboardingRouter = t.router({
     welcomeVideo: z.boolean().optional(),
     sentToClient: z.string().nullable().optional(),
     subscription: z.boolean().optional(),
+    salesPerson: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
     status: z.enum(["onboarding", "active", "cancelled"]).optional()
   })).mutation(async ({ input }) => {
@@ -4216,6 +4218,7 @@ var onboardingRouter = t.router({
     if (fields.welcomeVideo !== void 0) update.welcomeVideo = fields.welcomeVideo ? 1 : 0;
     if (fields.sentToClient !== void 0) update.sentToClient = fields.sentToClient;
     if (fields.subscription !== void 0) update.subscription = fields.subscription ? 1 : 0;
+    if (fields.salesPerson !== void 0) update.salesPerson = fields.salesPerson;
     if (fields.notes !== void 0) update.notes = fields.notes;
     if (fields.status !== void 0) update.status = fields.status;
     if (Object.keys(update).length === 0) return { ok: true };

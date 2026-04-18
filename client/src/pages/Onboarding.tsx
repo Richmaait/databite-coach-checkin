@@ -97,6 +97,7 @@ export default function Onboarding() {
               <thead>
                 <tr className="border-b border-white/[0.08]">
                   <th className="text-left px-3 py-2 font-medium text-white/50 min-w-[160px]">Client</th>
+                  <th className="text-center px-1 py-2 font-medium text-white/50 min-w-[65px]">Sale</th>
                   <th className="text-left px-2 py-2 font-medium text-white/50 min-w-[90px]">Paid</th>
                   <th className="text-left px-2 py-2 font-medium text-white/50 min-w-[90px]">Due</th>
                   <th className="text-left px-2 py-2 font-medium text-white/50 min-w-[90px]">Photos</th>
@@ -113,6 +114,7 @@ export default function Onboarding() {
                   <th className="text-left px-2 py-2 font-medium text-white/50 min-w-[90px]">Coach</th>
                   <th className="text-left px-2 py-2 font-medium text-white/50 min-w-[70px]">Day</th>
                   <th className="text-center px-2 py-2 font-medium text-white/50 min-w-[80px]">Type</th>
+                  <th className="text-left px-2 py-2 font-medium text-white/50 min-w-[120px]">Notes</th>
                   <th className="text-center px-2 py-2 font-medium text-white/50 min-w-[70px]">Finalise</th>
                 </tr>
               </thead>
@@ -160,6 +162,20 @@ function OnboardingRow({ client, coaches, onUpdate, onAlertVideo, onFinalise }: 
     <tr className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
       {/* Name */}
       <td className="px-3 py-2 font-medium text-white/80">{client.clientName}</td>
+
+      {/* Sale */}
+      <td className="text-center px-1 py-2">
+        <select value={client.salesPerson || ""} onChange={e => onUpdate("salesPerson", e.target.value || null)}
+          className={`w-full px-1 py-1 rounded text-[10px] font-semibold focus:outline-none border ${
+            client.salesPerson === "Yaman" ? "bg-blue-500/15 border-blue-500/25 text-blue-300"
+            : client.salesPerson === "Susie" ? "bg-pink-500/15 border-pink-500/25 text-pink-300"
+            : "bg-white/5 border-white/10 text-white/40"
+          }`}>
+          <option value="">—</option>
+          <option value="Yaman">Yaman</option>
+          <option value="Susie">Susie</option>
+        </select>
+      </td>
 
       {/* Paid date */}
       <td className="px-2 py-2">
@@ -263,6 +279,13 @@ function OnboardingRow({ client, coaches, onUpdate, onAlertVideo, onFinalise }: 
           }`}>
           {paymentType === "upfront" ? `Upfront ${upfrontWeeks}w` : "Sub"}
         </button>
+      </td>
+
+      {/* Notes */}
+      <td className="px-2 py-2">
+        <input type="text" value={client.notes || ""} placeholder="..."
+          onChange={e => onUpdate("notes", e.target.value || null)}
+          className="w-full px-1.5 py-1 rounded bg-white/5 border border-white/10 text-white/60 text-[10px] placeholder:text-white/20 focus:outline-none focus:border-violet-500/30" />
       </td>
 
       {/* Finalise */}

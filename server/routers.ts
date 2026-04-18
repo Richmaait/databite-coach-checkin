@@ -3500,6 +3500,7 @@ const onboardingRouter = t.router({
       welcomeVideo: z.boolean().optional(),
       sentToClient: z.string().nullable().optional(),
       subscription: z.boolean().optional(),
+      salesPerson: z.string().nullable().optional(),
       notes: z.string().nullable().optional(),
       status: z.enum(["onboarding", "active", "cancelled"]).optional(),
     }))
@@ -3520,6 +3521,7 @@ const onboardingRouter = t.router({
       if (fields.welcomeVideo !== undefined) update.welcomeVideo = fields.welcomeVideo ? 1 : 0;
       if (fields.sentToClient !== undefined) update.sentToClient = fields.sentToClient;
       if (fields.subscription !== undefined) update.subscription = fields.subscription ? 1 : 0;
+      if (fields.salesPerson !== undefined) update.salesPerson = fields.salesPerson;
       if (fields.notes !== undefined) update.notes = fields.notes;
       if (fields.status !== undefined) update.status = fields.status;
       if (Object.keys(update).length === 0) return { ok: true };

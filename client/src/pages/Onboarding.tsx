@@ -9,8 +9,10 @@ const BOOL_FIELDS = [
   { key: "appInviteSent", label: "App Invite" },
   { key: "contractSent", label: "Contract" },
   { key: "mealPlan", label: "Meal Plan" },
+] as const;
+
+const BOOL_FIELDS_AFTER_VIDEO = [
   { key: "welcomeVideo", label: "Welcome Video" },
-  { key: "training", label: "Training" },
   { key: "subscription", label: "Subscription" },
 ] as const;
 
@@ -101,13 +103,17 @@ export default function Onboarding() {
                   {BOOL_FIELDS.map(f => (
                     <th key={f.key} className="text-center px-1 py-2 font-medium text-white/50 min-w-[60px]">{f.label}</th>
                   ))}
+                  <th className="text-center px-1 py-2 font-medium text-white/50 min-w-[50px]">Video</th>
+                  {BOOL_FIELDS_AFTER_VIDEO.map(f => (
+                    <th key={f.key} className="text-center px-1 py-2 font-medium text-white/50 min-w-[60px]">{f.label}</th>
+                  ))}
                   {DATE_FIELDS.map(f => (
                     <th key={f.key} className="text-center px-1 py-2 font-medium text-white/50 min-w-[70px]">{f.label}</th>
                   ))}
                   <th className="text-left px-2 py-2 font-medium text-white/50 min-w-[90px]">Coach</th>
                   <th className="text-left px-2 py-2 font-medium text-white/50 min-w-[70px]">Day</th>
-                  <th className="text-center px-2 py-2 font-medium text-white/50 min-w-[60px]">Type</th>
-                  <th className="text-center px-2 py-2 font-medium text-white/50 min-w-[140px]">Actions</th>
+                  <th className="text-center px-2 py-2 font-medium text-white/50 min-w-[80px]">Type</th>
+                  <th className="text-center px-2 py-2 font-medium text-white/50 min-w-[70px]">Finalise</th>
                 </tr>
               </thead>
               <tbody>
@@ -173,7 +179,7 @@ function OnboardingRow({ client, coaches, onUpdate, onAlertVideo, onFinalise }: 
           className="w-full px-1.5 py-1 rounded bg-white/5 border border-white/10 text-white/70 text-[11px] focus:outline-none" />
       </td>
 
-      {/* Boolean checklist toggles */}
+      {/* Boolean checklist: App Invite, Contract, Meal Plan */}
       {BOOL_FIELDS.map(f => {
         const checked = !!client[f.key];
         return (
@@ -189,9 +195,34 @@ function OnboardingRow({ client, coaches, onUpdate, onAlertVideo, onFinalise }: 
         );
       })}
 
-      {/* Date checklist fields */}
+      {/* Video alert button — between Meal Plan and Welcome Video */}
+      <td className="text-center px-1 py-2">
+        <button onClick={onAlertVideo}
+          className="w-6 h-6 rounded-md text-[10px] bg-fuchsia-500/15 border border-fuchsia-500/25 text-fuchsia-300 hover:bg-fuchsia-500/25 transition-colors">
+          🎬
+        </button>
+      </td>
+
+      {/* Boolean checklist: Welcome Video, Subscription */}
+      {BOOL_FIELDS_AFTER_VIDEO.map(f => {
+        const checked = !!client[f.key];
+        return (
+          <td key={f.key} className="text-center px-1 py-2">
+            <button onClick={() => onUpdate(f.key, !checked)}
+              className={`w-6 h-6 rounded-md text-[10px] font-bold transition-colors ${checked
+                ? "bg-emerald-400/20 border border-emerald-400/30 text-emerald-300"
+                : "bg-white/[0.03] border border-white/[0.08] text-white/20 hover:bg-white/[0.06]"
+              }`}>
+              {checked ? "✓" : ""}
+            </button>
+          </td>
+        );
+      })}
+
+      {/* Sent to Client — date toggle, shown in AU format */}
       {DATE_FIELDS.map(f => {
         const val = client[f.key];
+        const auDate = val ? val.split("-").reverse().join("/") : null;
         return (
           <td key={f.key} className="text-center px-1 py-2">
             <button onClick={() => onUpdate(f.key, val ? null : new Date().toISOString().slice(0, 10))}
@@ -199,7 +230,7 @@ function OnboardingRow({ client, coaches, onUpdate, onAlertVideo, onFinalise }: 
                 ? "bg-emerald-400/15 border border-emerald-400/25 text-emerald-300"
                 : "bg-white/[0.03] border border-white/[0.08] text-white/30 hover:bg-white/[0.06]"
               }`}>
-              {val || "—"}
+              {auDate || "—"}
             </button>
           </td>
         );
@@ -234,13 +265,9 @@ function OnboardingRow({ client, coaches, onUpdate, onAlertVideo, onFinalise }: 
         </button>
       </td>
 
-      {/* Actions */}
+      {/* Finalise */}
       <td className="px-2 py-2">
         <div className="flex gap-1">
-          <button onClick={onAlertVideo}
-            className="px-2 py-1 rounded bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-300 text-[9px] font-semibold hover:bg-fuchsia-500/20 transition-colors whitespace-nowrap">
-            🎬 Video
-          </button>
           <button disabled={!canFinalise}
             onClick={() => { if (canFinalise) onFinalise(coach!.id, coach!.name, selectedDay, paymentType, paymentType === "upfront" ? upfrontWeeks : undefined); }}
             className="px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[9px] font-semibold hover:bg-emerald-500/20 transition-colors disabled:opacity-30 whitespace-nowrap">

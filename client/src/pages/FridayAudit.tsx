@@ -41,6 +41,8 @@ export default function FridayAudit() {
     { enabled: isAdmin },
   );
 
+  const [expandedHistory, setExpandedHistory] = useState<Set<number>>(new Set());
+
   const submitMutation = trpc.audits.submitClient.useMutation({
     onSuccess: (data) => {
       refetch(); refetchAll();
@@ -153,47 +155,67 @@ export default function FridayAudit() {
                     const clients = a.selectedClients as AuditClient[];
                     const done = clients.filter(c => c.submitted).length;
                     const isReviewed = !!(a as any).reviewedAt;
+                    const isExpanded = expandedHistory.has(a.id);
                     return (
                       <div key={a.id} className="glass-btn rounded-xl px-4 py-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-medium text-white/70">{a.coachName}</span>
-                            <span className="text-xs text-white/40">{a.weekStart}</span>
-                            <div className="flex gap-1">
-                              {clients.map((c, i) => {
-                                const r = RATINGS.find(rt => rt.value === c.rating);
-                                return r ? <span key={i} className="text-xs">{r.emoji}</span> : <span key={i} className="text-xs text-white/20">○</span>;
-                              })}
+                        <button
+                          className="w-full text-left"
+                          onClick={() => setExpandedHistory(prev => {
+                            const next = new Set(prev);
+                            next.has(a.id) ? next.delete(a.id) : next.add(a.id);
+                            return next;
+                          })}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className={`text-xs transition-transform ${isExpanded ? "rotate-90" : ""}`}>▶</span>
+                              <span className="text-sm font-medium text-white/70">{a.coachName}</span>
+                              <span className="text-xs text-white/40">{a.weekStart}</span>
+                              <div className="flex gap-1">
+                                {clients.map((c, i) => {
+                                  const r = RATINGS.find(rt => rt.value === c.rating);
+                                  return r ? <span key={i} className="text-xs">{r.emoji}</span> : <span key={i} className="text-xs text-white/20">○</span>;
+                                })}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs font-semibold ${done === clients.length ? "text-emerald-400" : "text-red-400"}`}>
+                                {done}/{clients.length}
+                              </span>
+                              {isReviewed ? (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20">REVIEWED</span>
+                              ) : done === clients.length ? (
+                                <span
+                                  onClick={(e) => { e.stopPropagation(); reviewMutation.mutate({ auditId: a.id }); }}
+                                  className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/10 text-white/50 border border-white/20 hover:bg-violet-500/20 hover:text-violet-300 transition-colors cursor-pointer"
+                                >
+                                  Review
+                                </span>
+                              ) : null}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-semibold ${done === clients.length ? "text-emerald-400" : "text-red-400"}`}>
-                              {done}/{clients.length}
-                            </span>
-                            {isReviewed ? (
-                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20">REVIEWED</span>
-                            ) : done === clients.length ? (
-                              <button
-                                onClick={() => reviewMutation.mutate({ auditId: a.id })}
-                                disabled={reviewMutation.isPending}
-                                className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/10 text-white/50 border border-white/20 hover:bg-violet-500/20 hover:text-violet-300 transition-colors"
-                              >
-                                Review
-                              </button>
-                            ) : null}
+                        </button>
+                        {isExpanded && (
+                          <div className="space-y-2 mt-3 pt-3 border-t border-white/[0.06]">
+                            {clients.map((c, i) => {
+                              const ratingInfo = RATINGS.find(r => r.value === c.rating);
+                              return (
+                                <div key={i} className={`rounded-lg px-3 py-2 border ${c.submitted ? "border-emerald-400/15 bg-emerald-400/[0.04]" : "border-white/[0.06] bg-white/[0.02]"}`}>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm text-white/80">{c.name}</span>
+                                      <span className="text-xs text-white/40">{DAY_LABELS[c.day] ?? c.day}</span>
+                                      {ratingInfo && <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${ratingInfo.bg} ${ratingInfo.border} ${ratingInfo.text}`}>{ratingInfo.emoji} {ratingInfo.label}</span>}
+                                    </div>
+                                    {c.submitted ? <span className="text-[9px] text-emerald-400">✓</span> : <span className="text-[9px] text-white/30">pending</span>}
+                                  </div>
+                                  {c.loomLink && <a href={c.loomLink} target="_blank" rel="noopener noreferrer" className="text-xs text-violet-400 hover:underline block mt-1">🎥 {c.loomLink}</a>}
+                                  {c.notes && <p className="text-xs text-white/40 mt-1">{c.notes}</p>}
+                                </div>
+                              );
+                            })}
                           </div>
-                        </div>
-                        {/* Expandable client details */}
-                        <div className="space-y-1 mt-2">
-                          {clients.map((c, i) => (
-                            <div key={i} className="text-xs text-white/40 flex items-center gap-2">
-                              {c.submitted && RATINGS.find(r => r.value === c.rating) ? <span>{RATINGS.find(r => r.value === c.rating)!.emoji}</span> : <span className="text-white/20">○</span>}
-                              <span className="text-white/60">{c.name}</span>
-                              <span className="text-white/30">{DAY_LABELS[c.day]}</span>
-                              {c.loomLink && <a href={c.loomLink} target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:underline">🎥</a>}
-                            </div>
-                          ))}
-                        </div>
+                        )}
                       </div>
                     );
                   })}

@@ -283,6 +283,7 @@ var init_schema = __esm({
       welcomeVideo: tinyint("welcomeVideo").default(0).notNull(),
       sentToClient: varchar("sentToClient", { length: 10 }),
       subscription: tinyint("subscription").default(0).notNull(),
+      videoAlertSentAt: varchar("videoAlertSentAt", { length: 10 }),
       salesPerson: varchar("salesPerson", { length: 64 }),
       notes: text("notes"),
       cancelledAt: datetime("cancelledAt"),
@@ -4285,6 +4286,8 @@ var onboardingRouter = t.router({
 
 Please record and send their welcome video.`;
     await sendSlackDM(ONBOARDING_SLACK_CHANNEL, msg);
+    const today = getTodayMelbourne2();
+    await db2.update(onboardingClients).set({ videoAlertSentAt: today }).where(eq8(onboardingClients.id, input.id));
     return { ok: true };
   }),
   reactivate: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {

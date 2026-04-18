@@ -3602,6 +3602,8 @@ const onboardingRouter = t.router({
 
       const msg = `🎬 *Welcome video needed*\n\n*${client.clientName}*${client.coach ? ` → *${client.coach}*` : ""}\n\nPlease record and send their welcome video.`;
       await sendSlackDM(ONBOARDING_SLACK_CHANNEL, msg);
+      const today = getTodayMelbourne();
+      await db.update(onboardingClients).set({ videoAlertSentAt: today }).where(eq(onboardingClients.id, input.id));
       return { ok: true };
     }),
 

@@ -23,13 +23,13 @@ export default function Onboarding() {
   if (user && user.role !== "admin") { navigate("/"); return null; }
 
   const [search, setSearch] = useState("");
-  const [coachFilter, setCoachFilter] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
 
   const { data: clients, refetch, isLoading } = trpc.onboarding.list.useQuery(
-    { status: "onboarding", ...(coachFilter ? { coach: coachFilter } : {}) },
+    { status: "onboarding" },
   );
+  const { data: allCoaches } = trpc.coaches.list.useQuery();
 
   const importMutation = trpc.onboarding.importFromSheet.useMutation({
     onSuccess: (data) => {
@@ -49,18 +49,17 @@ export default function Onboarding() {
     onError: (e) => toast.error(e.message),
   });
 
+  const assignMutation = trpc.roster.assign.useMutation({
+    onSuccess: () => toast.success("Client assigned to roster"),
+    onError: (e) => toast.error(e.message),
+  });
+
   const filtered = useMemo(() => {
     if (!clients) return [];
     if (!search.trim()) return clients;
     const q = search.toLowerCase();
     return clients.filter(c => c.clientName.toLowerCase().includes(q) || (c.coach ?? "").toLowerCase().includes(q));
   }, [clients, search]);
-
-  const coachOptions = useMemo(() => {
-    if (!clients) return [];
-    const set = new Set(clients.map(c => c.coach).filter(Boolean) as string[]);
-    return [...set].sort();
-  }, [clients]);
 
 
   if (!user) return null;
@@ -92,24 +91,14 @@ export default function Onboarding() {
           </div>
         </div>
 
-        {/* Search + filter */}
-        <div className="flex gap-3">
-          <input
-            type="text"
-            placeholder="Search clients..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="flex-1 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/90 text-sm placeholder:text-white/30 focus:outline-none focus:border-violet-500/40"
-          />
-          <select
-            value={coachFilter}
-            onChange={e => setCoachFilter(e.target.value)}
-            className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm focus:outline-none"
-          >
-            <option value="">All coaches</option>
-            {coachOptions.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
+        {/* Search */}
+        <input
+          type="text"
+          placeholder="Search clients..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white/90 text-sm placeholder:text-white/30 focus:outline-none focus:border-violet-500/40"
+        />
 
         {/* Add client form */}
         {showAddForm && <AddClientForm onSubmit={(data) => createMutation.mutate(data)} onCancel={() => setShowAddForm(false)} isPending={createMutation.isPending} />}
@@ -130,6 +119,10 @@ export default function Onboarding() {
                 isExpanded={expandedId === client.id}
                 onToggle={() => setExpandedId(expandedId === client.id ? null : client.id)}
                 onUpdate={(field, value) => updateMutation.mutate({ id: client.id, [field]: value })}
+                coaches={allCoaches ?? []}
+                onAssignToRoster={(coachId, coachName, day) => assignMutation.mutate({
+                  coachId, coachName, clientName: client.clientName.replace(/\s*\(.*\)\s*$/, "").trim(), dayOfWeek: day,
+                })}
               />
             ))}
           </div>
@@ -180,11 +173,16 @@ function AddClientForm({ onSubmit, onCancel, isPending }: {
   );
 }
 
-function ClientRow({ client, isExpanded, onToggle, onUpdate }: {
+const DAY_OPTIONS = ["monday", "tuesday", "wednesday", "thursday", "friday"] as const;
+const DAY_LABELS: Record<string, string> = { monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu", friday: "Fri" };
+
+function ClientRow({ client, isExpanded, onToggle, onUpdate, coaches, onAssignToRoster }: {
   client: any;
   isExpanded: boolean;
   onToggle: () => void;
   onUpdate: (field: string, value: any) => void;
+  coaches: Array<{ id: number; name: string }>;
+  onAssignToRoster: (coachId: number, coachName: string, day: string) => void;
 }) {
   const checklistTotal = CHECKLIST_FIELDS.length;
   const checklistDone = CHECKLIST_FIELDS.filter(f => {
@@ -256,6 +254,35 @@ function ClientRow({ client, isExpanded, onToggle, onUpdate }: {
           </div>
 
           {/* Notes */}
+          {/* Coach + Day assignment */}
+          <div className="flex items-center gap-3 pt-1">
+            <span className="text-xs text-white/50">Assign to roster:</span>
+            <select
+              value={client.coach || ""}
+              onChange={e => { e.stopPropagation(); onUpdate("coach", e.target.value || null); }}
+              className="px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/70 text-xs focus:outline-none"
+            >
+              <option value="">Select coach</option>
+              {coaches.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+            </select>
+            {client.coach && (
+              <div className="flex gap-1">
+                {DAY_OPTIONS.map(day => {
+                  const coach = coaches.find(c => c.name === client.coach);
+                  return (
+                    <button
+                      key={day}
+                      onClick={e => { e.stopPropagation(); if (coach) onAssignToRoster(coach.id, coach.name, day); }}
+                      className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-white/50 text-[10px] font-medium hover:bg-violet-500/20 hover:text-violet-300 hover:border-violet-500/30 transition-colors"
+                    >
+                      {DAY_LABELS[day]}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {client.notes && (
             <p className="text-xs text-white/40 italic">{client.notes}</p>
           )}

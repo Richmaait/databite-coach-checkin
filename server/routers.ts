@@ -3591,7 +3591,8 @@ const onboardingRouter = t.router({
           });
           imported++;
         } catch (err: any) {
-          if (err.code === "ER_DUP_ENTRY") skipped++;
+          const msg = err?.message ?? "";
+          if (err.code === "ER_DUP_ENTRY" || msg.includes("Duplicate entry") || msg.includes("ER_DUP_ENTRY")) skipped++;
           else throw err;
         }
       }

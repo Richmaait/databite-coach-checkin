@@ -3530,7 +3530,7 @@ const onboardingRouter = t.router({
     .mutation(async ({ input }) => {
       const db = await requireDb();
       await db.update(onboardingClients)
-        .set({ status: "cancelled", cancelledAt: sql`NOW()` })
+        .set({ status: "cancelled" })
         .where(eq(onboardingClients.id, input.id));
       return { ok: true };
     }),
@@ -3587,7 +3587,7 @@ const onboardingRouter = t.router({
             sentToClient: row.sentToClient,
             subscription: row.subscription ? 1 : 0,
             notes: row.notes || null,
-            cancelledAt: status === "cancelled" ? sql`NOW()` : null,
+            cancelledAt: null,
           });
           imported++;
         } catch (err: any) {

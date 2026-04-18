@@ -4167,7 +4167,7 @@ var onboardingRouter = t.router({
   }),
   cancel: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    await db2.update(onboardingClients).set({ status: "cancelled", cancelledAt: sql`NOW()` }).where(eq7(onboardingClients.id, input.id));
+    await db2.update(onboardingClients).set({ status: "cancelled" }).where(eq7(onboardingClients.id, input.id));
     return { ok: true };
   }),
   reactivate: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
@@ -4213,7 +4213,7 @@ var onboardingRouter = t.router({
           sentToClient: row.sentToClient,
           subscription: row.subscription ? 1 : 0,
           notes: row.notes || null,
-          cancelledAt: status === "cancelled" ? sql`NOW()` : null
+          cancelledAt: null
         });
         imported++;
       } catch (err) {

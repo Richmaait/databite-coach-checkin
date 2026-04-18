@@ -17,11 +17,18 @@ import { ENV } from "./env";
 /** Day number to DayKey mapping (0=Sun, 1=Mon, ..., 6=Sat) */
 const DAY_NUM_TO_KEY: Record<number, DayKey> = { 1: "monday", 2: "tuesday", 3: "wednesday", 4: "thursday", 5: "friday" };
 
-function getLocalDayOfWeek(timezone: string): number {
+function getLocalTimeParts(timezone: string): { dow: number; hour: string; minute: number } {
   const now = new Date();
-  const day = new Intl.DateTimeFormat("en-AU", { timeZone: timezone, weekday: "short" }).format(now);
+  const parts = new Intl.DateTimeFormat("en-AU", {
+    timeZone: timezone, weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(now);
+  const dayStr = parts.find(p => p.type === "weekday")?.value ?? "";
   const map: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-  return map[day] ?? 0;
+  return {
+    dow: map[dayStr] ?? 0,
+    hour: parts.find(p => p.type === "hour")?.value ?? "",
+    minute: parseInt(parts.find(p => p.type === "minute")?.value ?? "-1"),
+  };
 }
 
 function getMonday(dateStr?: string): string {
@@ -48,12 +55,13 @@ export async function sendFridayAudit(): Promise<void> {
   for (const coach of allCoaches) {
     if (!coach.slackUserId) continue;
 
-    // Check if today is this coach's LAST workday of the week
+    // Check if it's 14:25-14:34 in the coach's timezone AND their last workday
     const timezone = coach.timezone ?? "Australia/Melbourne";
-    const todayDow = getLocalDayOfWeek(timezone);
+    const local = getLocalTimeParts(timezone);
     const workdays: number[] = Array.isArray(coach.workdays) ? coach.workdays as number[] : [1, 2, 3, 4, 5];
     const lastWorkday = Math.max(...workdays);
-    if (todayDow !== lastWorkday) continue; // not their last day — skip
+    if (local.dow !== lastWorkday) continue;
+    if (local.hour !== "14" || local.minute < 25 || local.minute >= 35) continue;
 
     // Dedup: use reminderIndex 20 for weekly audit
     const localDate = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date());
@@ -216,7 +224,7 @@ export async function checkMissedAudits(): Promise<void> {
     const [coach] = await db.select().from(coaches).where(eq(coaches.id, audit.coachId)).limit(1);
     if (!coach) continue;
     const timezone = coach.timezone ?? "Australia/Melbourne";
-    const todayDow = getLocalDayOfWeek(timezone);
+    const todayDow = getLocalTimeParts(timezone).dow;
     const workdays: number[] = Array.isArray(coach.workdays) ? coach.workdays as number[] : [1, 2, 3, 4, 5];
     const lastWorkday = Math.max(...workdays);
     if (todayDow !== lastWorkday) continue;

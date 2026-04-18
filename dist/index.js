@@ -291,11 +291,6 @@ async function getAllCoaches() {
   if (!db2) return [];
   return db2.select().from(coaches);
 }
-async function getClientCheckInsForWeek(coachId, weekStart) {
-  const db2 = await getDb();
-  if (!db2) return [];
-  return db2.select().from(clientCheckIns).where(and(eq(clientCheckIns.coachId, coachId), eq(clientCheckIns.weekStart, weekStart)));
-}
 async function getAllPerformanceRatings() {
   const db2 = await getDb();
   if (!db2) return [];
@@ -740,11 +735,22 @@ __export(slackFridayAudit_exports, {
   sendFridayAudit: () => sendFridayAudit
 });
 import { eq as eq5, and as and3, isNull as isNull2 } from "drizzle-orm";
-function getLocalDayOfWeek2(timezone) {
+function getLocalTimeParts(timezone) {
   const now = /* @__PURE__ */ new Date();
-  const day = new Intl.DateTimeFormat("en-AU", { timeZone: timezone, weekday: "short" }).format(now);
+  const parts = new Intl.DateTimeFormat("en-AU", {
+    timeZone: timezone,
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).formatToParts(now);
+  const dayStr = parts.find((p) => p.type === "weekday")?.value ?? "";
   const map = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-  return map[day] ?? 0;
+  return {
+    dow: map[dayStr] ?? 0,
+    hour: parts.find((p) => p.type === "hour")?.value ?? "",
+    minute: parseInt(parts.find((p) => p.type === "minute")?.value ?? "-1")
+  };
 }
 function getMonday(dateStr) {
   const d = dateStr ? /* @__PURE__ */ new Date(dateStr + "T00:00:00") : new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "Australia/Melbourne" }));
@@ -765,10 +771,11 @@ async function sendFridayAudit() {
   for (const coach of allCoaches) {
     if (!coach.slackUserId) continue;
     const timezone = coach.timezone ?? "Australia/Melbourne";
-    const todayDow = getLocalDayOfWeek2(timezone);
+    const local = getLocalTimeParts(timezone);
     const workdays = Array.isArray(coach.workdays) ? coach.workdays : [1, 2, 3, 4, 5];
     const lastWorkday = Math.max(...workdays);
-    if (todayDow !== lastWorkday) continue;
+    if (local.dow !== lastWorkday) continue;
+    if (local.hour !== "14" || local.minute < 25 || local.minute >= 35) continue;
     const localDate = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(/* @__PURE__ */ new Date());
     const claimed = await claimReminderSlot(coach.id, localDate, 20);
     if (!claimed) continue;
@@ -887,7 +894,7 @@ async function checkMissedAudits() {
     const [coach] = await db2.select().from(coaches).where(eq5(coaches.id, audit.coachId)).limit(1);
     if (!coach) continue;
     const timezone = coach.timezone ?? "Australia/Melbourne";
-    const todayDow = getLocalDayOfWeek2(timezone);
+    const todayDow = getLocalTimeParts(timezone).dow;
     const workdays = Array.isArray(coach.workdays) ? coach.workdays : [1, 2, 3, 4, 5];
     const lastWorkday = Math.max(...workdays);
     if (todayDow !== lastWorkday) continue;
@@ -4072,145 +4079,6 @@ async function serveStatic(app) {
 // server/_core/index.ts
 init_slackReminders();
 
-// server/slackFridaySummary.ts
-init_db();
-init_env();
-init_slackReminders();
-init_rosterUtils();
-var MANAGER_SLACK_ID2 = ENV.managerSlackId;
-var APP_URL3 = ENV.appUrl || "https://databitecoach.com";
-function getMondayLocal2(date2) {
-  const d = new Date(date2);
-  d.setHours(0, 0, 0, 0);
-  const dow = d.getDay();
-  const diff = dow === 0 ? -6 : 1 - dow;
-  d.setDate(d.getDate() + diff);
-  return d;
-}
-function toDateStr(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${dd}`;
-}
-function addDays3(d, n) {
-  const r = new Date(d);
-  r.setDate(r.getDate() + n);
-  return r;
-}
-function formatShortDate(dateStr) {
-  const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString("en-AU", { day: "numeric", month: "short" });
-}
-var DAY_OFFSET = {
-  monday: 0,
-  tuesday: 1,
-  wednesday: 2,
-  thursday: 3,
-  friday: 4
-};
-var DAY_LABEL = {
-  monday: "Mon",
-  tuesday: "Tue",
-  wednesday: "Wed",
-  thursday: "Thu",
-  friday: "Fri"
-};
-async function sendFridayWeeklySummary() {
-  if (!MANAGER_SLACK_ID2) {
-    console.warn("[Slack Friday Summary] MANAGER_SLACK_ID not set \u2014 skipping");
-    return;
-  }
-  const now = /* @__PURE__ */ new Date();
-  const epochDate = /* @__PURE__ */ new Date(CLIENT_CHECKINS_EPOCH + "T00:00:00");
-  const weekStart = getMondayLocal2(now);
-  if (weekStart < epochDate) {
-    console.log("[Slack Friday Summary] Before tracking epoch \u2014 skipping");
-    return;
-  }
-  const weekStartStr = toDateStr(weekStart);
-  const fridayDate = addDays3(weekStart, 4);
-  const weekLabel = `${formatShortDate(weekStartStr)} \u2013 ${formatShortDate(toDateStr(fridayDate))}`;
-  const allCoaches = await getAllCoaches();
-  const activeCoaches = allCoaches.filter((c) => c.isActive);
-  if (activeCoaches.length === 0) {
-    console.log("[Slack Friday Summary] No active coaches \u2014 skipping");
-    return;
-  }
-  let totalScheduled = 0;
-  let totalCompleted = 0;
-  const coachSections = [];
-  for (const coach of activeCoaches) {
-    const roster = await fetchRosterForCoach(coach.name);
-    const completions = await getClientCheckInsForWeek(coach.id, weekStartStr);
-    const completedSet = new Set(completions.map((c) => `${c.clientName}|${c.dayOfWeek}`));
-    let coachScheduled = 0;
-    let coachCompleted = 0;
-    const pendingByDay = {};
-    const completedByDay = {};
-    for (const day of DAYS2) {
-      const clients = roster[day];
-      if (clients.length === 0) continue;
-      const dayDate = addDays3(weekStart, DAY_OFFSET[day]);
-      const cutoff = new Date(dayDate);
-      cutoff.setHours(17, 0, 0, 0);
-      const dayHasPassed = now >= cutoff;
-      for (const client of clients) {
-        const isDone = completedSet.has(`${client}|${day}`);
-        coachScheduled++;
-        if (isDone) {
-          coachCompleted++;
-          if (!completedByDay[day]) completedByDay[day] = [];
-          completedByDay[day].push(client);
-        } else if (dayHasPassed) {
-          if (!pendingByDay[day]) pendingByDay[day] = [];
-          pendingByDay[day].push(client);
-        }
-      }
-    }
-    totalScheduled += coachScheduled;
-    totalCompleted += coachCompleted;
-    const coachPct = coachScheduled > 0 ? Math.round(coachCompleted / coachScheduled * 100) : 0;
-    const engEmoji = coachPct >= 90 ? "\u{1F7E2}" : coachPct >= 75 ? "\u{1F7E1}" : "\u{1F534}";
-    let section = `*${coach.name}* \u2014 ${engEmoji} ${coachCompleted}/${coachScheduled} (${coachPct}%)
-`;
-    const completedDays = DAYS2.filter((d) => (completedByDay[d]?.length ?? 0) > 0);
-    if (completedDays.length > 0) {
-      for (const day of completedDays) {
-        const clients = completedByDay[day];
-        const dayDate = addDays3(weekStart, DAY_OFFSET[day]);
-        const dateLabel = formatShortDate(toDateStr(dayDate));
-        section += `  \u2705 ${DAY_LABEL[day]} ${dateLabel}: ${clients.join(", ")}
-`;
-      }
-    }
-    const pendingDays = DAYS2.filter((d) => (pendingByDay[d]?.length ?? 0) > 0);
-    if (pendingDays.length > 0) {
-      for (const day of pendingDays) {
-        const clients = pendingByDay[day];
-        const dayDate = addDays3(weekStart, DAY_OFFSET[day]);
-        const dateLabel = formatShortDate(toDateStr(dayDate));
-        section += `  \u274C ${DAY_LABEL[day]} ${dateLabel}: ${clients.join(", ")}
-`;
-      }
-    }
-    coachSections.push(section);
-  }
-  const overallPct = totalScheduled > 0 ? Math.round(totalCompleted / totalScheduled * 100) : 0;
-  const overallEmoji = overallPct >= 90 ? "\u{1F7E2}" : overallPct >= 75 ? "\u{1F7E1}" : "\u{1F534}";
-  let msg = `\u{1F4CB} *Weekly Client Check-In Summary \u2014 ${weekLabel}*
-`;
-  msg += `${overallEmoji} Overall: *${totalCompleted}/${totalScheduled} completed (${overallPct}%)*
-
-`;
-  for (const section of coachSections) {
-    msg += section + "\n";
-  }
-  msg += `\u{1F449} <${APP_URL3}/client-checkins|View Client Check-Ins>`;
-  await sendSlackDM(MANAGER_SLACK_ID2, msg);
-  console.log(`[Slack Friday Summary] Sent \u2014 ${totalCompleted}/${totalScheduled} (${overallPct}%)`);
-}
-
 // server/typeformWebhook.ts
 init_db();
 init_env();
@@ -5151,11 +5019,8 @@ async function startServer() {
     if (weekday === "Mon" && hour === "08" && minuteInt < 5) {
       sendMondayDigest().catch((err) => console.error("[Monday Digest] error:", err));
     }
-    if (["Mon", "Tue", "Wed", "Thu", "Fri"].includes(weekday ?? "") && hour === "14" && minuteInt >= 25 && minuteInt < 35) {
+    if (["Mon", "Tue", "Wed", "Thu", "Fri"].includes(weekday ?? "") && parseInt(hour ?? "0") >= 14 && parseInt(hour ?? "0") <= 17) {
       sendFridayAudit().catch((err) => console.error("[Weekly Audit] error:", err));
-    }
-    if (weekday === "Fri" && hour === "20" && minuteInt < 5) {
-      sendFridayWeeklySummary().catch((err) => console.error("[Slack Friday Summary] error:", err));
     }
     if (["Mon", "Tue", "Wed", "Thu", "Fri"].includes(weekday ?? "") && hour === "20" && minuteInt < 5) {
       checkMissedAudits().catch((err) => console.error("[Weekly Audit] missed check error:", err));

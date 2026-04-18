@@ -10,7 +10,6 @@ import { serveStatic, setupVite } from "./vite";
 import { runReminderTick, runSalesReminderTick, sendFortnightlyPerformanceReviewReminder, sendFortnightlySweepReportReminder } from "../slackReminders";
 import { sendWeeklySummary } from "../slackWeeklySummary";
 import { sendDisengagementAlert } from "../slackDisengagementAlert";
-import { sendFridayWeeklySummary } from "../slackFridaySummary";
 import { registerTypeformWebhook } from "../typeformWebhook";
 import { runTypeformBackfill } from "../typeformBackfill";
 import { registerWeeklySummaryPdfRoute } from "../weeklySummaryPdfRoute";
@@ -116,14 +115,9 @@ async function startServer() {
       sendMondayDigest().catch(err => console.error("[Monday Digest] error:", err));
     }
 
-    // Weekday 14:30 AEST — quality audit (fires on each coach's last workday)
-    if (["Mon","Tue","Wed","Thu","Fri"].includes(weekday ?? "") && hour === "14" && minuteInt >= 25 && minuteInt < 35) {
+    // Weekday afternoon — quality audit (each coach checked at 14:30 in THEIR timezone)
+    if (["Mon","Tue","Wed","Thu","Fri"].includes(weekday ?? "") && parseInt(hour ?? "0") >= 14 && parseInt(hour ?? "0") <= 17) {
       sendFridayAudit().catch(err => console.error("[Weekly Audit] error:", err));
-    }
-
-    // Friday 20:00 AEST — current-week client check-in summary
-    if (weekday === "Fri" && hour === "20" && minuteInt < 5) {
-      sendFridayWeeklySummary().catch(err => console.error("[Slack Friday Summary] error:", err));
     }
 
     // Weekday 20:00 AEST — missed audit check (fires on each coach's last workday)

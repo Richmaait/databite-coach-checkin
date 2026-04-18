@@ -21,17 +21,20 @@ export default function Milestones() {
   const [coachFilter, setCoachFilter] = useState("");
 
   const { data: alerts, refetch: refetchAlerts } = trpc.milestones.getAlerts.useQuery();
-  const { data: allClients } = trpc.milestones.getAll.useQuery();
+  const { data: allClients, refetch: refetchAll } = trpc.milestones.getAll.useQuery();
+
+  const refetch = () => { refetchAlerts(); refetchAll(); };
 
   const contactMutation = trpc.milestones.markContacted.useMutation({
-    onSuccess: () => { refetchAlerts(); toast.success("Contacted"); },
+    onSuccess: () => { refetch(); toast.success("Updated"); },
     onError: (e) => toast.error(e.message),
   });
   const ratingMutation = trpc.milestones.setRating.useMutation({
-    onSuccess: () => refetchAlerts(),
+    onSuccess: () => refetch(),
     onError: (e) => toast.error(e.message),
   });
   const notesMutation = trpc.milestones.setNotes.useMutation({
+    onSuccess: () => refetch(),
     onError: (e) => toast.error(e.message),
   });
 
@@ -83,20 +86,18 @@ export default function Milestones() {
                           <span className="text-sm text-white/80 font-medium min-w-[140px]">{c.clientName}</span>
                           <span className="text-xs text-white/40 min-w-[50px]">{c.coach}</span>
 
-                          {c.contactedAt ? (
-                            <button
-                              onClick={() => { if (confirm(`Undo contacted for ${c.clientName}?`)) contactMutation.mutate({ id: c.id, week: alert.milestone.week, undo: true }); }}
-                              className="text-[10px] font-semibold text-emerald-300 bg-emerald-400/15 border border-emerald-400/25 px-2 py-0.5 rounded-full whitespace-nowrap hover:bg-red-400/15 hover:text-red-300 hover:border-red-400/25 transition-colors">
-                              ✓ {c.contactedAt.split("-").reverse().join("/")}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => contactMutation.mutate({ id: c.id, week: alert.milestone.week })}
-                              disabled={contactMutation.isPending}
-                              className="text-[10px] font-semibold text-white/50 bg-white/10 border border-white/20 px-2 py-0.5 rounded-full hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/30 transition-colors whitespace-nowrap">
-                              Contacted
-                            </button>
-                          )}
+                          <button
+                            onClick={() => c.contactedAt
+                              ? (confirm(`Undo contacted for ${c.clientName}?`) && contactMutation.mutate({ id: c.id, week: alert.milestone.week, undo: true }))
+                              : contactMutation.mutate({ id: c.id, week: alert.milestone.week })
+                            }
+                            disabled={contactMutation.isPending}
+                            className={`text-[9px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap w-[75px] text-center transition-colors ${c.contactedAt
+                              ? "text-emerald-300 bg-emerald-400/15 border border-emerald-400/25 hover:bg-red-400/15 hover:text-red-300 hover:border-red-400/25"
+                              : "text-white/50 bg-white/10 border border-white/20 hover:bg-emerald-500/20 hover:text-emerald-300 hover:border-emerald-500/30"
+                            }`}>
+                            {c.contactedAt ? `✓ ${c.contactedAt.slice(8)}/${c.contactedAt.slice(5,7)}` : "Contacted"}
+                          </button>
 
                           <div className="flex rounded-lg overflow-hidden border border-white/10">
                             {([["green", "🟢", "On Track"], ["yellow", "🟡", "Neutral"], ["red", "🔴", "Off Track"]] as const).map(([val, emoji, label]) => (
@@ -182,12 +183,12 @@ export default function Milestones() {
                         const past = (c.weekNumber ?? 0) >= h.week;
                         const mColors = MILESTONE_COLORS[h.week];
                         return (
-                          <td key={h.week} className="text-center px-2 py-2">
+                          <td key={h.week} className="text-center px-2 py-2 max-w-[120px]">
                             {h.contactedAt ? (
                               <div className="flex flex-col items-center gap-0.5">
                                 <span className="text-[10px]">{ratingEmoji ?? "✓"}</span>
                                 {h.notes && (
-                                  <span className={`text-[8px] max-w-[80px] truncate ${mColors?.text ?? "text-white/40"}`}>{h.notes}</span>
+                                  <span className={`text-[8px] leading-tight text-left w-full ${mColors?.text ?? "text-white/40"}`}>{h.notes}</span>
                                 )}
                               </div>
                             ) : past ? (

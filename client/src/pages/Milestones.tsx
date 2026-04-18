@@ -84,9 +84,11 @@ export default function Milestones() {
                           <span className="text-xs text-white/40 min-w-[50px]">{c.coach}</span>
 
                           {c.contactedAt ? (
-                            <span className="text-[10px] font-semibold text-emerald-300 bg-emerald-400/15 border border-emerald-400/25 px-2 py-0.5 rounded-full whitespace-nowrap">
+                            <button
+                              onClick={() => { if (confirm(`Undo contacted for ${c.clientName}?`)) contactMutation.mutate({ id: c.id, week: alert.milestone.week, undo: true }); }}
+                              className="text-[10px] font-semibold text-emerald-300 bg-emerald-400/15 border border-emerald-400/25 px-2 py-0.5 rounded-full whitespace-nowrap hover:bg-red-400/15 hover:text-red-300 hover:border-red-400/25 transition-colors">
                               ✓ {c.contactedAt.split("-").reverse().join("/")}
-                            </span>
+                            </button>
                           ) : (
                             <button
                               onClick={() => contactMutation.mutate({ id: c.id, week: alert.milestone.week })}

@@ -4413,11 +4413,18 @@ var milestonesRouter = t.router({
     }
     return MILESTONES.map((m) => ({ ...alerts[m.week] })).filter((a) => a.clients.length > 0);
   }),
-  markContacted: adminProcedure.input(z.object({ id: z.number(), week: z.number() })).mutation(async ({ input }) => {
+  markContacted: adminProcedure.input(z.object({ id: z.number(), week: z.number(), undo: z.boolean().optional() })).mutation(async ({ input }) => {
     const db2 = await requireDb();
-    const field = `milestone${input.week}ContactedAt`;
-    const today = getTodayMelbourne2();
-    await db2.update(onboardingClients).set({ [field]: today }).where(eq8(onboardingClients.id, input.id));
+    if (input.undo) {
+      const atField = `milestone${input.week}ContactedAt`;
+      const ratingField = `milestone${input.week}Rating`;
+      const notesField = `milestone${input.week}Notes`;
+      await db2.update(onboardingClients).set({ [atField]: null, [ratingField]: null, [notesField]: null }).where(eq8(onboardingClients.id, input.id));
+    } else {
+      const field = `milestone${input.week}ContactedAt`;
+      const today = getTodayMelbourne2();
+      await db2.update(onboardingClients).set({ [field]: today }).where(eq8(onboardingClients.id, input.id));
+    }
     return { ok: true };
   }),
   setRating: adminProcedure.input(z.object({ id: z.number(), week: z.number(), rating: z.enum(["green", "yellow", "red"]) })).mutation(async ({ input }) => {

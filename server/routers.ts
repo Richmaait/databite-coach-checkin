@@ -3742,12 +3742,19 @@ const milestonesRouter = t.router({
   }),
 
   markContacted: adminProcedure
-    .input(z.object({ id: z.number(), week: z.number() }))
+    .input(z.object({ id: z.number(), week: z.number(), undo: z.boolean().optional() }))
     .mutation(async ({ input }) => {
       const db = await requireDb();
-      const field = `milestone${input.week}ContactedAt` as any;
-      const today = getTodayMelbourne();
-      await db.update(onboardingClients).set({ [field]: today }).where(eq(onboardingClients.id, input.id));
+      if (input.undo) {
+        const atField = `milestone${input.week}ContactedAt` as any;
+        const ratingField = `milestone${input.week}Rating` as any;
+        const notesField = `milestone${input.week}Notes` as any;
+        await db.update(onboardingClients).set({ [atField]: null, [ratingField]: null, [notesField]: null }).where(eq(onboardingClients.id, input.id));
+      } else {
+        const field = `milestone${input.week}ContactedAt` as any;
+        const today = getTodayMelbourne();
+        await db.update(onboardingClients).set({ [field]: today }).where(eq(onboardingClients.id, input.id));
+      }
       return { ok: true };
     }),
 

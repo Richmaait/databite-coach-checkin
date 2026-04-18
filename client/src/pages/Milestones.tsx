@@ -7,7 +7,7 @@ import { useLocation } from "wouter";
 
 const MILESTONE_COLORS: Record<number, { bg: string; border: string; text: string }> = {
   2: { bg: "bg-blue-500/15", border: "border-blue-500/25", text: "text-blue-300" },
-  4: { bg: "bg-emerald-500/15", border: "border-emerald-500/25", text: "text-emerald-300" },
+  4: { bg: "bg-rose-500/15", border: "border-rose-500/25", text: "text-rose-300" },
   8: { bg: "bg-violet-500/15", border: "border-violet-500/25", text: "text-violet-300" },
   12: { bg: "bg-cyan-500/15", border: "border-cyan-500/25", text: "text-cyan-300" },
 };

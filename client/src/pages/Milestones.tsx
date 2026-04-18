@@ -7,7 +7,7 @@ import { useLocation } from "wouter";
 
 const MILESTONE_COLORS: Record<number, { bg: string; border: string; text: string }> = {
   2: { bg: "bg-blue-500/15", border: "border-blue-500/25", text: "text-blue-300" },
-  4: { bg: "bg-rose-500/15", border: "border-rose-500/25", text: "text-rose-300" },
+  4: { bg: "bg-pink-500/15", border: "border-pink-500/25", text: "text-pink-300" },
   8: { bg: "bg-violet-500/15", border: "border-violet-500/25", text: "text-violet-300" },
   12: { bg: "bg-cyan-500/15", border: "border-cyan-500/25", text: "text-cyan-300" },
 };
@@ -150,7 +150,7 @@ export default function Milestones() {
                   <th className="text-left px-2 py-2 font-medium text-white/50">Started</th>
                   <th className="text-center px-2 py-2 font-medium text-white/50">Week</th>
                   <th className="text-center px-2 py-2 font-medium text-blue-300/60">Wk 2</th>
-                  <th className="text-center px-2 py-2 font-medium text-rose-300/60">Wk 4</th>
+                  <th className="text-center px-2 py-2 font-medium text-pink-300/60">Wk 4</th>
                   <th className="text-center px-2 py-2 font-medium text-violet-300/60">Wk 8</th>
                   <th className="text-center px-2 py-2 font-medium text-cyan-300/60">Wk 12</th>
                   <th className="text-left px-2 py-2 font-medium text-white/50">Next</th>

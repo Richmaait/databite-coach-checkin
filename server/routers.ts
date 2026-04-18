@@ -3500,6 +3500,8 @@ const onboardingRouter = t.router({
       welcomeVideo: z.boolean().optional(),
       sentToClient: z.string().nullable().optional(),
       subscription: z.boolean().optional(),
+      assignedDay: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday"]).nullable().optional(),
+      paymentType: z.enum(["subscription", "upfront"]).nullable().optional(),
       salesPerson: z.string().nullable().optional(),
       notes: z.string().nullable().optional(),
       status: z.enum(["onboarding", "active", "cancelled"]).optional(),
@@ -3521,6 +3523,8 @@ const onboardingRouter = t.router({
       if (fields.welcomeVideo !== undefined) update.welcomeVideo = fields.welcomeVideo ? 1 : 0;
       if (fields.sentToClient !== undefined) update.sentToClient = fields.sentToClient;
       if (fields.subscription !== undefined) update.subscription = fields.subscription ? 1 : 0;
+      if (fields.assignedDay !== undefined) update.assignedDay = fields.assignedDay;
+      if (fields.paymentType !== undefined) update.paymentType = fields.paymentType;
       if (fields.salesPerson !== undefined) update.salesPerson = fields.salesPerson;
       if (fields.notes !== undefined) update.notes = fields.notes;
       if (fields.status !== undefined) update.status = fields.status;
@@ -3665,6 +3669,68 @@ const onboardingRouter = t.router({
 
 // ─── Roster Router ─────────────────────────────────────────────────────────────
 
+// ─── Milestones Router ─────────────────────────────────────────────────────────
+
+const MILESTONES = [
+  { week: 2, label: "Check-in", description: "How are they settling in?" },
+  { week: 4, label: "First Milestone", description: "Celebrate their first month" },
+  { week: 8, label: "On-Track Check", description: "Are they on track?" },
+  { week: 12, label: "Progress Review", description: "End of minimum commitment" },
+];
+
+const milestonesRouter = t.router({
+  getAll: adminProcedure.query(async () => {
+    const db = await requireDb();
+    const clients = await db.select().from(onboardingClients)
+      .where(and(eq(onboardingClients.status, "active"), isNull(onboardingClients.cancelledAt)));
+
+    const todayMon = getMonday(getTodayMelbourne());
+    return clients.map(c => {
+      let weekNumber: number | null = null;
+      let currentMilestone: typeof MILESTONES[number] | null = null;
+      if (c.sentToClient) {
+        const startMon = getMonday(c.sentToClient);
+        const diff = new Date(todayMon + "T00:00:00").getTime() - new Date(startMon + "T00:00:00").getTime();
+        weekNumber = Math.floor(diff / (7 * 86400000)) + 1;
+        currentMilestone = MILESTONES.find(m => m.week === weekNumber) ?? null;
+      }
+      const nextMilestone = weekNumber ? MILESTONES.find(m => m.week > weekNumber!) ?? null : MILESTONES[0];
+      return {
+        id: c.id,
+        clientName: c.clientName,
+        coach: c.coach,
+        sentToClient: c.sentToClient,
+        weekNumber,
+        currentMilestone,
+        nextMilestone,
+      };
+    }).filter(c => c.weekNumber != null && c.weekNumber > 0 && c.weekNumber <= 14);
+  }),
+
+  getAlerts: adminProcedure.query(async () => {
+    const db = await requireDb();
+    const clients = await db.select().from(onboardingClients)
+      .where(and(eq(onboardingClients.status, "active"), isNull(onboardingClients.cancelledAt)));
+
+    const todayMon = getMonday(getTodayMelbourne());
+    const alerts: Record<number, { milestone: typeof MILESTONES[number]; clients: Array<{ id: number; clientName: string; coach: string | null; sentToClient: string | null; weekNumber: number }> }> = {};
+
+    for (const m of MILESTONES) alerts[m.week] = { milestone: m, clients: [] };
+
+    for (const c of clients) {
+      if (!c.sentToClient) continue;
+      const startMon = getMonday(c.sentToClient);
+      const diff = new Date(todayMon + "T00:00:00").getTime() - new Date(startMon + "T00:00:00").getTime();
+      const weekNumber = Math.floor(diff / (7 * 86400000)) + 1;
+      if (alerts[weekNumber]) {
+        alerts[weekNumber].clients.push({ id: c.id, clientName: c.clientName, coach: c.coach, sentToClient: c.sentToClient, weekNumber });
+      }
+    }
+
+    return MILESTONES.map(m => ({ ...alerts[m.week] })).filter(a => a.clients.length > 0);
+  }),
+});
+
 const rosterRouter = t.router({
   list: adminProcedure
     .input(z.object({ coachId: z.number().optional() }).optional())
@@ -3757,6 +3823,7 @@ export const appRouter = t.router({
   audits: auditsRouter,
   onboarding: onboardingRouter,
   roster: rosterRouter,
+  milestones: milestonesRouter,
 });
 
 export type AppRouter = typeof appRouter;

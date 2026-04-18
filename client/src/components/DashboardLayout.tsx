@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getLoginUrl } from "@/const";
-import { LayoutDashboard, LogOut, Users, ClipboardCheck, BarChart3, ListChecks, TrendingUp, Activity, FileBarChart2, DollarSign, ClipboardList, UserPlus } from "lucide-react";
+import { LayoutDashboard, LogOut, Users, ClipboardCheck, BarChart3, ListChecks, TrendingUp, Activity, FileBarChart2, DollarSign, ClipboardList, UserPlus, Flag } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import DashboardLayoutSkeleton from './DashboardLayoutSkeleton';
@@ -24,6 +24,7 @@ const allMenuItems = [
   { icon: Users, label: "Team", path: "/team", adminOnly: true },
   { icon: ClipboardList, label: "Audits", path: "/audit", adminOnly: false },
   { icon: UserPlus, label: "Onboarding", path: "/onboarding", adminOnly: true },
+  { icon: Flag, label: "Milestones", path: "/milestones", adminOnly: true },
   { icon: DollarSign, label: "Sales", path: "/sales", adminOnly: true, roles: ["admin", "sales"] },
 ];
 

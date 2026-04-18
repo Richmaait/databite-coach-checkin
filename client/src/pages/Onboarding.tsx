@@ -180,10 +180,9 @@ function OnboardingRow({ client, coaches, tab, onUpdate, onAlertVideo, onFinalis
   onAlertVideo: () => void;
   onFinalise: (coachId: number, coachName: string, day: string, paymentType: "subscription" | "upfront", upfrontWeeks?: number) => void;
 }) {
-  const [selectedDay, setSelectedDay] = useState("");
-  const [paymentType, setPaymentType] = useState<"subscription" | "upfront">("subscription");
-  const [upfrontWeeks, setUpfrontWeeks] = useState(14);
   const videoSent = !!client.videoAlertSentAt;
+  const selectedDay = client.assignedDay || "";
+  const paymentType = client.paymentType || "subscription";
 
   const coach = coaches.find(c => c.name === client.coach);
   const canFinalise = client.coach && selectedDay && coach;
@@ -315,7 +314,7 @@ function OnboardingRow({ client, coaches, tab, onUpdate, onAlertVideo, onFinalis
       {/* Day — onboarding only */}
       {!isCompleted && (
         <td className="px-2 py-2">
-          <select value={selectedDay} onChange={e => setSelectedDay(e.target.value)}
+          <select value={selectedDay} onChange={e => onUpdate("assignedDay", e.target.value || null)}
             className="w-full px-1.5 py-1 rounded bg-white/5 border border-white/10 text-white/70 text-[11px] focus:outline-none">
             <option value="">—</option>
             {DAY_OPTIONS.map(d => <option key={d} value={d}>{DAY_LABELS[d]}</option>)}
@@ -326,12 +325,12 @@ function OnboardingRow({ client, coaches, tab, onUpdate, onAlertVideo, onFinalis
       {/* Payment type — onboarding only */}
       {!isCompleted && (
         <td className="text-center px-2 py-2">
-          <button onClick={() => setPaymentType(p => p === "subscription" ? "upfront" : "subscription")}
+          <button onClick={() => onUpdate("paymentType", paymentType === "subscription" ? "upfront" : "subscription")}
             className={`px-2 py-1 rounded text-[9px] font-bold transition-colors whitespace-nowrap ${paymentType === "upfront"
               ? "bg-cyan-500/20 border border-cyan-500/30 text-cyan-300"
               : "bg-violet-500/15 border border-violet-500/25 text-violet-300"
             }`}>
-            {paymentType === "upfront" ? `Upfront ${upfrontWeeks}w` : "Sub"}
+            {paymentType === "upfront" ? "Upfront" : "Sub"}
           </button>
         </td>
       )}
@@ -371,7 +370,7 @@ function OnboardingRow({ client, coaches, tab, onUpdate, onAlertVideo, onFinalis
       {!isCompleted && (
         <td className="px-2 py-2">
           <button disabled={!canFinalise}
-            onClick={() => { if (canFinalise) onFinalise(coach!.id, coach!.name, selectedDay, paymentType, paymentType === "upfront" ? upfrontWeeks : undefined); }}
+            onClick={() => { if (canFinalise) onFinalise(coach!.id, coach!.name, selectedDay, paymentType as "subscription" | "upfront", paymentType === "upfront" ? 14 : undefined); }}
             className="px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[9px] font-semibold hover:bg-emerald-500/20 transition-colors disabled:opacity-30 whitespace-nowrap">
             Finalise
           </button>

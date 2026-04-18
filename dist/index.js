@@ -284,6 +284,8 @@ var init_schema = __esm({
       sentToClient: varchar("sentToClient", { length: 10 }),
       subscription: tinyint("subscription").default(0).notNull(),
       videoAlertSentAt: varchar("videoAlertSentAt", { length: 10 }),
+      assignedDay: mysqlEnum("assignedDay", ["monday", "tuesday", "wednesday", "thursday", "friday"]),
+      paymentType: mysqlEnum("paymentType", ["subscription", "upfront"]).default("subscription"),
       salesPerson: varchar("salesPerson", { length: 64 }),
       notes: text("notes"),
       cancelledAt: datetime("cancelledAt"),
@@ -4199,6 +4201,8 @@ var onboardingRouter = t.router({
     welcomeVideo: z.boolean().optional(),
     sentToClient: z.string().nullable().optional(),
     subscription: z.boolean().optional(),
+    assignedDay: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday"]).nullable().optional(),
+    paymentType: z.enum(["subscription", "upfront"]).nullable().optional(),
     salesPerson: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
     status: z.enum(["onboarding", "active", "cancelled"]).optional()
@@ -4219,6 +4223,8 @@ var onboardingRouter = t.router({
     if (fields.welcomeVideo !== void 0) update.welcomeVideo = fields.welcomeVideo ? 1 : 0;
     if (fields.sentToClient !== void 0) update.sentToClient = fields.sentToClient;
     if (fields.subscription !== void 0) update.subscription = fields.subscription ? 1 : 0;
+    if (fields.assignedDay !== void 0) update.assignedDay = fields.assignedDay;
+    if (fields.paymentType !== void 0) update.paymentType = fields.paymentType;
     if (fields.salesPerson !== void 0) update.salesPerson = fields.salesPerson;
     if (fields.notes !== void 0) update.notes = fields.notes;
     if (fields.status !== void 0) update.status = fields.status;
@@ -4335,6 +4341,56 @@ Please record and send their welcome video.`;
     return { imported, skipped, counts };
   })
 });
+var MILESTONES = [
+  { week: 2, label: "Check-in", description: "How are they settling in?" },
+  { week: 4, label: "First Milestone", description: "Celebrate their first month" },
+  { week: 8, label: "On-Track Check", description: "Are they on track?" },
+  { week: 12, label: "Progress Review", description: "End of minimum commitment" }
+];
+var milestonesRouter = t.router({
+  getAll: adminProcedure.query(async () => {
+    const db2 = await requireDb();
+    const clients = await db2.select().from(onboardingClients).where(and6(eq8(onboardingClients.status, "active"), isNull4(onboardingClients.cancelledAt)));
+    const todayMon = getMonday2(getTodayMelbourne2());
+    return clients.map((c) => {
+      let weekNumber = null;
+      let currentMilestone = null;
+      if (c.sentToClient) {
+        const startMon = getMonday2(c.sentToClient);
+        const diff = (/* @__PURE__ */ new Date(todayMon + "T00:00:00")).getTime() - (/* @__PURE__ */ new Date(startMon + "T00:00:00")).getTime();
+        weekNumber = Math.floor(diff / (7 * 864e5)) + 1;
+        currentMilestone = MILESTONES.find((m) => m.week === weekNumber) ?? null;
+      }
+      const nextMilestone = weekNumber ? MILESTONES.find((m) => m.week > weekNumber) ?? null : MILESTONES[0];
+      return {
+        id: c.id,
+        clientName: c.clientName,
+        coach: c.coach,
+        sentToClient: c.sentToClient,
+        weekNumber,
+        currentMilestone,
+        nextMilestone
+      };
+    }).filter((c) => c.weekNumber != null && c.weekNumber > 0 && c.weekNumber <= 14);
+  }),
+  getAlerts: adminProcedure.query(async () => {
+    const db2 = await requireDb();
+    const clients = await db2.select().from(onboardingClients).where(and6(eq8(onboardingClients.status, "active"), isNull4(onboardingClients.cancelledAt)));
+    const todayMon = getMonday2(getTodayMelbourne2());
+    const alerts = {};
+    for (const m of MILESTONES) alerts[m.week] = { milestone: m, clients: [] };
+    for (const c of clients) {
+      if (!c.sentToClient) continue;
+      const startMon = getMonday2(c.sentToClient);
+      const diff = (/* @__PURE__ */ new Date(todayMon + "T00:00:00")).getTime() - (/* @__PURE__ */ new Date(startMon + "T00:00:00")).getTime();
+      const weekNumber = Math.floor(diff / (7 * 864e5)) + 1;
+      if (alerts[weekNumber]) {
+        alerts[weekNumber].clients.push({ id: c.id, clientName: c.clientName, coach: c.coach, sentToClient: c.sentToClient, weekNumber });
+      }
+    }
+    return MILESTONES.map((m) => ({ ...alerts[m.week] })).filter((a) => a.clients.length > 0);
+  })
+});
 var rosterRouter = t.router({
   list: adminProcedure.input(z.object({ coachId: z.number().optional() }).optional()).query(async ({ input }) => {
     const db2 = await requireDb();
@@ -4404,7 +4460,8 @@ var appRouter = t.router({
   sales: salesRouter,
   audits: auditsRouter,
   onboarding: onboardingRouter,
-  roster: rosterRouter
+  roster: rosterRouter,
+  milestones: milestonesRouter
 });
 
 // server/_core/context.ts

@@ -17,21 +17,18 @@ const CHECKLIST_FIELDS = [
   { key: "subscription", label: "Subscription" },
 ] as const;
 
-type Tab = "onboarding" | "active" | "cancelled";
-
 export default function Onboarding() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   if (user && user.role !== "admin") { navigate("/"); return null; }
 
-  const [tab, setTab] = useState<Tab>("onboarding");
   const [search, setSearch] = useState("");
   const [coachFilter, setCoachFilter] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
 
   const { data: clients, refetch, isLoading } = trpc.onboarding.list.useQuery(
-    { status: tab, ...(coachFilter ? { coach: coachFilter } : {}) },
+    { status: "onboarding", ...(coachFilter ? { coach: coachFilter } : {}) },
   );
 
   const importMutation = trpc.onboarding.importFromSheet.useMutation({
@@ -44,16 +41,6 @@ export default function Onboarding() {
 
   const updateMutation = trpc.onboarding.update.useMutation({
     onSuccess: () => refetch(),
-    onError: (e) => toast.error(e.message),
-  });
-
-  const cancelMutation = trpc.onboarding.cancel.useMutation({
-    onSuccess: () => { refetch(); toast.success("Client marked as cancelled"); },
-    onError: (e) => toast.error(e.message),
-  });
-
-  const reactivateMutation = trpc.onboarding.reactivate.useMutation({
-    onSuccess: () => { refetch(); toast.success("Client reactivated"); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -75,11 +62,6 @@ export default function Onboarding() {
     return [...set].sort();
   }, [clients]);
 
-  const TABS: { key: Tab; label: string; count: number | undefined }[] = [
-    { key: "onboarding", label: "In Progress", count: undefined },
-    { key: "active", label: "Active", count: undefined },
-    { key: "cancelled", label: "Cancelled", count: undefined },
-  ];
 
   if (!user) return null;
 
@@ -108,19 +90,6 @@ export default function Onboarding() {
               </button>
             )}
           </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-1 bg-white/5 rounded-xl p-1">
-          {TABS.map(t => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t.key ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"}`}
-            >
-              {t.label}
-            </button>
-          ))}
         </div>
 
         {/* Search + filter */}
@@ -161,9 +130,6 @@ export default function Onboarding() {
                 isExpanded={expandedId === client.id}
                 onToggle={() => setExpandedId(expandedId === client.id ? null : client.id)}
                 onUpdate={(field, value) => updateMutation.mutate({ id: client.id, [field]: value })}
-                onCancel={() => { if (confirm(`Cancel ${client.clientName}?`)) cancelMutation.mutate({ id: client.id }); }}
-                onReactivate={() => reactivateMutation.mutate({ id: client.id })}
-                tab={tab}
               />
             ))}
           </div>
@@ -214,14 +180,11 @@ function AddClientForm({ onSubmit, onCancel, isPending }: {
   );
 }
 
-function ClientRow({ client, isExpanded, onToggle, onUpdate, onCancel, onReactivate, tab }: {
+function ClientRow({ client, isExpanded, onToggle, onUpdate }: {
   client: any;
   isExpanded: boolean;
   onToggle: () => void;
   onUpdate: (field: string, value: any) => void;
-  onCancel: () => void;
-  onReactivate: () => void;
-  tab: Tab;
 }) {
   const checklistTotal = CHECKLIST_FIELDS.length;
   const checklistDone = CHECKLIST_FIELDS.filter(f => {
@@ -238,22 +201,14 @@ function ClientRow({ client, isExpanded, onToggle, onUpdate, onCancel, onReactiv
             <span className={`text-xs transition-transform ${isExpanded ? "rotate-90" : ""}`}>▶</span>
             <span className="text-sm font-medium text-white/80">{client.clientName}</span>
             {client.coach && <span className="text-xs text-white/40">{client.coach}</span>}
-            {tab === "active" && client.weekNumber != null && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500/15 text-violet-300 border border-violet-500/20">
-                Week {client.weekNumber}
-              </span>
-            )}
           </div>
           <div className="flex items-center gap-3">
-            {tab === "onboarding" && (
-              <div className="flex items-center gap-2">
-                <div className="w-20 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                  <div className="h-full rounded-full bg-violet-400/60 transition-all" style={{ width: `${pct}%` }} />
-                </div>
-                <span className="text-[10px] text-white/40">{checklistDone}/{checklistTotal}</span>
+            <div className="flex items-center gap-2">
+              <div className="w-20 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                <div className="h-full rounded-full bg-violet-400/60 transition-all" style={{ width: `${pct}%` }} />
               </div>
-            )}
-            {client.sentToClient && <span className="text-[10px] text-white/30">{client.sentToClient}</span>}
+              <span className="text-[10px] text-white/40">{checklistDone}/{checklistTotal}</span>
+            </div>
           </div>
         </div>
       </button>
@@ -305,25 +260,6 @@ function ClientRow({ client, isExpanded, onToggle, onUpdate, onCancel, onReactiv
             <p className="text-xs text-white/40 italic">{client.notes}</p>
           )}
 
-          {/* Actions */}
-          <div className="flex gap-2 pt-1">
-            {tab !== "cancelled" && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onCancel(); }}
-                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-red-400/10 border border-red-400/20 text-red-300 hover:bg-red-400/20 transition-colors"
-              >
-                Cancel Client
-              </button>
-            )}
-            {tab === "cancelled" && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onReactivate(); }}
-                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-emerald-400/10 border border-emerald-400/20 text-emerald-300 hover:bg-emerald-400/20 transition-colors"
-              >
-                Reactivate
-              </button>
-            )}
-          </div>
         </div>
       )}
     </div>

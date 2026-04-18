@@ -178,12 +178,16 @@ export default function Milestones() {
                       {(history ?? []).map(h => {
                         const ratingEmoji = h.rating === "green" ? "🟢" : h.rating === "yellow" ? "🟡" : h.rating === "red" ? "🔴" : null;
                         const past = (c.weekNumber ?? 0) >= h.week;
+                        const mColors = MILESTONE_COLORS[h.week];
                         return (
-                          <td key={h.week} className="text-center px-2 py-2" title={h.notes || undefined}>
+                          <td key={h.week} className="text-center px-2 py-2">
                             {h.contactedAt ? (
-                              <span className="text-[10px]">
-                                {ratingEmoji ?? "✓"}{h.notes ? " 📝" : ""}
-                              </span>
+                              <div className="flex flex-col items-center gap-0.5">
+                                <span className="text-[10px]">{ratingEmoji ?? "✓"}</span>
+                                {h.notes && (
+                                  <span className={`text-[8px] max-w-[80px] truncate ${mColors?.text ?? "text-white/40"}`}>{h.notes}</span>
+                                )}
+                              </div>
                             ) : past ? (
                               <span className="text-white/15">—</span>
                             ) : (

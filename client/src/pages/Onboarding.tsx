@@ -48,6 +48,11 @@ export default function Onboarding() {
     onError: (e) => toast.error(e.message),
   });
 
+  const alertVideoMutation = trpc.onboarding.alertWelcomeVideo.useMutation({
+    onSuccess: () => toast.success("Alert sent to #onboarding-alerts"),
+    onError: (e) => toast.error(e.message),
+  });
+
   const finaliseMutation = trpc.onboarding.finalise.useMutation({
     onSuccess: () => { refetch(); toast.success("Client finalised and moved to roster"); },
     onError: (e) => toast.error(e.message),
@@ -119,6 +124,7 @@ export default function Onboarding() {
                 onToggle={() => setExpandedId(expandedId === client.id ? null : client.id)}
                 onUpdate={(field, value) => updateMutation.mutate({ id: client.id, [field]: value })}
                 coaches={allCoaches ?? []}
+                onAlertWelcomeVideo={() => alertVideoMutation.mutate({ id: client.id })}
                 onFinalise={(coachId, coachName, day, paymentType, upfrontWeeks) =>
                   finaliseMutation.mutate({ id: client.id, coachId, coachName, dayOfWeek: day as any, paymentType, upfrontWeeks })
                 }
@@ -178,12 +184,13 @@ function AddClientForm({ onSubmit, onCancel, isPending }: {
 const DAY_OPTIONS = ["monday", "tuesday", "wednesday", "thursday", "friday"] as const;
 const DAY_LABELS: Record<string, string> = { monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu", friday: "Fri" };
 
-function ClientRow({ client, isExpanded, onToggle, onUpdate, coaches, onFinalise }: {
+function ClientRow({ client, isExpanded, onToggle, onUpdate, coaches, onAlertWelcomeVideo, onFinalise }: {
   client: any;
   isExpanded: boolean;
   onToggle: () => void;
   onUpdate: (field: string, value: any) => void;
   coaches: Array<{ id: number; name: string }>;
+  onAlertWelcomeVideo: () => void;
   onFinalise: (coachId: number, coachName: string, day: string, paymentType: "subscription" | "upfront", upfrontWeeks?: number) => void;
 }) {
   const checklistTotal = CHECKLIST_FIELDS.length;
@@ -259,8 +266,8 @@ function ClientRow({ client, isExpanded, onToggle, onUpdate, coaches, onFinalise
             })}
           </div>
 
-          {/* Finalise: Coach + Day + Payment type */}
-          <FinaliseSection client={client} coaches={coaches} onUpdate={onUpdate} onFinalise={onFinalise} />
+          {/* Welcome video alert + Finalise */}
+          <FinaliseSection client={client} coaches={coaches} onUpdate={onUpdate} onAlertWelcomeVideo={onAlertWelcomeVideo} onFinalise={onFinalise} />
 
           {client.notes && (
             <p className="text-xs text-white/40 italic">{client.notes}</p>
@@ -272,10 +279,11 @@ function ClientRow({ client, isExpanded, onToggle, onUpdate, coaches, onFinalise
   );
 }
 
-function FinaliseSection({ client, coaches, onUpdate, onFinalise }: {
+function FinaliseSection({ client, coaches, onUpdate, onAlertWelcomeVideo, onFinalise }: {
   client: any;
   coaches: Array<{ id: number; name: string }>;
   onUpdate: (field: string, value: any) => void;
+  onAlertWelcomeVideo: () => void;
   onFinalise: (coachId: number, coachName: string, day: string, paymentType: "subscription" | "upfront", upfrontWeeks?: number) => void;
 }) {
   const [selectedDay, setSelectedDay] = useState("");
@@ -334,16 +342,24 @@ function FinaliseSection({ client, coaches, onUpdate, onFinalise }: {
         )}
       </div>
 
-      <button
-        disabled={!canFinalise}
-        onClick={e => {
-          e.stopPropagation();
-          if (canFinalise) onFinalise(coach!.id, coach!.name, selectedDay, paymentType, paymentType === "upfront" ? upfrontWeeks : undefined);
-        }}
-        className="w-full px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-sm font-semibold hover:bg-emerald-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-      >
-        Finalise &amp; Move to Roster
-      </button>
+      <div className="flex gap-2">
+        <button
+          onClick={e => { e.stopPropagation(); onAlertWelcomeVideo(); }}
+          className="flex-1 px-4 py-2 rounded-xl bg-amber-500/15 border border-amber-500/25 text-amber-300 text-sm font-semibold hover:bg-amber-500/25 transition-colors"
+        >
+          🎬 Alert Rich for Welcome Video
+        </button>
+        <button
+          disabled={!canFinalise}
+          onClick={e => {
+            e.stopPropagation();
+            if (canFinalise) onFinalise(coach!.id, coach!.name, selectedDay, paymentType, paymentType === "upfront" ? upfrontWeeks : undefined);
+          }}
+          className="flex-1 px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-sm font-semibold hover:bg-emerald-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          Finalise &amp; Move to Roster
+        </button>
+      </div>
     </div>
   );
 }

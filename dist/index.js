@@ -1136,6 +1136,7 @@ var ADMIN_EMAILS = [
   "rich@databite.com.au"
 ];
 var DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+var ONBOARDING_SLACK_CHANNEL = "C0ATQJGNRAS";
 
 // server/_core/auth.ts
 var COACH_EMAILS = {
@@ -4269,15 +4270,18 @@ var onboardingRouter = t.router({
         ));
       } else throw err;
     }
-    const managerSlackId = ENV.managerSlackId;
-    if (managerSlackId) {
-      const msg = `\u{1F3AC} *Welcome video needed*
+    return { ok: true };
+  }),
+  alertWelcomeVideo: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+    const db2 = await requireDb();
+    const [client] = await db2.select().from(onboardingClients).where(eq8(onboardingClients.id, input.id)).limit(1);
+    if (!client) throw new TRPCError({ code: "NOT_FOUND" });
+    const msg = `\u{1F3AC} *Welcome video needed*
 
-*${client.clientName}* has been finalised and moved to *${input.coachName}*'s roster (${input.dayOfWeek}).
+*${client.clientName}*${client.coach ? ` \u2192 *${client.coach}*` : ""}
 
 Please record and send their welcome video.`;
-      sendSlackDM(managerSlackId, msg).catch((err) => console.error("[Onboarding] Slack notify error:", err));
-    }
+    await sendSlackDM(ONBOARDING_SLACK_CHANNEL, msg);
     return { ok: true };
   }),
   reactivate: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {

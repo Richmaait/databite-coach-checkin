@@ -10,3 +10,4 @@ export const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"] as 
 export type DayKey = (typeof DAYS)[number];
 
 export const TEAM_SLACK_CHANNEL = "C09AD6EDCDU"; // #seal-team-six
+export const ONBOARDING_SLACK_CHANNEL = "C0ATQJGNRAS"; // #onboarding-alerts

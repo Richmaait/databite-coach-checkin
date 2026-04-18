@@ -18,6 +18,7 @@ import {
   CLIENT_CHECKINS_EPOCH,
   DAYS,
   TEAM_SLACK_CHANNEL,
+  ONBOARDING_SLACK_CHANNEL,
 } from "../shared/const";
 import { ENV } from "./env";
 import {
@@ -3587,13 +3588,18 @@ const onboardingRouter = t.router({
         } else throw err;
       }
 
-      // Notify Rich to record welcome video
-      const managerSlackId = ENV.managerSlackId;
-      if (managerSlackId) {
-        const msg = `🎬 *Welcome video needed*\n\n*${client.clientName}* has been finalised and moved to *${input.coachName}*'s roster (${input.dayOfWeek}).\n\nPlease record and send their welcome video.`;
-        sendSlackDM(managerSlackId, msg).catch(err => console.error("[Onboarding] Slack notify error:", err));
-      }
+      return { ok: true };
+    }),
 
+  alertWelcomeVideo: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      const [client] = await db.select().from(onboardingClients).where(eq(onboardingClients.id, input.id)).limit(1);
+      if (!client) throw new TRPCError({ code: "NOT_FOUND" });
+
+      const msg = `🎬 *Welcome video needed*\n\n*${client.clientName}*${client.coach ? ` → *${client.coach}*` : ""}\n\nPlease record and send their welcome video.`;
+      await sendSlackDM(ONBOARDING_SLACK_CHANNEL, msg);
       return { ok: true };
     }),
 

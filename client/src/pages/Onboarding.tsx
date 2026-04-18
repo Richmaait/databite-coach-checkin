@@ -11,7 +11,6 @@ const CHECKLIST_FIELDS = [
   { key: "requestedPhotos", label: "Requested Photos", isDate: true },
   { key: "mealPlan", label: "Meal Plan" },
   { key: "training", label: "Training" },
-  { key: "sentToRich", label: "Sent to Rich" },
   { key: "welcomeVideo", label: "Welcome Video" },
   { key: "sentToClient", label: "Sent to Client", isDate: true },
   { key: "subscription", label: "Subscription" },

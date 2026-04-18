@@ -3587,6 +3587,13 @@ const onboardingRouter = t.router({
         } else throw err;
       }
 
+      // Notify Rich to record welcome video
+      const managerSlackId = ENV.managerSlackId;
+      if (managerSlackId) {
+        const msg = `🎬 *Welcome video needed*\n\n*${client.clientName}* has been finalised and moved to *${input.coachName}*'s roster (${input.dayOfWeek}).\n\nPlease record and send their welcome video.`;
+        sendSlackDM(managerSlackId, msg).catch(err => console.error("[Onboarding] Slack notify error:", err));
+      }
+
       return { ok: true };
     }),
 

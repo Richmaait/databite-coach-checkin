@@ -4269,6 +4269,15 @@ var onboardingRouter = t.router({
         ));
       } else throw err;
     }
+    const managerSlackId = ENV.managerSlackId;
+    if (managerSlackId) {
+      const msg = `\u{1F3AC} *Welcome video needed*
+
+*${client.clientName}* has been finalised and moved to *${input.coachName}*'s roster (${input.dayOfWeek}).
+
+Please record and send their welcome video.`;
+      sendSlackDM(managerSlackId, msg).catch((err) => console.error("[Onboarding] Slack notify error:", err));
+    }
     return { ok: true };
   }),
   reactivate: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {

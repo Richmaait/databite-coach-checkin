@@ -142,36 +142,58 @@ export default function Milestones() {
             </select>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-white/[0.08]">
-                  <th className="text-left px-4 py-2 font-medium text-white/50">Client</th>
-                  <th className="text-left px-4 py-2 font-medium text-white/50">Coach</th>
-                  <th className="text-left px-4 py-2 font-medium text-white/50">Started</th>
-                  <th className="text-center px-4 py-2 font-medium text-white/50">Week</th>
-                  <th className="text-left px-4 py-2 font-medium text-white/50">Next Milestone</th>
+                  <th className="text-left px-3 py-2 font-medium text-white/50 min-w-[150px]">Client</th>
+                  <th className="text-left px-2 py-2 font-medium text-white/50">Coach</th>
+                  <th className="text-left px-2 py-2 font-medium text-white/50">Started</th>
+                  <th className="text-center px-2 py-2 font-medium text-white/50">Week</th>
+                  <th className="text-center px-2 py-2 font-medium text-blue-300/60">Wk 2</th>
+                  <th className="text-center px-2 py-2 font-medium text-rose-300/60">Wk 4</th>
+                  <th className="text-center px-2 py-2 font-medium text-violet-300/60">Wk 8</th>
+                  <th className="text-center px-2 py-2 font-medium text-cyan-300/60">Wk 12</th>
+                  <th className="text-left px-2 py-2 font-medium text-white/50">Next</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map(c => {
                   const milestone = c.currentMilestone;
                   const colors = milestone ? MILESTONE_COLORS[milestone.week] : null;
+                  const history = (c as any).milestoneHistory as Array<{ week: number; label: string; contactedAt: string | null; rating: string | null; notes: string | null }> | undefined;
                   return (
                     <tr key={c.id} className="border-b border-white/[0.04] hover:bg-violet-500/[0.08] transition-colors">
-                      <td className="px-4 py-2.5 font-medium text-white/80">{c.clientName}</td>
-                      <td className="px-4 py-2.5 text-white/50">{c.coach || "—"}</td>
-                      <td className="px-4 py-2.5 text-white/50">{c.sentToClient ? c.sentToClient.split("-").reverse().join("/") : "—"}</td>
-                      <td className="text-center px-4 py-2.5">
+                      <td className="px-3 py-2 font-medium text-white/80">{c.clientName}</td>
+                      <td className="px-2 py-2 text-white/50">{c.coach || "—"}</td>
+                      <td className="px-2 py-2 text-white/50">{c.sentToClient ? c.sentToClient.split("-").reverse().join("/") : "—"}</td>
+                      <td className="text-center px-2 py-2">
                         {milestone ? (
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${colors!.bg} ${colors!.border} border ${colors!.text}`}>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${colors!.bg} ${colors!.border} border ${colors!.text}`}>
                             {c.weekNumber}
                           </span>
                         ) : (
                           <span className="text-white/50">{c.weekNumber}</span>
                         )}
                       </td>
-                      <td className="px-4 py-2.5 text-xs text-white/40">
-                        {c.nextMilestone ? `Week ${c.nextMilestone.week} — ${c.nextMilestone.label}` : "—"}
+                      {(history ?? []).map(h => {
+                        const ratingEmoji = h.rating === "green" ? "🟢" : h.rating === "yellow" ? "🟡" : h.rating === "red" ? "🔴" : null;
+                        const past = (c.weekNumber ?? 0) >= h.week;
+                        return (
+                          <td key={h.week} className="text-center px-2 py-2" title={h.notes || undefined}>
+                            {h.contactedAt ? (
+                              <span className="text-[10px]">
+                                {ratingEmoji ?? "✓"}{h.notes ? " 📝" : ""}
+                              </span>
+                            ) : past ? (
+                              <span className="text-white/15">—</span>
+                            ) : (
+                              <span className="text-white/10">·</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                      <td className="px-2 py-2 text-white/40">
+                        {c.nextMilestone ? `Wk ${c.nextMilestone.week}` : "—"}
                       </td>
                     </tr>
                   );

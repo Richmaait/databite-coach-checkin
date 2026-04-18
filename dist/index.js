@@ -4374,6 +4374,13 @@ var milestonesRouter = t.router({
         currentMilestone = MILESTONES.find((m) => m.week === weekNumber) ?? null;
       }
       const nextMilestone = weekNumber ? MILESTONES.find((m) => m.week > weekNumber) ?? null : MILESTONES[0];
+      const milestoneHistory = MILESTONES.map((m) => ({
+        week: m.week,
+        label: m.label,
+        contactedAt: c[`milestone${m.week}ContactedAt`] ?? null,
+        rating: c[`milestone${m.week}Rating`] ?? null,
+        notes: c[`milestone${m.week}Notes`] ?? null
+      }));
       return {
         id: c.id,
         clientName: c.clientName,
@@ -4381,7 +4388,8 @@ var milestonesRouter = t.router({
         sentToClient: c.sentToClient,
         weekNumber,
         currentMilestone,
-        nextMilestone
+        nextMilestone,
+        milestoneHistory
       };
     }).filter((c) => c.weekNumber != null && c.weekNumber > 0 && c.weekNumber <= 14);
   }),

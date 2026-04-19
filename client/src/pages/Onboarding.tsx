@@ -91,10 +91,9 @@ export default function Onboarding() {
 
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <img src="/databite-logo-navy.svg" alt="databite" className="h-6" />
-              <div className="h-6 w-px bg-gray-200" />
-              <span className="text-lg font-light text-gray-400 tracking-tight" style={{ fontFamily: "'Comfortaa', cursive" }}>Onboarding</span>
+            <div>
+              <img src="/databite-logo-navy.svg" alt="databite" className="h-5 mb-1.5" />
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400">Onboarding</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex bg-gray-100 rounded-lg p-0.5">

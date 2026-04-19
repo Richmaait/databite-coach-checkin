@@ -29,6 +29,16 @@ const MONTH_COLORS = [
   "border-l-cyan-400", "border-l-amber-400", "border-l-rose-400", "border-l-teal-400",
   "border-l-indigo-400", "border-l-orange-400", "border-l-fuchsia-400", "border-l-lime-400",
 ];
+const MONTH_BG_COLORS = [
+  "bg-blue-50/40", "bg-emerald-50/40", "bg-violet-50/40", "bg-pink-50/40",
+  "bg-cyan-50/40", "bg-amber-50/40", "bg-rose-50/40", "bg-teal-50/40",
+  "bg-indigo-50/40", "bg-orange-50/40", "bg-fuchsia-50/40", "bg-lime-50/40",
+];
+const MONTH_HEADER_COLORS = [
+  "border-l-blue-400 bg-blue-50/60", "border-l-emerald-400 bg-emerald-50/60", "border-l-violet-400 bg-violet-50/60", "border-l-pink-400 bg-pink-50/60",
+  "border-l-cyan-400 bg-cyan-50/60", "border-l-amber-400 bg-amber-50/60", "border-l-rose-400 bg-rose-50/60", "border-l-teal-400 bg-teal-50/60",
+  "border-l-indigo-400 bg-indigo-50/60", "border-l-orange-400 bg-orange-50/60", "border-l-fuchsia-400 bg-fuchsia-50/60", "border-l-lime-400 bg-lime-50/60",
+];
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 type Tab = "onboarding" | "completed";
@@ -73,7 +83,7 @@ export default function Onboarding() {
     const groups: Record<string, typeof filtered> = {};
     for (const c of filtered) {
       const d = c.datePaid || c.sentToClient || "";
-      const key = d ? d.slice(0, 4) : "unknown";
+      const key = d ? d.slice(0, 7) : "unknown";
       if (!groups[key]) groups[key] = [];
       groups[key].push(c);
     }
@@ -364,49 +374,69 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
 }
 
 function CompletedTable({ groupedByMonth }: { groupedByMonth: [string, any[]][] }) {
+  // Group months under their year
+  const byYear: Record<string, [string, any[]][]> = {};
+  for (const entry of groupedByMonth) {
+    const year = entry[0] === "unknown" ? "unknown" : entry[0].slice(0, 4);
+    if (!byYear[year]) byYear[year] = [];
+    byYear[year].push(entry);
+  }
+  const years = Object.entries(byYear).sort((a, b) => b[0].localeCompare(a[0]));
+
   return (
-    <div className="space-y-6">
-      {groupedByMonth.map(([year, yearClients]) => {
-        const label = year === "unknown" ? "Unknown" : year;
-        const monthClients = yearClients;
-        return (
-          <div key={year}>
-            <div className="flex items-center gap-2 mb-2 px-1">
-              <span className="text-sm font-bold text-gray-800">{label}</span>
-              <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">{monthClients.length} clients</span>
-            </div>
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left px-3 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Client</th>
-                    <th className="text-center px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Sale</th>
-                    <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Paid</th>
-                    <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Due</th>
-                    <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Started</th>
-                    <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Coach</th>
-                    <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {monthClients.map((c, idx) => (
-                    <tr key={c.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} border-b border-gray-100 hover:bg-violet-100/80 transition-colors`}>
-                      <td className="px-3 py-2 font-semibold text-gray-800">{c.clientName}</td>
-                      <td className="text-center px-2 py-2">
-                        <span className={`text-[10px] font-semibold ${c.salesPerson === "Yaman" ? "text-blue-600" : c.salesPerson === "Suzie" ? "text-pink-600" : "text-gray-300"}`}>{c.salesPerson || "—"}</span>
-                      </td>
-                      <td className="px-2 py-2 text-gray-500 text-[10px]">{c.datePaid ? c.datePaid.split("-").reverse().join("/") : "—"}</td>
-                      <td className="px-2 py-2 text-gray-500 text-[10px]">{c.dateDue ? c.dateDue.split("-").reverse().join("/") : "—"}</td>
-                      <td className="px-2 py-2 text-gray-500 text-[10px]">{c.sentToClient ? c.sentToClient.split("-").reverse().join("/") : "—"}</td>
-                      <td className={`px-2 py-2 text-[11px] font-semibold ${COACH_COLORS[c.coach] || "text-gray-400"}`}>{c.coach || "—"}</td>
-                      <td className="px-2 py-2 text-gray-400 text-[10px]">{c.notes || ""}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+    <div className="space-y-8">
+      {years.map(([year, months]) => (
+        <div key={year}>
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <span className="text-lg font-bold text-gray-800">{year === "unknown" ? "Unknown" : year}</span>
           </div>
-        );
+          <div className="space-y-4">
+            {months.map(([monthKey, monthClients]) => {
+              const mi = monthKey === "unknown" ? -1 : parseInt(monthKey.slice(5, 7)) - 1;
+              const monthLabel = mi >= 0 ? `${MONTH_NAMES[mi]} ${monthKey.slice(0, 4)}` : "Unknown";
+              const borderColor = mi >= 0 ? MONTH_COLORS[mi % 12] : "";
+              const headerColor = mi >= 0 ? MONTH_HEADER_COLORS[mi % 12] : "";
+              const rowTint = mi >= 0 ? MONTH_BG_COLORS[mi % 12] : "";
+              return (
+                <div key={monthKey} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                  <div className={`flex items-center gap-2 px-4 py-2 border-l-4 ${headerColor} border-b border-gray-200`}>
+                    <span className="text-xs font-bold text-gray-700">{monthLabel}</span>
+                    <span className="text-[10px] text-gray-400 bg-white/60 px-2 py-0.5 rounded-full font-medium">{monthClients.length}</span>
+                  </div>
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="text-left px-3 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Client</th>
+                        <th className="text-center px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Sale</th>
+                        <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Paid</th>
+                        <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Due</th>
+                        <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Started</th>
+                        <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Coach</th>
+                        <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {monthClients.map((c: any, idx: number) => (
+                        <tr key={c.id} className={`${idx % 2 === 0 ? "bg-white" : rowTint} border-b border-gray-100 border-l-4 ${borderColor} hover:bg-violet-100/80 transition-colors`}>
+                          <td className="px-3 py-2 font-semibold text-gray-800">{c.clientName}</td>
+                          <td className="text-center px-2 py-2">
+                            <span className={`text-[10px] font-semibold ${c.salesPerson === "Yaman" ? "text-blue-600" : c.salesPerson === "Suzie" ? "text-pink-600" : "text-gray-300"}`}>{c.salesPerson || "—"}</span>
+                          </td>
+                          <td className="px-2 py-2 text-gray-500 text-[10px]">{c.datePaid ? c.datePaid.split("-").reverse().join("/") : "—"}</td>
+                          <td className="px-2 py-2 text-gray-500 text-[10px]">{c.dateDue ? c.dateDue.split("-").reverse().join("/") : "—"}</td>
+                          <td className="px-2 py-2 text-gray-500 text-[10px]">{c.sentToClient ? c.sentToClient.split("-").reverse().join("/") : "—"}</td>
+                          <td className={`px-2 py-2 text-[11px] font-semibold ${COACH_COLORS[c.coach] || "text-gray-400"}`}>{c.coach || "—"}</td>
+                          <td className="px-2 py-2 text-gray-400 text-[10px]">{c.notes || ""}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
       })}
     </div>
   );

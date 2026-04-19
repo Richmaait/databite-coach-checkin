@@ -259,7 +259,7 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
         <td key={f.key} className="text-center px-1 py-2">
           <button onClick={() => onUpdate(f.key, !client[f.key])}
             className={`w-5 h-5 rounded text-[9px] font-bold transition-all ${client[f.key]
-              ? "bg-emerald-500 text-white shadow-sm" : "bg-gray-100 border border-gray-200 text-transparent hover:border-gray-300"}`}>
+              ? "bg-emerald-100 text-emerald-600 border border-emerald-300" : "bg-gray-100 border border-gray-200 text-transparent hover:border-gray-300"}`}>
             ✓
           </button>
         </td>
@@ -268,7 +268,7 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
       <td className="text-center px-1 py-2">
         <button onClick={videoSent ? onUndoVideo : onAlertVideo}
           className={`w-5 h-5 rounded text-[9px] transition-all ${videoSent
-            ? "bg-emerald-500 text-white shadow-sm hover:bg-red-400" : "bg-fuchsia-100 border border-fuchsia-200 text-fuchsia-500 hover:bg-fuchsia-200"}`}>
+            ? "bg-emerald-100 text-emerald-600 border border-emerald-300 hover:bg-red-400" : "bg-fuchsia-100 border border-fuchsia-200 text-fuchsia-500 hover:bg-fuchsia-200"}`}>
           🎬
         </button>
       </td>
@@ -277,7 +277,7 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
         <td key={f.key} className="text-center px-1 py-2">
           <button onClick={() => onUpdate(f.key, !client[f.key])}
             className={`w-5 h-5 rounded text-[9px] font-bold transition-all ${client[f.key]
-              ? "bg-emerald-500 text-white shadow-sm" : "bg-gray-100 border border-gray-200 text-transparent hover:border-gray-300"}`}>
+              ? "bg-emerald-100 text-emerald-600 border border-emerald-300" : "bg-gray-100 border border-gray-200 text-transparent hover:border-gray-300"}`}>
             ✓
           </button>
         </td>
@@ -290,7 +290,7 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
           return (
             <button onClick={() => onUpdate("sentToClient", val ? null : new Date().toISOString().slice(0, 10))}
               className={`px-1.5 py-0.5 rounded text-[9px] font-medium transition-all ${val
-                ? "bg-emerald-500 text-white shadow-sm" : "bg-gray-100 border border-gray-200 text-gray-400 hover:border-gray-300"}`}>
+                ? "bg-emerald-100 text-emerald-600 border border-emerald-300" : "bg-gray-100 border border-gray-200 text-gray-400 hover:border-gray-300"}`}>
               {auDate || "—"}
             </button>
           );
@@ -330,7 +330,7 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
             if (newType === "upfront" && !client.subscription) onUpdate("subscription", true);
           }}
           className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all whitespace-nowrap ${paymentType === "upfront"
-            ? "bg-cyan-500 text-white shadow-sm" : "bg-violet-100 text-violet-600 border border-violet-200"}`}>
+            ? "bg-cyan-100 text-cyan-600 border border-cyan-300" : "bg-violet-100 text-violet-600 border border-violet-200"}`}>
           {paymentType === "upfront" ? "Upfront" : "Sub"}
         </button>
       </td>
@@ -357,7 +357,7 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
       <td className="px-2 py-2">
         <button disabled={!canFinalise}
           onClick={() => { if (canFinalise) onFinalise(coach!.id, coach!.name, selectedDay, paymentType as any, paymentType === "upfront" ? 14 : undefined); }}
-          className="px-2.5 py-1 rounded-md bg-emerald-500 text-white text-[9px] font-semibold hover:bg-emerald-600 transition-colors disabled:bg-gray-200 disabled:text-gray-400 whitespace-nowrap shadow-sm">
+          className="px-2.5 py-1 rounded-md bg-emerald-100 text-emerald-600 border border-emerald-300 text-[9px] font-semibold hover:bg-emerald-200 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-200 whitespace-nowrap">
           Finalise
         </button>
       </td>

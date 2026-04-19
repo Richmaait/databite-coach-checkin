@@ -144,7 +144,6 @@ export default function Onboarding() {
                     <th className="text-center px-3 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Total</th>
                     <th className="text-center px-3 py-2.5 font-semibold text-blue-500 uppercase tracking-wider text-[10px]">Yaman</th>
                     <th className="text-center px-3 py-2.5 font-semibold text-pink-500 uppercase tracking-wider text-[10px]">Suzie</th>
-                    <th className="text-center px-3 py-2.5 font-semibold text-gray-400 uppercase tracking-wider text-[10px]">Other</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -157,7 +156,6 @@ export default function Onboarding() {
                         <td className="text-center px-3 py-2 font-bold text-gray-900 text-sm">{row.total}</td>
                         <td className="text-center px-3 py-2 font-semibold text-blue-600">{row.bySeller?.Yaman || "—"}</td>
                         <td className="text-center px-3 py-2 font-semibold text-pink-600">{row.bySeller?.Suzie || "—"}</td>
-                        <td className="text-center px-3 py-2 text-gray-400">{row.bySeller?.Unassigned || "—"}</td>
                       </tr>
                     );
                   })}

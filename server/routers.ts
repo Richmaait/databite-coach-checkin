@@ -3654,10 +3654,16 @@ const onboardingRouter = t.router({
       byMonth[month].bySeller[seller] = (byMonth[month].bySeller[seller] || 0) + 1;
     }
 
-    // Apply overrides for historical months
+    // Apply overrides for historical months (total only, keep live bySeller)
     for (const [month, total] of Object.entries(OVERRIDES)) {
-      if (!byMonth[month]) byMonth[month] = { total, bySeller: { Unassigned: total } };
+      if (!byMonth[month]) byMonth[month] = { total, bySeller: {} };
       else byMonth[month].total = total;
+    }
+
+    // Remove "Unassigned" from display — only show named sellers
+    for (const data of Object.values(byMonth)) {
+      delete data.bySeller["Unassigned"];
+      delete data.bySeller[""];
     }
 
     return Object.entries(byMonth)

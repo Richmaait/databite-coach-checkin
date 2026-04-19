@@ -4354,8 +4354,12 @@ Please record and send their welcome video.`;
       byMonth[month].bySeller[seller] = (byMonth[month].bySeller[seller] || 0) + 1;
     }
     for (const [month, total] of Object.entries(OVERRIDES)) {
-      if (!byMonth[month]) byMonth[month] = { total, bySeller: { Unassigned: total } };
+      if (!byMonth[month]) byMonth[month] = { total, bySeller: {} };
       else byMonth[month].total = total;
+    }
+    for (const data of Object.values(byMonth)) {
+      delete data.bySeller["Unassigned"];
+      delete data.bySeller[""];
     }
     return Object.entries(byMonth).sort((a, b) => b[0].localeCompare(a[0])).map(([month, data]) => ({ month, ...data }));
   }),

@@ -3469,6 +3469,8 @@ const onboardingRouter = t.router({
       coach: z.string().optional(),
       datePaid: z.string().optional(),
       dateDue: z.string().optional(),
+      salesPerson: z.string().optional(),
+      paymentType: z.string().optional(),
       notes: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
@@ -3478,6 +3480,8 @@ const onboardingRouter = t.router({
         coach: input.coach ?? null,
         datePaid: input.datePaid ?? null,
         dateDue: input.dateDue ?? null,
+        salesPerson: input.salesPerson ?? null,
+        paymentType: (input.paymentType as any) ?? "subscription",
         notes: input.notes ?? null,
         status: "onboarding",
       });

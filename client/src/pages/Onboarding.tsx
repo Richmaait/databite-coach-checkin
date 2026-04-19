@@ -135,24 +135,33 @@ export default function Onboarding() {
 
           {/* Sales summary */}
           {tab === "completed" && salesStats && salesStats.length > 0 && (
-            <div className="flex gap-6 items-end mb-4 px-1">
-              {salesStats.slice(0, 6).map((row: any) => {
-                const [y, m] = row.month.split("-");
-                const mi = parseInt(m) - 1;
-                const maxTotal = Math.max(...salesStats.slice(0, 6).map((r: any) => r.total));
-                const barHeight = Math.max(20, (row.total / maxTotal) * 80);
-                return (
-                  <div key={row.month} className="flex flex-col items-center gap-1">
-                    <span className="text-sm font-bold text-gray-900">{row.total}</span>
-                    <div className="w-12 rounded-t-md bg-[#191772]" style={{ height: `${barHeight}px` }} />
-                    <span className="text-[10px] font-medium text-gray-500">{MONTH_NAMES[mi]}</span>
-                    <div className="flex gap-0.5 mt-0.5">
-                      {row.bySeller?.Yaman > 0 && <span className="text-[8px] font-bold text-blue-600">{row.bySeller.Yaman}Y</span>}
-                      {row.bySeller?.Suzie > 0 && <span className="text-[8px] font-bold text-pink-600">{row.bySeller.Suzie}S</span>}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Month</th>
+                    <th className="text-center px-3 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Total</th>
+                    <th className="text-center px-3 py-2.5 font-semibold text-blue-500 uppercase tracking-wider text-[10px]">Yaman</th>
+                    <th className="text-center px-3 py-2.5 font-semibold text-pink-500 uppercase tracking-wider text-[10px]">Suzie</th>
+                    <th className="text-center px-3 py-2.5 font-semibold text-gray-400 uppercase tracking-wider text-[10px]">Other</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {salesStats.slice(0, 8).map((row: any, idx: number) => {
+                    const [y, m] = row.month.split("-");
+                    const mi = parseInt(m) - 1;
+                    return (
+                      <tr key={row.month} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} border-b border-gray-100`}>
+                        <td className="px-4 py-2 font-semibold text-gray-800">{MONTH_NAMES[mi]} {y}</td>
+                        <td className="text-center px-3 py-2 font-bold text-gray-900 text-sm">{row.total}</td>
+                        <td className="text-center px-3 py-2 font-semibold text-blue-600">{row.bySeller?.Yaman || "—"}</td>
+                        <td className="text-center px-3 py-2 font-semibold text-pink-600">{row.bySeller?.Suzie || "—"}</td>
+                        <td className="text-center px-3 py-2 text-gray-400">{row.bySeller?.Unassigned || "—"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
 

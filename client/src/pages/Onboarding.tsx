@@ -73,7 +73,7 @@ export default function Onboarding() {
     const groups: Record<string, typeof filtered> = {};
     for (const c of filtered) {
       const d = c.datePaid || c.sentToClient || "";
-      const key = d ? d.slice(0, 7) : "unknown";
+      const key = d ? d.slice(0, 4) : "unknown";
       if (!groups[key]) groups[key] = [];
       groups[key].push(c);
     }
@@ -368,10 +368,9 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
 function CompletedTable({ groupedByMonth }: { groupedByMonth: [string, any[]][] }) {
   return (
     <div className="space-y-6">
-      {groupedByMonth.map(([month, monthClients]) => {
-        const [y, m] = month.split("-");
-        const mi = parseInt(m || "1") - 1;
-        const label = month === "unknown" ? "Unknown" : `${MONTH_NAMES[mi]} ${y}`;
+      {groupedByMonth.map(([year, yearClients]) => {
+        const label = year === "unknown" ? "Unknown" : year;
+        const monthClients = yearClients;
         return (
           <div key={month}>
             <div className="flex items-center gap-2 mb-2 px-1">
@@ -393,7 +392,7 @@ function CompletedTable({ groupedByMonth }: { groupedByMonth: [string, any[]][] 
                 </thead>
                 <tbody>
                   {monthClients.map((c, idx) => (
-                    <tr key={c.id} className={`border-l-4 ${MONTH_COLORS[mi % 12]} ${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} border-b border-gray-100 hover:bg-violet-100/80 transition-colors`}>
+                    <tr key={c.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} border-b border-gray-100 hover:bg-violet-100/80 transition-colors`}>
                       <td className="px-3 py-2 font-semibold text-gray-800">{c.clientName}</td>
                       <td className="text-center px-2 py-2">
                         <span className={`text-[10px] font-semibold ${c.salesPerson === "Yaman" ? "text-blue-600" : c.salesPerson === "Suzie" ? "text-pink-600" : "text-gray-300"}`}>{c.salesPerson || "—"}</span>

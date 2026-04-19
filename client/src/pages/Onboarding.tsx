@@ -41,6 +41,7 @@ export default function Onboarding() {
   const [tab, setTab] = useState<Tab>("onboarding");
   const [search, setSearch] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showAllMonths, setShowAllMonths] = useState(false);
 
   const { data: onboardingClients, refetch: refetchOnboarding, isLoading: loadingOnboarding } = trpc.onboarding.list.useQuery({ status: "onboarding" });
   const { data: activeClients, refetch: refetchActive, isLoading: loadingActive } = trpc.onboarding.list.useQuery({ status: "completed" as any });
@@ -147,7 +148,7 @@ export default function Onboarding() {
                   </tr>
                 </thead>
                 <tbody>
-                  {salesStats.slice(0, 8).map((row: any, idx: number) => {
+                  {salesStats.slice(0, showAllMonths ? undefined : 5).map((row: any, idx: number) => {
                     const [y, m] = row.month.split("-");
                     const mi = parseInt(m) - 1;
                     return (
@@ -160,6 +161,16 @@ export default function Onboarding() {
                       </tr>
                     );
                   })}
+                  {salesStats.length > 5 && (
+                    <tr>
+                      <td colSpan={5} className="text-center py-2">
+                        <button onClick={() => setShowAllMonths(!showAllMonths)}
+                          className="text-[10px] font-semibold text-violet-600 hover:text-violet-800 transition-colors">
+                          {showAllMonths ? "Show less" : `Show all ${salesStats.length} months`}
+                        </button>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

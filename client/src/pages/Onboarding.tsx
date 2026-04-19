@@ -307,7 +307,11 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
       </td>
       {/* Type */}
       <td className="text-center px-1 py-2">
-        <button onClick={() => onUpdate("paymentType", paymentType === "subscription" ? "upfront" : "subscription")}
+        <button onClick={() => {
+            const newType = paymentType === "subscription" ? "upfront" : "subscription";
+            onUpdate("paymentType", newType);
+            if (newType === "upfront" && !client.subscription) onUpdate("subscription", true);
+          }}
           className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all whitespace-nowrap ${paymentType === "upfront"
             ? "bg-cyan-500 text-white shadow-sm" : "bg-violet-100 text-violet-600 border border-violet-200"}`}>
           {paymentType === "upfront" ? "Upfront" : "Sub"}

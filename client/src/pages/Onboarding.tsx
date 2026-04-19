@@ -43,7 +43,7 @@ export default function Onboarding() {
   const [showAddForm, setShowAddForm] = useState(false);
 
   const { data: onboardingClients, refetch: refetchOnboarding, isLoading: loadingOnboarding } = trpc.onboarding.list.useQuery({ status: "onboarding" });
-  const { data: activeClients, refetch: refetchActive, isLoading: loadingActive } = trpc.onboarding.list.useQuery({ status: "active" });
+  const { data: activeClients, refetch: refetchActive, isLoading: loadingActive } = trpc.onboarding.list.useQuery({ status: "completed" as any });
   const { data: allCoaches } = trpc.coaches.list.useQuery();
   const coaches = allCoaches ?? [];
 

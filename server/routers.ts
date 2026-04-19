@@ -3438,18 +3438,23 @@ const auditsRouter = t.router({
 const onboardingRouter = t.router({
   list: adminProcedure
     .input(z.object({
-      status: z.enum(["onboarding", "active", "cancelled"]).optional(),
+      status: z.enum(["onboarding", "active", "cancelled", "completed"]).optional(),
       coach: z.string().optional(),
     }).optional())
     .query(async ({ input }) => {
       const db = await requireDb();
       let query = db.select().from(onboardingClients);
       const conditions: any[] = [];
-      if (input?.status) conditions.push(eq(onboardingClients.status, input.status));
+      if (input?.status === "completed") {
+        conditions.push(ne(onboardingClients.status, "onboarding"));
+      } else if (input?.status) {
+        conditions.push(eq(onboardingClients.status, input.status));
+      }
       if (input?.coach) conditions.push(eq(onboardingClients.coach, input.coach));
+      const orderCol = input?.status === "completed" ? desc(onboardingClients.datePaid) : asc(onboardingClients.dateDue);
       const rows = conditions.length > 0
-        ? await query.where(and(...conditions)).orderBy(asc(onboardingClients.dateDue))
-        : await query.orderBy(asc(onboardingClients.dateDue));
+        ? await query.where(and(...conditions)).orderBy(orderCol)
+        : await query.orderBy(orderCol);
 
       const todayMon = getMonday(getTodayMelbourne());
       return rows.map(r => {

@@ -4160,15 +4160,20 @@ ${summary}`;
 });
 var onboardingRouter = t.router({
   list: adminProcedure.input(z.object({
-    status: z.enum(["onboarding", "active", "cancelled"]).optional(),
+    status: z.enum(["onboarding", "active", "cancelled", "completed"]).optional(),
     coach: z.string().optional()
   }).optional()).query(async ({ input }) => {
     const db2 = await requireDb();
     let query = db2.select().from(onboardingClients);
     const conditions = [];
-    if (input?.status) conditions.push(eq8(onboardingClients.status, input.status));
+    if (input?.status === "completed") {
+      conditions.push(ne(onboardingClients.status, "onboarding"));
+    } else if (input?.status) {
+      conditions.push(eq8(onboardingClients.status, input.status));
+    }
     if (input?.coach) conditions.push(eq8(onboardingClients.coach, input.coach));
-    const rows = conditions.length > 0 ? await query.where(and6(...conditions)).orderBy(asc(onboardingClients.dateDue)) : await query.orderBy(asc(onboardingClients.dateDue));
+    const orderCol = input?.status === "completed" ? desc(onboardingClients.datePaid) : asc(onboardingClients.dateDue);
+    const rows = conditions.length > 0 ? await query.where(and6(...conditions)).orderBy(orderCol) : await query.orderBy(orderCol);
     const todayMon = getMonday2(getTodayMelbourne2());
     return rows.map((r) => {
       let weekNumber = null;

@@ -437,7 +437,6 @@ function CompletedTable({ groupedByMonth }: { groupedByMonth: [string, any[]][] 
           </div>
         </div>
       ))}
-      })}
     </div>
   );
 }

@@ -161,7 +161,7 @@ export default function Onboarding() {
                   })}
                   {salesStats.length > 5 && (
                     <tr>
-                      <td colSpan={5} className="text-center py-2">
+                      <td colSpan={4} className="text-center py-2">
                         <button onClick={() => setShowAllMonths(!showAllMonths)}
                           className="text-[10px] font-semibold text-violet-600 hover:text-violet-800 transition-colors">
                           {showAllMonths ? "Show less" : `Show all ${salesStats.length} months`}

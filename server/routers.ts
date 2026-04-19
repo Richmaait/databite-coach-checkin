@@ -3636,18 +3636,22 @@ const onboardingRouter = t.router({
 
     // Historical overrides — verified totals from Rich's records
     const OVERRIDES: Record<string, number> = {
-      "2024-12": 25,
       "2025-01": 28, "2025-02": 30, "2025-03": 50, "2025-04": 60,
       "2025-05": 30, "2025-06": 55, "2025-07": 63, "2025-08": 65,
       "2025-09": 40, "2025-10": 70, "2025-11": 40, "2025-12": 49,
       "2026-01": 51, "2026-02": 37, "2026-03": 34,
     };
 
+    // Seller baselines — verified counts that new DB entries add on top of
+    const SELLER_BASELINES: Record<string, Record<string, number>> = {
+      "2026-04": { Yaman: 10, Suzie: 5 },
+    };
+
     const byMonth: Record<string, { total: number; bySeller: Record<string, number> }> = {};
     for (const r of rows) {
       const d = r.datePaid || "";
       const month = d ? d.slice(0, 7) : null;
-      if (!month) continue;
+      if (!month || month < "2025-01") continue; // Only 2025+ data
       if (!byMonth[month]) byMonth[month] = { total: 0, bySeller: {} };
       byMonth[month].total++;
       const seller = r.salesPerson || "Unassigned";
@@ -3660,13 +3664,23 @@ const onboardingRouter = t.router({
       else byMonth[month].total = total;
     }
 
+    // Add seller baselines on top of live DB counts
+    for (const [month, sellers] of Object.entries(SELLER_BASELINES)) {
+      if (!byMonth[month]) byMonth[month] = { total: 0, bySeller: {} };
+      for (const [seller, baseline] of Object.entries(sellers)) {
+        byMonth[month].bySeller[seller] = (byMonth[month].bySeller[seller] || 0) + baseline;
+      }
+    }
+
     // Remove "Unassigned" from display — only show named sellers
     for (const data of Object.values(byMonth)) {
       delete data.bySeller["Unassigned"];
       delete data.bySeller[""];
     }
 
+    // Only return 2025 and 2026
     return Object.entries(byMonth)
+      .filter(([month]) => month >= "2025-01" && month <= "2026-12")
       .sort((a, b) => b[0].localeCompare(a[0]))
       .map(([month, data]) => ({ month, ...data }));
   }),

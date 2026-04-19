@@ -372,7 +372,7 @@ function CompletedTable({ groupedByMonth }: { groupedByMonth: [string, any[]][] 
         const label = year === "unknown" ? "Unknown" : year;
         const monthClients = yearClients;
         return (
-          <div key={month}>
+          <div key={year}>
             <div className="flex items-center gap-2 mb-2 px-1">
               <span className="text-sm font-bold text-gray-800">{label}</span>
               <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">{monthClients.length} clients</span>

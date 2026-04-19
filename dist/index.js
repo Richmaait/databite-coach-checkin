@@ -4317,6 +4317,16 @@ Please record and send their welcome video.`;
     await db2.update(onboardingClients).set({ status: "active", cancelledAt: null }).where(eq8(onboardingClients.id, input.id));
     return { ok: true };
   }),
+  undoVideoAlert: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+    const db2 = await requireDb();
+    await db2.update(onboardingClients).set({ videoAlertSentAt: null }).where(eq8(onboardingClients.id, input.id));
+    return { ok: true };
+  }),
+  deleteClient: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+    const db2 = await requireDb();
+    await db2.delete(onboardingClients).where(eq8(onboardingClients.id, input.id));
+    return { ok: true };
+  }),
   importFromSheet: adminProcedure.mutation(async () => {
     const db2 = await requireDb();
     const sheetClients = await fetchOnboardingClients();

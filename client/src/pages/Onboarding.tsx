@@ -16,10 +16,6 @@ const BOOL_FIELDS_AFTER_VIDEO = [
   { key: "subscription", label: "Subscription" },
 ] as const;
 
-const DATE_FIELDS = [
-  { key: "sentToClient", label: "Sent to Client" },
-] as const;
-
 const DAY_OPTIONS = ["monday", "tuesday", "wednesday", "thursday", "friday"] as const;
 const DAY_LABELS: Record<string, string> = { monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu", friday: "Fri" };
 
@@ -28,36 +24,9 @@ const MONTH_COLORS = [
   "border-l-cyan-400", "border-l-amber-400", "border-l-rose-400", "border-l-teal-400",
   "border-l-indigo-400", "border-l-orange-400", "border-l-fuchsia-400", "border-l-lime-400",
 ];
-const MONTH_BG = [
-  "bg-blue-500/8", "bg-emerald-500/8", "bg-violet-500/8", "bg-pink-500/8",
-  "bg-cyan-500/8", "bg-amber-500/8", "bg-rose-500/8", "bg-teal-500/8",
-  "bg-indigo-500/8", "bg-orange-500/8", "bg-fuchsia-500/8", "bg-lime-500/8",
-];
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 type Tab = "onboarding" | "completed";
-
-// Light theme classes for onboarding page
-const L = {
-  bg: "bg-gray-50 min-h-screen",
-  title: "text-gray-900",
-  subtitle: "text-gray-500",
-  card: "bg-white border border-gray-200 shadow-sm",
-  input: "bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-violet-500",
-  select: "bg-white border border-gray-300 text-gray-700 focus:border-violet-500",
-  label: "text-gray-500",
-  text: "text-gray-700",
-  textMuted: "text-gray-400",
-  th: "text-gray-500 border-b border-gray-200",
-  td: "border-b border-gray-100",
-  hover: "hover:bg-violet-50",
-  tabActive: "bg-white text-gray-900 shadow-sm",
-  tabInactive: "text-gray-400 hover:text-gray-600",
-  checkOn: "bg-emerald-100 border border-emerald-300 text-emerald-600",
-  checkOff: "bg-gray-50 border border-gray-200 text-gray-300 hover:bg-gray-100",
-  btn: "bg-violet-600 text-white hover:bg-violet-700",
-  btnOutline: "bg-white border border-gray-300 text-gray-600 hover:bg-gray-50",
-};
 
 export default function Onboarding() {
   const { user } = useAuth();
@@ -75,22 +44,12 @@ export default function Onboarding() {
 
   const refetch = () => { refetchOnboarding(); refetchActive(); };
 
-  const updateMutation = trpc.onboarding.update.useMutation({
-    onSuccess: () => refetch(),
-    onError: (e) => toast.error(e.message),
-  });
-  const createMutation = trpc.onboarding.create.useMutation({
-    onSuccess: () => { refetch(); setShowAddForm(false); toast.success("Client added"); },
-    onError: (e) => toast.error(e.message),
-  });
-  const alertVideoMutation = trpc.onboarding.alertWelcomeVideo.useMutation({
-    onSuccess: () => { refetch(); toast.success("Alert sent to #onboarding-alerts"); },
-    onError: (e) => toast.error(e.message),
-  });
-  const finaliseMutation = trpc.onboarding.finalise.useMutation({
-    onSuccess: () => { refetch(); toast.success("Client finalised and moved to roster"); },
-    onError: (e) => toast.error(e.message),
-  });
+  const updateMutation = trpc.onboarding.update.useMutation({ onSuccess: () => refetch(), onError: (e) => toast.error(e.message) });
+  const createMutation = trpc.onboarding.create.useMutation({ onSuccess: () => { refetch(); setShowAddForm(false); toast.success("Client added"); }, onError: (e) => toast.error(e.message) });
+  const alertVideoMutation = trpc.onboarding.alertWelcomeVideo.useMutation({ onSuccess: () => { refetch(); toast.success("Alert sent to #onboarding-alerts"); }, onError: (e) => toast.error(e.message) });
+  const undoVideoMutation = trpc.onboarding.undoVideoAlert.useMutation({ onSuccess: () => { refetch(); toast.success("Video alert undone"); }, onError: (e) => toast.error(e.message) });
+  const finaliseMutation = trpc.onboarding.finalise.useMutation({ onSuccess: () => { refetch(); toast.success("Client finalised and moved to roster"); }, onError: (e) => toast.error(e.message) });
+  const deleteMutation = trpc.onboarding.deleteClient.useMutation({ onSuccess: () => { refetch(); toast.success("Client deleted"); }, onError: (e) => toast.error(e.message) });
 
   const clients = tab === "onboarding" ? onboardingClients : activeClients;
   const isLoading = tab === "onboarding" ? loadingOnboarding : loadingActive;
@@ -102,7 +61,6 @@ export default function Onboarding() {
     return clients.filter(c => c.clientName.toLowerCase().includes(q) || (c.coach ?? "").toLowerCase().includes(q) || (c.notes ?? "").toLowerCase().includes(q));
   }, [clients, search]);
 
-  // Group completed by month
   const groupedByMonth = useMemo(() => {
     if (tab !== "completed" || !filtered.length) return null;
     const groups: Record<string, typeof filtered> = {};
@@ -115,13 +73,12 @@ export default function Onboarding() {
     return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
   }, [filtered, tab]);
 
-  // Sales stats for completed
   const salesStats = useMemo(() => {
     if (tab !== "completed" || !groupedByMonth) return null;
     const stats: Record<string, { total: number; bySeller: Record<string, number> }> = {};
-    for (const [month, clients] of groupedByMonth) {
-      stats[month] = { total: clients.length, bySeller: {} };
-      for (const c of clients) {
+    for (const [month, mClients] of groupedByMonth) {
+      stats[month] = { total: mClients.length, bySeller: {} };
+      for (const c of mClients) {
         const seller = (c as any).salesPerson || "Unassigned";
         stats[month].bySeller[seller] = (stats[month].bySeller[seller] || 0) + 1;
       }
@@ -135,57 +92,67 @@ export default function Onboarding() {
 
   return (
     <DashboardLayout>
-      <div className={`${L.bg}`}>
-        <div className="flex flex-col gap-4 p-6 pt-20 w-full">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className={`text-3xl font-bold ${L.title}`} style={{ fontFamily: "'Comfortaa', cursive" }}>Onboarding</h1>
-              <p className={`text-sm ${L.subtitle} mt-1`}>Client onboarding checklist and tracking</p>
+      <div className="bg-[#fafafa] min-h-screen">
+        <div className="w-full px-6 pt-20 pb-32">
+
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <img src="/databite-icon-white.svg" alt="" className="w-8 h-8 invert opacity-20" />
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 tracking-tight" style={{ fontFamily: "'Comfortaa', cursive" }}>Onboarding</h1>
+                <p className="text-xs text-gray-400 mt-0.5">Client onboarding checklist and tracking</p>
+              </div>
             </div>
-            {tab === "onboarding" && (
-              <button onClick={() => setShowAddForm(true)} className={`px-4 py-2 rounded-xl ${L.btn} text-sm font-semibold transition-colors`}>
-                + Add Client
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              <div className="flex bg-gray-100 rounded-lg p-0.5">
+                <button onClick={() => setTab("onboarding")}
+                  className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${tab === "onboarding" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}>
+                  Onboarding{onboardingClients ? ` (${onboardingClients.length})` : ""}
+                </button>
+                <button onClick={() => setTab("completed")}
+                  className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-all ${tab === "completed" ? "bg-white text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"}`}>
+                  Completed{activeClients ? ` (${activeClients.length})` : ""}
+                </button>
+              </div>
+              {tab === "onboarding" && (
+                <button onClick={() => setShowAddForm(!showAddForm)}
+                  className="px-4 py-2 rounded-lg bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700 transition-colors shadow-sm">
+                  + Add Client
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-1 bg-gray-200/60 rounded-xl p-1 w-fit">
-            <button onClick={() => setTab("onboarding")}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === "onboarding" ? L.tabActive : L.tabInactive}`}>
-              Onboarding{onboardingClients ? ` (${onboardingClients.length})` : ""}
-            </button>
-            <button onClick={() => setTab("completed")}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${tab === "completed" ? L.tabActive : L.tabInactive}`}>
-              Completed{activeClients ? ` (${activeClients.length})` : ""}
-            </button>
+          {/* Search */}
+          <div className="mb-4">
+            <input type="text" placeholder="Search by name, coach, or notes..." value={search} onChange={e => setSearch(e.target.value)}
+              className="w-full max-w-md px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-900 text-sm placeholder:text-gray-300 focus:outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400/30 shadow-sm" />
           </div>
 
-          <input type="text" placeholder="Search clients..." value={search} onChange={e => setSearch(e.target.value)}
-            className={`px-4 py-2 rounded-xl ${L.input} text-sm focus:outline-none`} />
-
+          {/* Add client form */}
           {showAddForm && tab === "onboarding" && (
-            <div className={`${L.card} rounded-2xl p-5 space-y-4`}>
-              <h3 className={`text-sm font-bold ${L.text}`}>New Client</h3>
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-4">
+              <h3 className="text-sm font-bold text-gray-700 mb-3">New Client</h3>
               <AddClientForm coaches={coaches} onSubmit={data => createMutation.mutate(data)} onCancel={() => setShowAddForm(false)} isPending={createMutation.isPending} />
             </div>
           )}
 
-          {/* Sales widget for completed tab */}
+          {/* Sales widget */}
           {tab === "completed" && salesStats && (
-            <div className="flex gap-3 overflow-x-auto pb-1">
+            <div className="flex gap-3 overflow-x-auto pb-2 mb-4">
               {Object.entries(salesStats).slice(0, 6).map(([month, data]) => {
                 const [y, m] = month.split("-");
                 const mi = parseInt(m) - 1;
                 return (
-                  <div key={month} className={`${L.card} rounded-xl p-3 min-w-[140px] border-l-4 ${MONTH_COLORS[mi % 12]}`}>
-                    <div className={`text-xs font-bold ${L.text}`}>{MONTH_NAMES[mi]} {y}</div>
+                  <div key={month} className={`bg-white rounded-xl border border-gray-200 shadow-sm p-3 min-w-[140px] border-l-4 ${MONTH_COLORS[mi % 12]}`}>
+                    <div className="text-xs font-bold text-gray-700">{MONTH_NAMES[mi]} {y}</div>
                     <div className="text-2xl font-bold text-violet-600 mt-1">{data.total}</div>
                     <div className="mt-1.5 space-y-0.5">
                       {Object.entries(data.bySeller).sort((a, b) => b[1] - a[1]).map(([seller, count]) => (
                         <div key={seller} className="flex justify-between text-[10px]">
-                          <span className={seller === "Yaman" ? "text-blue-500 font-semibold" : seller === "Suzie" ? "text-pink-500 font-semibold" : L.textMuted}>{seller}</span>
-                          <span className={L.text}>{count}</span>
+                          <span className={seller === "Yaman" ? "text-blue-600 font-semibold" : seller === "Suzie" ? "text-pink-600 font-semibold" : "text-gray-400"}>{seller}</span>
+                          <span className="text-gray-600 font-medium">{count}</span>
                         </div>
                       ))}
                     </div>
@@ -195,74 +162,59 @@ export default function Onboarding() {
             </div>
           )}
 
+          {/* Content */}
           {isLoading ? (
-            <div className={`text-center ${L.textMuted} py-12`}>Loading...</div>
+            <div className="text-center text-gray-400 py-16">Loading...</div>
           ) : filtered.length === 0 ? (
-            <div className={`text-center ${L.textMuted} py-12`}>{tab === "onboarding" ? "No clients in onboarding." : "No completed clients yet."}</div>
+            <div className="text-center text-gray-400 py-16">{tab === "onboarding" ? "No clients in onboarding." : "No completed clients yet."}</div>
           ) : tab === "onboarding" ? (
-            <OnboardingTable clients={filtered} coaches={coaches} onUpdate={onUpdate}
-              onAlertVideo={(id) => { if (confirm("Send welcome video alert to Rich?")) alertVideoMutation.mutate({ id }); }}
-              onFinalise={(id, coachId, coachName, day, pt, uw) => finaliseMutation.mutate({ id, coachId, coachName, dayOfWeek: day as any, paymentType: pt, upfrontWeeks: uw })}
-            />
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="w-6" />
+                    <th className="text-left px-3 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Client</th>
+                    <th className="text-left px-1 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Paid</th>
+                    <th className="text-left px-1 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Due</th>
+                    <th className="text-left px-1 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Photos</th>
+                    {BOOL_FIELDS.map(f => <th key={f.key} className="text-center px-1 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">{f.label}</th>)}
+                    <th className="text-center px-1 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Video</th>
+                    {BOOL_FIELDS_AFTER_VIDEO.map(f => <th key={f.key} className="text-center px-1 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">{f.label}</th>)}
+                    <th className="text-center px-1 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Sent</th>
+                    <th className="text-left px-2 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Coach</th>
+                    <th className="text-left px-2 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Day</th>
+                    <th className="text-center px-2 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Type</th>
+                    <th className="text-center px-1 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Sale</th>
+                    <th className="text-left px-2 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Notes</th>
+                    <th className="text-center px-2 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((client, idx) => (
+                    <OnboardingRow key={client.id} client={client} coaches={coaches} idx={idx}
+                      onUpdate={(f, v) => onUpdate(client.id, f, v)}
+                      onAlertVideo={() => { if (confirm(`Send welcome video alert to Rich for ${client.clientName}?`)) alertVideoMutation.mutate({ id: client.id }); }}
+                      onUndoVideo={() => { if (confirm(`Undo video alert for ${client.clientName}?`)) undoVideoMutation.mutate({ id: client.id }); }}
+                      onDelete={() => { if (confirm(`Delete ${client.clientName}? This cannot be undone.`)) deleteMutation.mutate({ id: client.id }); }}
+                      onFinalise={(cid, cn, d, pt, uw) => finaliseMutation.mutate({ id: client.id, coachId: cid, coachName: cn, dayOfWeek: d as any, paymentType: pt, upfrontWeeks: uw })} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
-            <CompletedTable clients={filtered} groupedByMonth={groupedByMonth!} />
+            <CompletedTable groupedByMonth={groupedByMonth!} />
           )}
 
-          <div className={`text-xs ${L.textMuted} text-center pb-4`}>
-            {filtered.length} client{filtered.length !== 1 ? "s" : ""}
-          </div>
+          <div className="text-xs text-gray-300 text-center mt-6">{filtered.length} client{filtered.length !== 1 ? "s" : ""}</div>
         </div>
       </div>
     </DashboardLayout>
   );
 }
 
-function OnboardingTable({ clients, coaches, onUpdate, onAlertVideo, onFinalise }: {
-  clients: any[];
-  coaches: Array<{ id: number; name: string }>;
-  onUpdate: (id: number, field: string, value: any) => void;
-  onAlertVideo: (id: number) => void;
-  onFinalise: (id: number, coachId: number, coachName: string, day: string, paymentType: "subscription" | "upfront", upfrontWeeks?: number) => void;
-}) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs">
-        <thead>
-          <tr>
-            <th className={`text-left px-3 py-2 font-medium ${L.th} min-w-[150px]`}>Client</th>
-            <th className={`text-left px-1 py-2 font-medium ${L.th} min-w-[75px]`}>Paid</th>
-            <th className={`text-left px-1 py-2 font-medium ${L.th} min-w-[75px]`}>Due</th>
-            <th className={`text-left px-1 py-2 font-medium ${L.th} min-w-[75px]`}>Photos</th>
-            {BOOL_FIELDS.map(f => <th key={f.key} className={`text-center px-1 py-2 font-medium ${L.th} min-w-[55px]`}>{f.label}</th>)}
-            <th className={`text-center px-1 py-2 font-medium ${L.th} min-w-[45px]`}>Video</th>
-            {BOOL_FIELDS_AFTER_VIDEO.map(f => <th key={f.key} className={`text-center px-1 py-2 font-medium ${L.th} min-w-[55px]`}>{f.label}</th>)}
-            {DATE_FIELDS.map(f => <th key={f.key} className={`text-center px-1 py-2 font-medium ${L.th} min-w-[65px]`}>{f.label}</th>)}
-            <th className={`text-left px-2 py-2 font-medium ${L.th} min-w-[80px]`}>Coach</th>
-            <th className={`text-left px-2 py-2 font-medium ${L.th} min-w-[60px]`}>Day</th>
-            <th className={`text-center px-2 py-2 font-medium ${L.th} min-w-[70px]`}>Type</th>
-            <th className={`text-center px-1 py-2 font-medium ${L.th} min-w-[60px]`}>Sale</th>
-            <th className={`text-left px-2 py-2 font-medium ${L.th} min-w-[100px]`}>Notes</th>
-            <th className={`text-center px-2 py-2 font-medium ${L.th} min-w-[60px]`}>Finalise</th>
-          </tr>
-        </thead>
-        <tbody>
-          {clients.map(client => (
-            <OnboardingRow key={client.id} client={client} coaches={coaches}
-              onUpdate={(f, v) => onUpdate(client.id, f, v)}
-              onAlertVideo={() => onAlertVideo(client.id)}
-              onFinalise={(cid, cn, d, pt, uw) => onFinalise(client.id, cid, cn, d, pt, uw)} />
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function OnboardingRow({ client, coaches, onUpdate, onAlertVideo, onFinalise }: {
-  client: any;
-  coaches: Array<{ id: number; name: string }>;
-  onUpdate: (field: string, value: any) => void;
-  onAlertVideo: () => void;
+function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVideo, onDelete, onFinalise }: {
+  client: any; coaches: Array<{ id: number; name: string }>; idx: number;
+  onUpdate: (field: string, value: any) => void; onAlertVideo: () => void; onUndoVideo: () => void; onDelete: () => void;
   onFinalise: (coachId: number, coachName: string, day: string, paymentType: "subscription" | "upfront", upfrontWeeks?: number) => void;
 }) {
   const videoSent = !!client.videoAlertSentAt;
@@ -270,101 +222,113 @@ function OnboardingRow({ client, coaches, onUpdate, onAlertVideo, onFinalise }: 
   const paymentType = client.paymentType || "subscription";
   const coach = coaches.find(c => c.name === client.coach);
   const canFinalise = client.coach && selectedDay && coach;
+  const stripe = idx % 2 === 0 ? "bg-white" : "bg-gray-50/70";
 
   return (
-    <tr className={`${L.td} ${L.hover} transition-colors`}>
-      <td className={`px-3 py-2 font-medium ${L.text}`}>{client.clientName}</td>
-      <td className="px-1 py-1.5">
-        <input type="date" value={client.datePaid || ""} onChange={e => onUpdate("datePaid", e.target.value || null)}
-          className={`w-full px-1 py-0.5 rounded ${L.input} text-[10px] focus:outline-none`} />
+    <tr className={`${stripe} border-b border-gray-100 hover:bg-violet-50/50 transition-colors group`}>
+      {/* Delete */}
+      <td className="pl-2 py-2">
+        <button onClick={onDelete} className="w-5 h-5 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 text-[10px] font-bold">✕</button>
       </td>
-      <td className="px-1 py-1.5">
-        <input type="date" value={client.dateDue || ""} onChange={e => onUpdate("dateDue", e.target.value || null)}
-          className={`w-full px-1 py-0.5 rounded ${L.input} text-[10px] focus:outline-none`} />
-      </td>
-      <td className="px-1 py-1.5">
-        <input type="date" value={client.requestedPhotos || ""} onChange={e => onUpdate("requestedPhotos", e.target.value || null)}
-          className={`w-full px-1 py-0.5 rounded ${L.input} text-[10px] focus:outline-none`} />
-      </td>
+      {/* Name */}
+      <td className="px-3 py-2 font-semibold text-gray-800 text-[11px]">{client.clientName}</td>
+      {/* Dates */}
+      {(["datePaid", "dateDue", "requestedPhotos"] as const).map(field => (
+        <td key={field} className="px-1 py-1">
+          <input type="date" value={client[field] || ""} onChange={e => onUpdate(field, e.target.value || null)}
+            className="w-full px-1 py-0.5 rounded border border-gray-200 text-gray-700 text-[10px] focus:outline-none focus:border-violet-400 bg-transparent cursor-pointer hover:bg-gray-50" />
+        </td>
+      ))}
+      {/* Bool checklist */}
       {BOOL_FIELDS.map(f => (
         <td key={f.key} className="text-center px-1 py-2">
           <button onClick={() => onUpdate(f.key, !client[f.key])}
-            className={`w-6 h-6 rounded-md text-[10px] font-bold transition-colors ${client[f.key] ? L.checkOn : L.checkOff}`}>
-            {client[f.key] ? "✓" : ""}
+            className={`w-5 h-5 rounded text-[9px] font-bold transition-all ${client[f.key]
+              ? "bg-emerald-500 text-white shadow-sm" : "bg-gray-100 border border-gray-200 text-transparent hover:border-gray-300"}`}>
+            ✓
           </button>
         </td>
       ))}
+      {/* Video */}
       <td className="text-center px-1 py-2">
-        <button onClick={onAlertVideo}
-          className={`w-6 h-6 rounded-md text-[10px] transition-colors ${videoSent
-            ? L.checkOn : "bg-fuchsia-50 border border-fuchsia-200 text-fuchsia-500 hover:bg-fuchsia-100"}`}>
+        <button onClick={videoSent ? onUndoVideo : onAlertVideo}
+          className={`w-5 h-5 rounded text-[9px] transition-all ${videoSent
+            ? "bg-emerald-500 text-white shadow-sm hover:bg-red-400" : "bg-fuchsia-100 border border-fuchsia-200 text-fuchsia-500 hover:bg-fuchsia-200"}`}>
           🎬
         </button>
       </td>
+      {/* Bool after video */}
       {BOOL_FIELDS_AFTER_VIDEO.map(f => (
         <td key={f.key} className="text-center px-1 py-2">
           <button onClick={() => onUpdate(f.key, !client[f.key])}
-            className={`w-6 h-6 rounded-md text-[10px] font-bold transition-colors ${client[f.key] ? L.checkOn : L.checkOff}`}>
-            {client[f.key] ? "✓" : ""}
+            className={`w-5 h-5 rounded text-[9px] font-bold transition-all ${client[f.key]
+              ? "bg-emerald-500 text-white shadow-sm" : "bg-gray-100 border border-gray-200 text-transparent hover:border-gray-300"}`}>
+            ✓
           </button>
         </td>
       ))}
-      {DATE_FIELDS.map(f => {
-        const val = client[f.key];
-        const auDate = val ? val.split("-").reverse().join("/") : null;
-        return (
-          <td key={f.key} className="text-center px-1 py-2">
-            <button onClick={() => onUpdate(f.key, val ? null : new Date().toISOString().slice(0, 10))}
-              className={`px-1.5 py-0.5 rounded text-[9px] font-medium transition-colors ${val
-                ? L.checkOn : L.checkOff}`}>
+      {/* Sent to Client */}
+      <td className="text-center px-1 py-2">
+        {(() => {
+          const val = client.sentToClient;
+          const auDate = val ? `${val.slice(8)}/${val.slice(5,7)}` : null;
+          return (
+            <button onClick={() => onUpdate("sentToClient", val ? null : new Date().toISOString().slice(0, 10))}
+              className={`px-1.5 py-0.5 rounded text-[9px] font-medium transition-all ${val
+                ? "bg-emerald-500 text-white shadow-sm" : "bg-gray-100 border border-gray-200 text-gray-400 hover:border-gray-300"}`}>
               {auDate || "—"}
             </button>
-          </td>
-        );
-      })}
-      <td className="px-2 py-2">
+          );
+        })()}
+      </td>
+      {/* Coach */}
+      <td className="px-2 py-1">
         <select value={client.coach || ""} onChange={e => onUpdate("coach", e.target.value || null)}
-          className={`w-full px-1.5 py-1 rounded ${L.select} text-[11px] focus:outline-none`}>
+          className="w-full px-1 py-0.5 rounded border border-gray-200 text-gray-700 text-[10px] focus:outline-none focus:border-violet-400 bg-transparent">
           <option value="">—</option>
           {coaches.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
         </select>
       </td>
-      <td className="px-2 py-2">
+      {/* Day */}
+      <td className="px-2 py-1">
         <select value={selectedDay} onChange={e => onUpdate("assignedDay", e.target.value || null)}
-          className={`w-full px-1.5 py-1 rounded ${L.select} text-[11px] focus:outline-none`}>
+          className="w-full px-1 py-0.5 rounded border border-gray-200 text-gray-700 text-[10px] focus:outline-none focus:border-violet-400 bg-transparent">
           <option value="">—</option>
           {DAY_OPTIONS.map(d => <option key={d} value={d}>{DAY_LABELS[d]}</option>)}
         </select>
       </td>
-      <td className="text-center px-2 py-2">
+      {/* Type */}
+      <td className="text-center px-1 py-2">
         <button onClick={() => onUpdate("paymentType", paymentType === "subscription" ? "upfront" : "subscription")}
-          className={`px-2 py-1 rounded text-[9px] font-bold transition-colors whitespace-nowrap ${paymentType === "upfront"
-            ? "bg-cyan-100 border border-cyan-300 text-cyan-700"
-            : "bg-violet-100 border border-violet-300 text-violet-700"}`}>
+          className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all whitespace-nowrap ${paymentType === "upfront"
+            ? "bg-cyan-500 text-white shadow-sm" : "bg-violet-100 text-violet-600 border border-violet-200"}`}>
           {paymentType === "upfront" ? "Upfront" : "Sub"}
         </button>
       </td>
-      <td className="text-center px-1 py-2">
+      {/* Sale */}
+      <td className="text-center px-1 py-1">
         <select value={client.salesPerson || ""} onChange={e => onUpdate("salesPerson", e.target.value || null)}
-          className={`w-full px-1 py-1 rounded text-[10px] font-semibold focus:outline-none border ${
+          className={`w-full px-1 py-0.5 rounded text-[10px] font-semibold focus:outline-none border ${
             client.salesPerson === "Yaman" ? "bg-blue-50 border-blue-200 text-blue-600"
             : client.salesPerson === "Suzie" ? "bg-pink-50 border-pink-200 text-pink-600"
-            : `${L.select}`}`}>
+            : "bg-transparent border-gray-200 text-gray-400"}`}>
           <option value="">—</option>
           <option value="Yaman">Yaman</option>
           <option value="Suzie">Suzie</option>
         </select>
       </td>
-      <td className="px-2 py-2">
+      {/* Notes */}
+      <td className="px-2 py-1">
         <input type="text" defaultValue={client.notes || ""} placeholder="..."
           onBlur={e => { const v = e.target.value || null; if (v !== (client.notes || null)) onUpdate("notes", v); }}
           onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-          className={`w-full px-1.5 py-1 rounded ${L.input} text-[10px] focus:outline-none`} />
+          className="w-full px-1.5 py-0.5 rounded border border-gray-200 text-gray-600 text-[10px] placeholder:text-gray-300 focus:outline-none focus:border-violet-400 bg-transparent" />
       </td>
+      {/* Finalise */}
       <td className="px-2 py-2">
         <button disabled={!canFinalise}
-          onClick={() => { if (canFinalise) onFinalise(coach!.id, coach!.name, selectedDay, paymentType as "subscription" | "upfront", paymentType === "upfront" ? 14 : undefined); }}
-          className="px-2 py-1 rounded bg-emerald-100 border border-emerald-300 text-emerald-700 text-[9px] font-semibold hover:bg-emerald-200 transition-colors disabled:opacity-30 whitespace-nowrap">
+          onClick={() => { if (canFinalise) onFinalise(coach!.id, coach!.name, selectedDay, paymentType as any, paymentType === "upfront" ? 14 : undefined); }}
+          className="px-2.5 py-1 rounded-md bg-emerald-500 text-white text-[9px] font-semibold hover:bg-emerald-600 transition-colors disabled:bg-gray-200 disabled:text-gray-400 whitespace-nowrap shadow-sm">
           Finalise
         </button>
       </td>
@@ -372,46 +336,44 @@ function OnboardingRow({ client, coaches, onUpdate, onAlertVideo, onFinalise }: 
   );
 }
 
-function CompletedTable({ clients, groupedByMonth }: { clients: any[]; groupedByMonth: [string, any[]][] }) {
+function CompletedTable({ groupedByMonth }: { groupedByMonth: [string, any[]][] }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {groupedByMonth.map(([month, monthClients]) => {
         const [y, m] = month.split("-");
         const mi = parseInt(m || "1") - 1;
         const label = month === "unknown" ? "Unknown" : `${MONTH_NAMES[mi]} ${y}`;
         return (
           <div key={month}>
-            <div className={`flex items-center gap-2 mb-2 px-1`}>
-              <span className={`text-sm font-bold ${L.text}`}>{label}</span>
-              <span className={`text-xs ${L.textMuted}`}>({monthClients.length} clients)</span>
+            <div className="flex items-center gap-2 mb-2 px-1">
+              <span className="text-sm font-bold text-gray-800">{label}</span>
+              <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full font-medium">{monthClients.length} clients</span>
             </div>
-            <div className="overflow-x-auto">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
               <table className="w-full text-xs">
                 <thead>
-                  <tr>
-                    <th className={`text-left px-3 py-1.5 font-medium ${L.th} min-w-[150px]`}>Client</th>
-                    <th className={`text-center px-1 py-1.5 font-medium ${L.th} min-w-[60px]`}>Sale</th>
-                    <th className={`text-left px-2 py-1.5 font-medium ${L.th} min-w-[70px]`}>Paid</th>
-                    <th className={`text-left px-2 py-1.5 font-medium ${L.th} min-w-[70px]`}>Due</th>
-                    <th className={`text-left px-2 py-1.5 font-medium ${L.th} min-w-[70px]`}>Started</th>
-                    <th className={`text-left px-2 py-1.5 font-medium ${L.th}`}>Coach</th>
-                    <th className={`text-left px-2 py-1.5 font-medium ${L.th}`}>Notes</th>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="text-left px-3 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Client</th>
+                    <th className="text-center px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Sale</th>
+                    <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Paid</th>
+                    <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Due</th>
+                    <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Started</th>
+                    <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Coach</th>
+                    <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Notes</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {monthClients.map(c => (
-                    <tr key={c.id} className={`border-l-4 ${MONTH_COLORS[mi % 12]} ${MONTH_BG[mi % 12]} ${L.td} ${L.hover} transition-colors`}>
-                      <td className={`px-3 py-1.5 font-medium ${L.text}`}>{c.clientName}</td>
-                      <td className="text-center px-1 py-1.5">
-                        <span className={`text-[10px] font-semibold ${
-                          c.salesPerson === "Yaman" ? "text-blue-600" : c.salesPerson === "Suzie" ? "text-pink-600" : L.textMuted
-                        }`}>{c.salesPerson || "—"}</span>
+                  {monthClients.map((c, idx) => (
+                    <tr key={c.id} className={`border-l-4 ${MONTH_COLORS[mi % 12]} ${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} border-b border-gray-100 hover:bg-violet-50/50 transition-colors`}>
+                      <td className="px-3 py-2 font-semibold text-gray-800">{c.clientName}</td>
+                      <td className="text-center px-2 py-2">
+                        <span className={`text-[10px] font-semibold ${c.salesPerson === "Yaman" ? "text-blue-600" : c.salesPerson === "Suzie" ? "text-pink-600" : "text-gray-300"}`}>{c.salesPerson || "—"}</span>
                       </td>
-                      <td className={`px-2 py-1.5 ${L.textMuted} text-[10px]`}>{c.datePaid ? c.datePaid.split("-").reverse().join("/") : "—"}</td>
-                      <td className={`px-2 py-1.5 ${L.textMuted} text-[10px]`}>{c.dateDue ? c.dateDue.split("-").reverse().join("/") : "—"}</td>
-                      <td className={`px-2 py-1.5 ${L.textMuted} text-[10px]`}>{c.sentToClient ? c.sentToClient.split("-").reverse().join("/") : "—"}</td>
-                      <td className={`px-2 py-1.5 ${L.text} text-[11px]`}>{c.coach || "—"}</td>
-                      <td className={`px-2 py-1.5 ${L.textMuted} text-[10px]`}>{c.notes || ""}</td>
+                      <td className="px-2 py-2 text-gray-500 text-[10px]">{c.datePaid ? c.datePaid.split("-").reverse().join("/") : "—"}</td>
+                      <td className="px-2 py-2 text-gray-500 text-[10px]">{c.dateDue ? c.dateDue.split("-").reverse().join("/") : "—"}</td>
+                      <td className="px-2 py-2 text-gray-500 text-[10px]">{c.sentToClient ? c.sentToClient.split("-").reverse().join("/") : "—"}</td>
+                      <td className="px-2 py-2 text-gray-700 text-[11px]">{c.coach || "—"}</td>
+                      <td className="px-2 py-2 text-gray-400 text-[10px]">{c.notes || ""}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -437,57 +399,40 @@ function AddClientForm({ coaches, onSubmit, onCancel, isPending }: {
   const [paymentType, setPaymentType] = useState("subscription");
   const [coach, setCoach] = useState("");
 
+  const inputCls = "px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400/30";
+  const labelCls = "text-[10px] text-gray-500 font-semibold uppercase tracking-wider";
+
   return (
     <div className="grid grid-cols-3 gap-3">
       <input placeholder="Client Name *" value={name} onChange={e => setName(e.target.value)}
-        className={`col-span-3 px-3 py-2 rounded-lg ${L.input} text-sm focus:outline-none`} />
-      <label className="flex flex-col gap-1">
-        <span className={`text-[10px] ${L.label} font-medium`}>Date Paid</span>
-        <input type="date" value={datePaid} onChange={e => setDatePaid(e.target.value)}
-          className={`px-3 py-2 rounded-lg ${L.input} text-sm focus:outline-none`} />
+        className={`col-span-3 ${inputCls}`} />
+      <label className="flex flex-col gap-1"><span className={labelCls}>Date Paid</span>
+        <input type="date" value={datePaid} onChange={e => setDatePaid(e.target.value)} className={`${inputCls} cursor-pointer`} />
       </label>
-      <label className="flex flex-col gap-1">
-        <span className={`text-[10px] ${L.label} font-medium`}>Date Due</span>
-        <input type="date" value={dateDue} onChange={e => setDateDue(e.target.value)}
-          className={`px-3 py-2 rounded-lg ${L.input} text-sm focus:outline-none`} />
+      <label className="flex flex-col gap-1"><span className={labelCls}>Date Due</span>
+        <input type="date" value={dateDue} onChange={e => setDateDue(e.target.value)} className={`${inputCls} cursor-pointer`} />
       </label>
-      <label className="flex flex-col gap-1">
-        <span className={`text-[10px] ${L.label} font-medium`}>Sale By</span>
-        <select value={salesPerson} onChange={e => setSalesPerson(e.target.value)}
-          className={`px-3 py-2 rounded-lg ${L.select} text-sm focus:outline-none`}>
-          <option value="">—</option>
-          <option value="Yaman">Yaman</option>
-          <option value="Suzie">Suzie</option>
+      <label className="flex flex-col gap-1"><span className={labelCls}>Sale By</span>
+        <select value={salesPerson} onChange={e => setSalesPerson(e.target.value)} className={inputCls}>
+          <option value="">—</option><option value="Yaman">Yaman</option><option value="Suzie">Suzie</option>
         </select>
       </label>
-      <label className="flex flex-col gap-1">
-        <span className={`text-[10px] ${L.label} font-medium`}>Payment Type</span>
-        <select value={paymentType} onChange={e => setPaymentType(e.target.value)}
-          className={`px-3 py-2 rounded-lg ${L.select} text-sm focus:outline-none`}>
-          <option value="subscription">Subscription</option>
-          <option value="upfront">Upfront</option>
+      <label className="flex flex-col gap-1"><span className={labelCls}>Payment Type</span>
+        <select value={paymentType} onChange={e => setPaymentType(e.target.value)} className={inputCls}>
+          <option value="subscription">Subscription</option><option value="upfront">Upfront</option>
         </select>
       </label>
-      <label className="flex flex-col gap-1">
-        <span className={`text-[10px] ${L.label} font-medium`}>Coach</span>
-        <select value={coach} onChange={e => setCoach(e.target.value)}
-          className={`px-3 py-2 rounded-lg ${L.select} text-sm focus:outline-none`}>
+      <label className="flex flex-col gap-1"><span className={labelCls}>Coach</span>
+        <select value={coach} onChange={e => setCoach(e.target.value)} className={inputCls}>
           <option value="">—</option>
           {coaches.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
         </select>
       </label>
-      <div className="col-span-3 flex gap-2 justify-end">
-        <button onClick={onCancel} className={`px-4 py-2 text-sm ${L.textMuted} hover:text-gray-600`}>Cancel</button>
-        <button onClick={() => name.trim() && onSubmit({
-          clientName: name.trim(),
-          datePaid: datePaid || undefined,
-          dateDue: dateDue || undefined,
-          salesPerson: salesPerson || undefined,
-          paymentType: paymentType || undefined,
-          coach: coach || undefined,
-        })}
+      <div className="col-span-3 flex gap-2 justify-end pt-1">
+        <button onClick={onCancel} className="px-4 py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors">Cancel</button>
+        <button onClick={() => name.trim() && onSubmit({ clientName: name.trim(), datePaid: datePaid || undefined, dateDue: dateDue || undefined, salesPerson: salesPerson || undefined, paymentType: paymentType || undefined, coach: coach || undefined })}
           disabled={!name.trim() || isPending}
-          className={`px-4 py-2 rounded-xl ${L.btn} text-sm font-semibold transition-colors disabled:opacity-40`}>
+          className="px-5 py-2 rounded-lg bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 transition-colors disabled:opacity-40 shadow-sm">
           {isPending ? "Adding..." : "Add Client"}
         </button>
       </div>

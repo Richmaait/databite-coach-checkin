@@ -3625,6 +3625,22 @@ const onboardingRouter = t.router({
       return { ok: true };
     }),
 
+  undoVideoAlert: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      await db.update(onboardingClients).set({ videoAlertSentAt: null }).where(eq(onboardingClients.id, input.id));
+      return { ok: true };
+    }),
+
+  deleteClient: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      await db.delete(onboardingClients).where(eq(onboardingClients.id, input.id));
+      return { ok: true };
+    }),
+
   importFromSheet: adminProcedure
     .mutation(async () => {
       const db = await requireDb();

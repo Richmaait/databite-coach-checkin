@@ -3633,6 +3633,16 @@ const onboardingRouter = t.router({
   salesStats: adminProcedure.query(async () => {
     const db = await requireDb();
     const rows = await db.select().from(onboardingClients);
+
+    // Historical overrides — verified totals from Rich's records
+    const OVERRIDES: Record<string, number> = {
+      "2024-12": 25,
+      "2025-01": 28, "2025-02": 30, "2025-03": 50, "2025-04": 60,
+      "2025-05": 30, "2025-06": 55, "2025-07": 63, "2025-08": 65,
+      "2025-09": 40, "2025-10": 70, "2025-11": 40, "2025-12": 49,
+      "2026-01": 51, "2026-02": 37, "2026-03": 34,
+    };
+
     const byMonth: Record<string, { total: number; bySeller: Record<string, number> }> = {};
     for (const r of rows) {
       const d = r.datePaid || "";
@@ -3643,6 +3653,13 @@ const onboardingRouter = t.router({
       const seller = r.salesPerson || "Unassigned";
       byMonth[month].bySeller[seller] = (byMonth[month].bySeller[seller] || 0) + 1;
     }
+
+    // Apply overrides for historical months
+    for (const [month, total] of Object.entries(OVERRIDES)) {
+      if (!byMonth[month]) byMonth[month] = { total, bySeller: { Unassigned: total } };
+      else byMonth[month].total = total;
+    }
+
     return Object.entries(byMonth)
       .sort((a, b) => b[0].localeCompare(a[0]))
       .map(([month, data]) => ({ month, ...data }));

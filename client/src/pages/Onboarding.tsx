@@ -151,7 +151,7 @@ export default function Onboarding() {
                     const [y, m] = row.month.split("-");
                     const mi = parseInt(m) - 1;
                     return (
-                      <tr key={row.month} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} border-b border-gray-100`}>
+                      <tr key={row.month} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} border-b border-gray-100 border-l-4 ${MONTH_COLORS[mi % 12]}`}>
                         <td className="px-4 py-2 font-semibold text-gray-800">{MONTH_NAMES[mi]} {y}</td>
                         <td className="text-center px-3 py-2 font-bold text-gray-900 text-sm">{row.total}</td>
                         <td className="text-center px-3 py-2 font-semibold text-blue-600">{row.bySeller?.Yaman || "—"}</td>

@@ -244,6 +244,7 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
       {(["datePaid", "dateDue", "requestedPhotos"] as const).map(field => (
         <td key={field} className="px-1 py-1">
           <input type="date" value={client[field] || ""} onChange={e => onUpdate(field, e.target.value || null)}
+            onClick={e => (e.target as HTMLInputElement).showPicker?.()}
             className="w-full px-1 py-0.5 rounded border border-gray-200 text-gray-700 text-[10px] focus:outline-none focus:border-violet-400 bg-transparent cursor-pointer hover:bg-gray-50" />
         </td>
       ))}
@@ -291,11 +292,21 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
       </td>
       {/* Coach */}
       <td className="px-2 py-1">
-        <select value={client.coach || ""} onChange={e => onUpdate("coach", e.target.value || null)}
-          className={`w-full px-1 py-0.5 rounded border border-gray-200 text-[10px] font-semibold focus:outline-none focus:border-violet-400 bg-transparent ${COACH_COLORS[client.coach] || "text-gray-400"}`}>
-          <option value="">—</option>
-          {coaches.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-        </select>
+        {(() => {
+          const bg = client.coach === "Steve" ? "bg-blue-50 border-blue-200 text-blue-700"
+            : client.coach === "Luke" ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+            : client.coach === "Kyah" ? "bg-fuchsia-50 border-fuchsia-200 text-fuchsia-700"
+            : client.coach === "Rich" ? "bg-violet-50 border-violet-200 text-violet-700"
+            : client.coach?.startsWith("Alex") ? "bg-amber-50 border-amber-200 text-amber-700"
+            : "bg-transparent border-gray-200 text-gray-400";
+          return (
+            <select value={client.coach || ""} onChange={e => onUpdate("coach", e.target.value || null)}
+              className={`w-full px-1 py-0.5 rounded border text-[10px] font-semibold focus:outline-none focus:border-violet-400 ${bg}`}>
+              <option value="">—</option>
+              {coaches.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+            </select>
+          );
+        })()}
       </td>
       {/* Day */}
       <td className="px-2 py-1">
@@ -419,10 +430,10 @@ function AddClientForm({ coaches, onSubmit, onCancel, isPending }: {
       <input placeholder="Client Name *" value={name} onChange={e => setName(e.target.value)}
         className={`col-span-3 ${inputCls}`} />
       <label className="flex flex-col gap-1"><span className={labelCls}>Date Paid</span>
-        <input type="date" value={datePaid} onChange={e => setDatePaid(e.target.value)} className={`${inputCls} cursor-pointer`} />
+        <input type="date" value={datePaid} onChange={e => setDatePaid(e.target.value)} onClick={e => (e.target as HTMLInputElement).showPicker?.()} className={`${inputCls} cursor-pointer`} />
       </label>
       <label className="flex flex-col gap-1"><span className={labelCls}>Date Due</span>
-        <input type="date" value={dateDue} onChange={e => setDateDue(e.target.value)} className={`${inputCls} cursor-pointer`} />
+        <input type="date" value={dateDue} onChange={e => setDateDue(e.target.value)} onClick={e => (e.target as HTMLInputElement).showPicker?.()} className={`${inputCls} cursor-pointer`} />
       </label>
       <label className="flex flex-col gap-1"><span className={labelCls}>Sale By</span>
         <select value={salesPerson} onChange={e => setSalesPerson(e.target.value)} className={inputCls}>

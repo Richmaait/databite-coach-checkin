@@ -19,6 +19,11 @@ const BOOL_FIELDS_AFTER_VIDEO = [
 const DAY_OPTIONS = ["monday", "tuesday", "wednesday", "thursday", "friday"] as const;
 const DAY_LABELS: Record<string, string> = { monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu", friday: "Fri" };
 
+const COACH_COLORS: Record<string, string> = {
+  Steve: "text-blue-600", Luke: "text-emerald-600", Kyah: "text-fuchsia-600",
+  Rich: "text-violet-600", "Alex ": "text-amber-600", Alex: "text-amber-600",
+};
+
 const MONTH_COLORS = [
   "border-l-blue-400", "border-l-emerald-400", "border-l-violet-400", "border-l-pink-400",
   "border-l-cyan-400", "border-l-amber-400", "border-l-rose-400", "border-l-teal-400",
@@ -130,11 +135,14 @@ export default function Onboarding() {
               className="w-full max-w-md px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-900 text-sm placeholder:text-gray-300 focus:outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400/30 shadow-sm" />
           </div>
 
-          {/* Add client form */}
+          {/* Add client modal */}
           {showAddForm && tab === "onboarding" && (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-4">
-              <h3 className="text-sm font-bold text-gray-700 mb-3">New Client</h3>
-              <AddClientForm coaches={coaches} onSubmit={data => createMutation.mutate(data)} onCancel={() => setShowAddForm(false)} isPending={createMutation.isPending} />
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowAddForm(false)} />
+              <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl p-6 w-full max-w-lg mx-4">
+                <h3 className="text-base font-bold text-gray-800 mb-4">New Client</h3>
+                <AddClientForm coaches={coaches} onSubmit={data => createMutation.mutate(data)} onCancel={() => setShowAddForm(false)} isPending={createMutation.isPending} />
+              </div>
             </div>
           )}
 
@@ -185,7 +193,7 @@ export default function Onboarding() {
                     <th className="text-left px-2 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Day</th>
                     <th className="text-center px-2 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Type</th>
                     <th className="text-center px-1 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Sale</th>
-                    <th className="text-left px-2 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Notes</th>
+                    <th className="text-left px-2 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px] min-w-[180px]">Notes</th>
                     <th className="text-center px-2 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]" />
                   </tr>
                 </thead>
@@ -225,7 +233,7 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
   const stripe = idx % 2 === 0 ? "bg-white" : "bg-gray-50/70";
 
   return (
-    <tr className={`${stripe} border-b border-gray-100 hover:bg-violet-50/50 transition-colors group`}>
+    <tr className={`${stripe} border-b border-gray-100 hover:bg-violet-100/80 transition-colors group`}>
       {/* Delete */}
       <td className="pl-2 py-2">
         <button onClick={onDelete} className="w-5 h-5 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 text-[10px] font-bold">✕</button>
@@ -284,7 +292,7 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
       {/* Coach */}
       <td className="px-2 py-1">
         <select value={client.coach || ""} onChange={e => onUpdate("coach", e.target.value || null)}
-          className="w-full px-1 py-0.5 rounded border border-gray-200 text-gray-700 text-[10px] focus:outline-none focus:border-violet-400 bg-transparent">
+          className={`w-full px-1 py-0.5 rounded border border-gray-200 text-[10px] font-semibold focus:outline-none focus:border-violet-400 bg-transparent ${COACH_COLORS[client.coach] || "text-gray-400"}`}>
           <option value="">—</option>
           {coaches.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
         </select>
@@ -364,7 +372,7 @@ function CompletedTable({ groupedByMonth }: { groupedByMonth: [string, any[]][] 
                 </thead>
                 <tbody>
                   {monthClients.map((c, idx) => (
-                    <tr key={c.id} className={`border-l-4 ${MONTH_COLORS[mi % 12]} ${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} border-b border-gray-100 hover:bg-violet-50/50 transition-colors`}>
+                    <tr key={c.id} className={`border-l-4 ${MONTH_COLORS[mi % 12]} ${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} border-b border-gray-100 hover:bg-violet-100/80 transition-colors`}>
                       <td className="px-3 py-2 font-semibold text-gray-800">{c.clientName}</td>
                       <td className="text-center px-2 py-2">
                         <span className={`text-[10px] font-semibold ${c.salesPerson === "Yaman" ? "text-blue-600" : c.salesPerson === "Suzie" ? "text-pink-600" : "text-gray-300"}`}>{c.salesPerson || "—"}</span>
@@ -372,7 +380,7 @@ function CompletedTable({ groupedByMonth }: { groupedByMonth: [string, any[]][] 
                       <td className="px-2 py-2 text-gray-500 text-[10px]">{c.datePaid ? c.datePaid.split("-").reverse().join("/") : "—"}</td>
                       <td className="px-2 py-2 text-gray-500 text-[10px]">{c.dateDue ? c.dateDue.split("-").reverse().join("/") : "—"}</td>
                       <td className="px-2 py-2 text-gray-500 text-[10px]">{c.sentToClient ? c.sentToClient.split("-").reverse().join("/") : "—"}</td>
-                      <td className="px-2 py-2 text-gray-700 text-[11px]">{c.coach || "—"}</td>
+                      <td className={`px-2 py-2 text-[11px] font-semibold ${COACH_COLORS[c.coach] || "text-gray-400"}`}>{c.coach || "—"}</td>
                       <td className="px-2 py-2 text-gray-400 text-[10px]">{c.notes || ""}</td>
                     </tr>
                   ))}

@@ -141,9 +141,9 @@ export default function Onboarding() {
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Month</th>
-                    <th className="text-center px-3 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Total</th>
-                    <th className="text-center px-3 py-2.5 font-semibold text-blue-500 uppercase tracking-wider text-[10px]">Yaman</th>
-                    <th className="text-center px-3 py-2.5 font-semibold text-pink-500 uppercase tracking-wider text-[10px]">Suzie</th>
+                    <th className="text-center px-3 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px] border-l border-gray-200">Total</th>
+                    <th className="text-center px-3 py-2.5 font-semibold text-blue-500 uppercase tracking-wider text-[10px] border-l border-gray-200 bg-blue-50/40">Yaman</th>
+                    <th className="text-center px-3 py-2.5 font-semibold text-pink-500 uppercase tracking-wider text-[10px] border-l border-gray-200 bg-pink-50/40">Suzie</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -153,9 +153,9 @@ export default function Onboarding() {
                     return (
                       <tr key={row.month} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} border-b border-gray-100 border-l-4 ${MONTH_COLORS[mi % 12]}`}>
                         <td className="px-4 py-2 font-semibold text-gray-800">{MONTH_NAMES[mi]} {y}</td>
-                        <td className="text-center px-3 py-2 font-bold text-gray-900 text-sm">{row.total}</td>
-                        <td className="text-center px-3 py-2 font-semibold text-blue-600">{row.bySeller?.Yaman || "—"}</td>
-                        <td className="text-center px-3 py-2 font-semibold text-pink-600">{row.bySeller?.Suzie || "—"}</td>
+                        <td className="text-center px-3 py-2 font-bold text-gray-900 text-sm border-l border-gray-100">{row.total}</td>
+                        <td className="text-center px-3 py-2 font-semibold text-blue-600 border-l border-gray-100 bg-blue-50/20">{row.bySeller?.Yaman || "—"}</td>
+                        <td className="text-center px-3 py-2 font-semibold text-pink-600 border-l border-gray-100 bg-pink-50/20">{row.bySeller?.Suzie || "—"}</td>
                       </tr>
                     );
                   })}

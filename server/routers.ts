@@ -3497,9 +3497,9 @@ const onboardingRouter = t.router({
     .input(z.object({
       id: z.number(),
       clientName: z.string().optional(),
-      coach: z.string().optional(),
-      datePaid: z.string().optional(),
-      dateDue: z.string().optional(),
+      coach: z.string().nullable().optional(),
+      datePaid: z.string().nullable().optional(),
+      dateDue: z.string().nullable().optional(),
       appInviteSent: z.boolean().optional(),
       contractSent: z.boolean().optional(),
       requestedPhotos: z.string().nullable().optional(),

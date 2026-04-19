@@ -4322,6 +4322,21 @@ Please record and send their welcome video.`;
     await db2.update(onboardingClients).set({ status: "active", cancelledAt: null }).where(eq8(onboardingClients.id, input.id));
     return { ok: true };
   }),
+  salesStats: adminProcedure.query(async () => {
+    const db2 = await requireDb();
+    const rows = await db2.select().from(onboardingClients);
+    const byMonth = {};
+    for (const r of rows) {
+      const d = r.datePaid || "";
+      const month = d ? d.slice(0, 7) : null;
+      if (!month) continue;
+      if (!byMonth[month]) byMonth[month] = { total: 0, bySeller: {} };
+      byMonth[month].total++;
+      const seller = r.salesPerson || "Unassigned";
+      byMonth[month].bySeller[seller] = (byMonth[month].bySeller[seller] || 0) + 1;
+    }
+    return Object.entries(byMonth).sort((a, b) => b[0].localeCompare(a[0])).map(([month, data]) => ({ month, ...data }));
+  }),
   undoVideoAlert: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
     const db2 = await requireDb();
     await db2.update(onboardingClients).set({ videoAlertSentAt: null }).where(eq8(onboardingClients.id, input.id));

@@ -45,6 +45,7 @@ export default function Onboarding() {
   const { data: onboardingClients, refetch: refetchOnboarding, isLoading: loadingOnboarding } = trpc.onboarding.list.useQuery({ status: "onboarding" });
   const { data: activeClients, refetch: refetchActive, isLoading: loadingActive } = trpc.onboarding.list.useQuery({ status: "completed" as any });
   const { data: allCoaches } = trpc.coaches.list.useQuery();
+  const { data: salesStats } = trpc.onboarding.salesStats.useQuery();
   const coaches = allCoaches ?? [];
 
   const refetch = () => { refetchOnboarding(); refetchActive(); };
@@ -78,18 +79,6 @@ export default function Onboarding() {
     return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
   }, [filtered, tab]);
 
-  const salesStats = useMemo(() => {
-    if (tab !== "completed" || !groupedByMonth) return null;
-    const stats: Record<string, { total: number; bySeller: Record<string, number> }> = {};
-    for (const [month, mClients] of groupedByMonth) {
-      stats[month] = { total: mClients.length, bySeller: {} };
-      for (const c of mClients) {
-        const seller = (c as any).salesPerson || "Unassigned";
-        stats[month].bySeller[seller] = (stats[month].bySeller[seller] || 0) + 1;
-      }
-    }
-    return stats;
-  }, [groupedByMonth, tab]);
 
   const onUpdate = (id: number, field: string, value: any) => updateMutation.mutate({ id, [field]: value });
 
@@ -145,26 +134,34 @@ export default function Onboarding() {
           )}
 
           {/* Sales widget */}
-          {tab === "completed" && salesStats && (
-            <div className="flex gap-3 overflow-x-auto pb-2 mb-4">
-              {Object.entries(salesStats).slice(0, 6).map(([month, data]) => {
-                const [y, m] = month.split("-");
-                const mi = parseInt(m) - 1;
-                return (
-                  <div key={month} className={`bg-white rounded-xl border border-gray-200 shadow-sm p-3 min-w-[140px] border-l-4 ${MONTH_COLORS[mi % 12]}`}>
-                    <div className="text-xs font-bold text-gray-700">{MONTH_NAMES[mi]} {y}</div>
-                    <div className="text-2xl font-bold text-violet-600 mt-1">{data.total}</div>
-                    <div className="mt-1.5 space-y-0.5">
-                      {Object.entries(data.bySeller).sort((a, b) => b[1] - a[1]).map(([seller, count]) => (
-                        <div key={seller} className="flex justify-between text-[10px]">
-                          <span className={seller === "Yaman" ? "text-blue-600 font-semibold" : seller === "Suzie" ? "text-pink-600 font-semibold" : "text-gray-400"}>{seller}</span>
-                          <span className="text-gray-600 font-medium">{count}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
+          {tab === "completed" && salesStats && salesStats.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-4">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Month</th>
+                    <th className="text-center px-3 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Total</th>
+                    <th className="text-center px-3 py-2.5 font-semibold text-blue-500 uppercase tracking-wider text-[10px]">Yaman</th>
+                    <th className="text-center px-3 py-2.5 font-semibold text-pink-500 uppercase tracking-wider text-[10px]">Suzie</th>
+                    <th className="text-center px-3 py-2.5 font-semibold text-gray-400 uppercase tracking-wider text-[10px]">Other</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {salesStats.slice(0, 8).map((row: any, idx: number) => {
+                    const [y, m] = row.month.split("-");
+                    const mi = parseInt(m) - 1;
+                    return (
+                      <tr key={row.month} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} border-b border-gray-100 border-l-4 ${MONTH_COLORS[mi % 12]}`}>
+                        <td className="px-4 py-2 font-semibold text-gray-800">{MONTH_NAMES[mi]} {y}</td>
+                        <td className="text-center px-3 py-2 font-bold text-gray-900 text-sm">{row.total}</td>
+                        <td className="text-center px-3 py-2 font-semibold text-blue-600">{row.bySeller?.Yaman || "—"}</td>
+                        <td className="text-center px-3 py-2 font-semibold text-pink-600">{row.bySeller?.Suzie || "—"}</td>
+                        <td className="text-center px-3 py-2 text-gray-400">{row.bySeller?.Unassigned || "—"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
 

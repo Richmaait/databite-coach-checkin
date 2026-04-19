@@ -3630,6 +3630,24 @@ const onboardingRouter = t.router({
       return { ok: true };
     }),
 
+  salesStats: adminProcedure.query(async () => {
+    const db = await requireDb();
+    const rows = await db.select().from(onboardingClients);
+    const byMonth: Record<string, { total: number; bySeller: Record<string, number> }> = {};
+    for (const r of rows) {
+      const d = r.datePaid || "";
+      const month = d ? d.slice(0, 7) : null;
+      if (!month) continue;
+      if (!byMonth[month]) byMonth[month] = { total: 0, bySeller: {} };
+      byMonth[month].total++;
+      const seller = r.salesPerson || "Unassigned";
+      byMonth[month].bySeller[seller] = (byMonth[month].bySeller[seller] || 0) + 1;
+    }
+    return Object.entries(byMonth)
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([month, data]) => ({ month, ...data }));
+  }),
+
   undoVideoAlert: adminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {

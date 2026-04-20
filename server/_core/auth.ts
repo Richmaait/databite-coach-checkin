@@ -1,29 +1,33 @@
 import { Request, Response, Express } from "express";
 import { SignJWT, jwtVerify } from "jose";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getDb } from "../db";
 import { users, coaches } from "../../drizzle/schema";
 import { ENV } from "../env";
 import { ADMIN_EMAILS } from "../../shared/const";
-
-/** Coaches that should be auto-created and linked on login */
-const COACH_EMAILS: Record<string, string> = {
-  "steve@databite.com.au": "Steve",
-  "luke@databite.com.au": "Luke",
-  "kyah@databite.com.au": "Kyah",
-};
 
 /** Sales team members */
 const SALES_EMAILS: Record<string, string> = {
   "yaman@databite.com.au": "Yaman",
 };
 
-/** All allowed login emails */
-const ALLOWED_EMAILS = [
-  ...ADMIN_EMAILS,
-  ...Object.keys(COACH_EMAILS),
-  ...Object.keys(SALES_EMAILS),
-];
+/** Check if an email is allowed to log in — admins, sales, or any active coach with an email in the DB */
+async function isEmailAllowed(email: string): Promise<boolean> {
+  if (ADMIN_EMAILS.includes(email)) return true;
+  if (SALES_EMAILS[email]) return true;
+  const db = await getDb();
+  if (!db) return false;
+  const [coach] = await db.select().from(coaches).where(and(eq(coaches.email, email), eq(coaches.isActive, 1))).limit(1);
+  return !!coach;
+}
+
+/** Look up a coach by email from the DB */
+async function getCoachByEmail(email: string): Promise<{ id: number; name: string; email: string | null; userId: number | null } | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const [coach] = await db.select().from(coaches).where(and(eq(coaches.email, email), eq(coaches.isActive, 1))).limit(1);
+  return coach || null;
+}
 
 const JWT_SECRET = new TextEncoder().encode(ENV.cookieSecret || "dev-secret-change-me");
 const COOKIE_NAME = "session";
@@ -134,7 +138,9 @@ export async function registerAuthRoutes(app: Express) {
       const emailLc = email.toLowerCase();
       const isAdmin = ADMIN_EMAILS.includes(emailLc);
       const isSales = SALES_EMAILS[emailLc] != null;
-      const knownName = isAdmin ? "Rich" : COACH_EMAILS[emailLc] || SALES_EMAILS[emailLc] || null;
+      const ADMIN_NAMES: Record<string, string> = { "rich@databite.com.au": "Rich", "suzie@databite.com.au": "Suzie" };
+      const coachRecord = await getCoachByEmail(emailLc);
+      const knownName = isAdmin ? (ADMIN_NAMES[emailLc] || null) : coachRecord?.name || SALES_EMAILS[emailLc] || null;
       const [result] = await db.insert(users).values({
         email,
         name: knownName || email.split("@")[0],
@@ -153,38 +159,27 @@ export async function registerAuthRoutes(app: Express) {
       user = { ...user, role: "admin" };
     }
 
-    // Auto-create and link coach profile for known coach emails
+    // Auto-link coach profile for emails that match a coach in the DB
     const emailLower = email.toLowerCase();
-    if (COACH_EMAILS[emailLower]) {
-      // Ensure user role is "coach"
-      if (user.role !== "coach") {
+    const coachForEmail = await getCoachByEmail(emailLower);
+    if (coachForEmail) {
+      if (user.role !== "coach" && !ADMIN_EMAILS.includes(emailLower)) {
         await db.update(users).set({ role: "coach" }).where(eq(users.id, user.id));
         user = { ...user, role: "coach" };
       }
 
-      // Check if a coach record already exists for this email
+      // Link coach to user if not already linked
       const [existingCoach] = await db
         .select()
         .from(coaches)
         .where(eq(coaches.email, emailLower))
         .limit(1);
 
-      if (existingCoach) {
-        // Link coach to this user if not already linked
-        if (!existingCoach.userId) {
-          await db
-            .update(coaches)
-            .set({ userId: user.id })
-            .where(eq(coaches.id, existingCoach.id));
-        }
-      } else {
-        // Auto-create coach record linked to this user
-        await db.insert(coaches).values({
-          name: COACH_EMAILS[emailLower],
-          email: emailLower,
-          userId: user.id,
-          isActive: 1,
-        });
+      if (existingCoach && !existingCoach.userId) {
+        await db
+          .update(coaches)
+          .set({ userId: user.id })
+          .where(eq(coaches.id, existingCoach.id));
       }
     }
 
@@ -303,8 +298,8 @@ export async function registerAuthRoutes(app: Express) {
         return res.redirect("/login?error=no_email");
       }
 
-      // Check if email is allowed
-      if (!ALLOWED_EMAILS.includes(email)) {
+      // Check if email is allowed (admins, sales, or active coach in DB)
+      if (!(await isEmailAllowed(email))) {
         return res.redirect("/login?error=not_approved");
       }
 
@@ -322,12 +317,14 @@ export async function registerAuthRoutes(app: Express) {
 
       if (!user) {
         const isAdmin = ADMIN_EMAILS.includes(email);
+        const isSales = SALES_EMAILS[email] != null;
         const ADMIN_NAMES: Record<string, string> = { "rich@databite.com.au": "Rich", "suzie@databite.com.au": "Suzie" };
-        const knownName = isAdmin ? (ADMIN_NAMES[email] || null) : COACH_EMAILS[email] || null;
+        const coachRecord = await getCoachByEmail(email);
+        const knownName = isAdmin ? (ADMIN_NAMES[email] || null) : coachRecord?.name || SALES_EMAILS[email] || null;
         const [result] = await db.insert(users).values({
           email,
           name: knownName || userInfo.name || email.split("@")[0],
-          role: isAdmin ? "admin" : "coach",
+          role: isAdmin ? "admin" : isSales ? "sales" : "coach",
         });
         [user] = await db
           .select()
@@ -342,33 +339,15 @@ export async function registerAuthRoutes(app: Express) {
         user = { ...user, role: "admin" };
       }
 
-      // Auto-create and link coach profile for known coach emails
-      if (COACH_EMAILS[email]) {
-        if (user.role !== "coach") {
+      // Auto-link coach profile from DB
+      const coachForEmail = await getCoachByEmail(email);
+      if (coachForEmail) {
+        if (user.role !== "coach" && !ADMIN_EMAILS.includes(email)) {
           await db.update(users).set({ role: "coach" }).where(eq(users.id, user.id));
           user = { ...user, role: "coach" };
         }
-
-        const [existingCoach] = await db
-          .select()
-          .from(coaches)
-          .where(eq(coaches.email, email))
-          .limit(1);
-
-        if (existingCoach) {
-          if (!existingCoach.userId) {
-            await db
-              .update(coaches)
-              .set({ userId: user.id })
-              .where(eq(coaches.id, existingCoach.id));
-          }
-        } else {
-          await db.insert(coaches).values({
-            name: COACH_EMAILS[email],
-            email,
-            userId: user.id,
-            isActive: 1,
-          });
+        if (!coachForEmail.userId) {
+          await db.update(coaches).set({ userId: user.id }).where(eq(coaches.id, coachForEmail.id));
         }
       }
 

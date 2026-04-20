@@ -21,7 +21,7 @@ export const FORM_TO_COACH: Record<string, string> = {
   hrGCn0V0: "Kyah",
   i9de5jMN: "Luke",
   lRvWjdgl: "Steve",
-  // Rich's form is excluded — he is the founder, not a tracked coach
+  Ol9CZ2Lu: "Rich",
 };
 
 const SHEET_ID = "1puu4oLAmC5jV_GEmRrMxvXuTak_dl6pOJ6iWC44Nfl4";

@@ -185,36 +185,40 @@ export default function Onboarding() {
           ) : filtered.length === 0 ? (
             <div className="text-center text-gray-400 py-16">{tab === "onboarding" ? "No clients in onboarding." : "No completed clients yet."}</div>
           ) : tab === "onboarding" ? (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto -mx-6 px-0 sm:mx-0">
-              <table className="text-xs whitespace-nowrap min-w-[1100px] w-full">
+            <div className="bg-white rounded-xl border border-gray-300 shadow-sm overflow-x-auto -mx-6 px-0 sm:mx-0">
+              <table className="text-xs whitespace-nowrap min-w-[1200px] w-full border-collapse">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="w-6" />
-                    <th className="text-left px-3 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Client</th>
-                    <th className="text-left px-1 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Paid</th>
-                    <th className="text-left px-1 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Due</th>
-                    <th className="text-left px-1 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Photos</th>
-                    {BOOL_FIELDS.map(f => <th key={f.key} className="text-center px-1 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">{f.label}</th>)}
-                    <th className="text-center px-1 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Video</th>
-                    {BOOL_FIELDS_AFTER_VIDEO.map(f => <th key={f.key} className="text-center px-1 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">{f.label}</th>)}
-                    <th className="text-center px-1 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Sent</th>
-                    <th className="text-left px-2 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Coach</th>
-                    <th className="text-left px-2 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Day</th>
-                    <th className="text-center px-2 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Type</th>
-                    <th className="text-center px-1 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Sale</th>
-                    <th className="text-left px-2 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px] min-w-[180px]">Notes</th>
-                    <th className="text-center px-2 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]" />
+                  <tr className="bg-gray-100 border-b-2 border-gray-300">
+                    <th className="w-10 border-r border-gray-200" />
+                    <th className="text-left px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[160px]">Client</th>
+                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[100px]">Date Paid</th>
+                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[100px]">Due Date</th>
+                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[100px]">Photos</th>
+                    {BOOL_FIELDS.map(f => <th key={f.key} className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[70px]">{f.label}</th>)}
+                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[60px]">Video</th>
+                    {BOOL_FIELDS_AFTER_VIDEO.map(f => <th key={f.key} className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[80px]">{f.label}</th>)}
+                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[70px]">Sent</th>
+                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[80px]">Coach</th>
+                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[70px]">Day</th>
+                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[70px]">Type</th>
+                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[70px]">Sale</th>
+                    <th className="text-left px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[200px]">Notes</th>
+                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] min-w-[70px]">Finalise</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((client, idx) => (
-                    <OnboardingRow key={client.id} client={client} coaches={coaches} idx={idx}
+                  {filtered.map((client, idx) => {
+                    const today = new Date().toISOString().slice(0, 10);
+                    const isDueToday = client.dateDue === today;
+                    return (
+                    <OnboardingRow key={client.id} client={client} coaches={coaches} idx={idx} isDueToday={isDueToday}
                       onUpdate={(f, v) => onUpdate(client.id, f, v)}
                       onAlertVideo={() => { if (confirm(`Send welcome video alert to Rich for ${client.clientName}?`)) alertVideoMutation.mutate({ id: client.id }); }}
                       onUndoVideo={() => { if (confirm(`Undo video alert for ${client.clientName}?`)) undoVideoMutation.mutate({ id: client.id }); }}
                       onDelete={() => { if (confirm(`Delete ${client.clientName}? This cannot be undone.`)) deleteMutation.mutate({ id: client.id }); }}
                       onFinalise={(cid, cn, d, pt, uw) => finaliseMutation.mutate({ id: client.id, coachId: cid, coachName: cn, dayOfWeek: d as any, paymentType: pt, upfrontWeeks: uw })} />
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -229,8 +233,8 @@ export default function Onboarding() {
   );
 }
 
-function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVideo, onDelete, onFinalise }: {
-  client: any; coaches: Array<{ id: number; name: string }>; idx: number;
+function OnboardingRow({ client, coaches, idx, isDueToday, onUpdate, onAlertVideo, onUndoVideo, onDelete, onFinalise }: {
+  client: any; coaches: Array<{ id: number; name: string }>; idx: number; isDueToday: boolean;
   onUpdate: (field: string, value: any) => void; onAlertVideo: () => void; onUndoVideo: () => void; onDelete: () => void;
   onFinalise: (coachId: number, coachName: string, day: string, paymentType: "subscription" | "upfront", upfrontWeeks?: number) => void;
 }) {
@@ -239,21 +243,32 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
   const paymentType = client.paymentType || "subscription";
   const coach = coaches.find(c => c.name === client.coach);
   const canFinalise = client.coach && selectedDay && coach;
-  const stripe = idx % 2 === 0 ? "bg-white" : "bg-gray-50/70";
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(client.clientName);
+  const [localBools, setLocalBools] = useState<Record<string, boolean>>({});
+
+  const getBool = (key: string) => localBools[key] ?? client[key];
+  const toggleBool = (key: string) => {
+    const newVal = !getBool(key);
+    setLocalBools(prev => ({ ...prev, [key]: newVal }));
+    onUpdate(key, newVal);
+  };
+
+  const rowBg = isDueToday ? "bg-orange-50" : idx % 2 === 0 ? "bg-white" : "bg-gray-50/70";
+  const rowBorder = isDueToday ? "border-l-4 border-l-orange-400" : "";
+  const cellBorder = "border-r border-gray-200";
 
   return (
-    <tr className={`${stripe} border-b border-gray-100 hover:bg-violet-100/80 transition-colors group`}>
+    <tr className={`${rowBg} ${rowBorder} border-b border-gray-200 hover:bg-violet-50/60 transition-colors group`}>
       {/* Delete + Edit */}
-      <td className="pl-2 py-2">
+      <td className={`pl-2 py-2.5 ${cellBorder}`}>
         <div className="flex items-center gap-0.5">
           <button onClick={onDelete} className="w-5 h-5 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 text-[10px] font-bold">✕</button>
           <button onClick={() => { setNameValue(client.clientName); setEditingName(true); }} className="w-5 h-5 rounded text-gray-300 hover:text-violet-500 hover:bg-violet-50 transition-colors opacity-0 group-hover:opacity-100 text-[10px]">✎</button>
         </div>
       </td>
       {/* Name */}
-      <td className="px-3 py-2 font-semibold text-gray-800 text-[11px]">
+      <td className={`px-3 py-2.5 font-semibold text-gray-800 text-[11px] ${cellBorder}`}>
         {editingName ? (
           <input autoFocus value={nameValue} onChange={e => setNameValue(e.target.value)}
             onBlur={() => { const v = nameValue.trim(); if (v && v !== client.clientName) onUpdate("clientName", v); setEditingName(false); }}
@@ -263,48 +278,48 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
       </td>
       {/* Dates */}
       {(["datePaid", "dateDue", "requestedPhotos"] as const).map(field => (
-        <td key={field} className="px-1 py-1">
+        <td key={field} className={`px-2 py-1.5 ${cellBorder}`}>
           <input type="date" value={client[field] || ""} onChange={e => onUpdate(field, e.target.value || null)}
             onClick={e => (e.target as HTMLInputElement).showPicker?.()}
-            className="w-full px-1 py-0.5 rounded border border-gray-200 text-gray-700 text-[10px] focus:outline-none focus:border-violet-400 bg-transparent cursor-pointer hover:bg-gray-50" />
+            className="w-full px-1.5 py-1 rounded border border-gray-200 text-gray-700 text-[11px] focus:outline-none focus:border-violet-400 bg-transparent cursor-pointer hover:bg-gray-50" />
         </td>
       ))}
       {/* Bool checklist */}
       {BOOL_FIELDS.map(f => (
-        <td key={f.key} className="text-center px-1 py-2">
-          <button onClick={() => onUpdate(f.key, !client[f.key])}
-            className={`w-5 h-5 rounded text-[9px] font-bold transition-all ${client[f.key]
+        <td key={f.key} className={`text-center px-2 py-2.5 ${cellBorder}`}>
+          <button onClick={() => toggleBool(f.key)}
+            className={`w-6 h-6 rounded text-[10px] font-bold transition-all ${getBool(f.key)
               ? "bg-emerald-100 text-emerald-600 border border-emerald-300" : "bg-gray-100 border border-gray-200 text-transparent hover:border-gray-300"}`}>
             ✓
           </button>
         </td>
       ))}
       {/* Video */}
-      <td className="text-center px-1 py-2">
+      <td className={`text-center px-2 py-2.5 ${cellBorder}`}>
         <button onClick={videoSent ? onUndoVideo : onAlertVideo}
-          className={`w-5 h-5 rounded text-[9px] transition-all ${videoSent
+          className={`w-6 h-6 rounded text-[10px] transition-all ${videoSent
             ? "bg-emerald-100 text-emerald-600 border border-emerald-300 hover:bg-red-400" : "bg-fuchsia-100 border border-fuchsia-200 text-fuchsia-500 hover:bg-fuchsia-200"}`}>
           🎬
         </button>
       </td>
       {/* Bool after video */}
       {BOOL_FIELDS_AFTER_VIDEO.map(f => (
-        <td key={f.key} className="text-center px-1 py-2">
-          <button onClick={() => onUpdate(f.key, !client[f.key])}
-            className={`w-5 h-5 rounded text-[9px] font-bold transition-all ${client[f.key]
+        <td key={f.key} className={`text-center px-2 py-2.5 ${cellBorder}`}>
+          <button onClick={() => toggleBool(f.key)}
+            className={`w-6 h-6 rounded text-[10px] font-bold transition-all ${getBool(f.key)
               ? "bg-emerald-100 text-emerald-600 border border-emerald-300" : "bg-gray-100 border border-gray-200 text-transparent hover:border-gray-300"}`}>
             ✓
           </button>
         </td>
       ))}
       {/* Sent to Client */}
-      <td className="text-center px-1 py-2">
+      <td className={`text-center px-2 py-2.5 ${cellBorder}`}>
         {(() => {
           const val = client.sentToClient;
           const auDate = val ? `${val.slice(8)}/${val.slice(5,7)}` : null;
           return (
             <button onClick={() => onUpdate("sentToClient", val ? null : new Date().toISOString().slice(0, 10))}
-              className={`px-1.5 py-0.5 rounded text-[9px] font-medium transition-all ${val
+              className={`px-2 py-1 rounded text-[10px] font-medium transition-all ${val
                 ? "bg-emerald-100 text-emerald-600 border border-emerald-300" : "bg-gray-100 border border-gray-200 text-gray-400 hover:border-gray-300"}`}>
               {auDate || "—"}
             </button>
@@ -312,7 +327,7 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
         })()}
       </td>
       {/* Coach */}
-      <td className="px-2 py-1">
+      <td className={`px-2 py-1.5 ${cellBorder}`}>
         {(() => {
           const bg = client.coach === "Steve" ? "bg-blue-50 border-blue-200 text-blue-700"
             : client.coach === "Luke" ? "bg-emerald-50 border-emerald-200 text-emerald-700"
@@ -322,7 +337,7 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
             : "bg-transparent border-gray-200 text-gray-400";
           return (
             <select value={client.coach || ""} onChange={e => onUpdate("coach", e.target.value || null)}
-              className={`w-full px-1 py-0.5 rounded border text-[10px] font-semibold focus:outline-none focus:border-violet-400 ${bg}`}>
+              className={`w-full px-1.5 py-1 rounded border text-[11px] font-semibold focus:outline-none focus:border-violet-400 ${bg}`}>
               <option value="">—</option>
               {coaches.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select>
@@ -330,29 +345,29 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
         })()}
       </td>
       {/* Day */}
-      <td className="px-2 py-1">
+      <td className={`px-2 py-1.5 ${cellBorder}`}>
         <select value={selectedDay} onChange={e => onUpdate("assignedDay", e.target.value || null)}
-          className="w-full px-1 py-0.5 rounded border border-gray-200 text-gray-700 text-[10px] focus:outline-none focus:border-violet-400 bg-transparent">
+          className="w-full px-1.5 py-1 rounded border border-gray-200 text-gray-700 text-[11px] focus:outline-none focus:border-violet-400 bg-transparent">
           <option value="">—</option>
           {DAY_OPTIONS.map(d => <option key={d} value={d}>{DAY_LABELS[d]}</option>)}
         </select>
       </td>
       {/* Type */}
-      <td className="text-center px-1 py-2">
+      <td className={`text-center px-2 py-2.5 ${cellBorder}`}>
         <button onClick={() => {
             const newType = paymentType === "subscription" ? "upfront" : "subscription";
             onUpdate("paymentType", newType);
             if (newType === "upfront" && !client.subscription) onUpdate("subscription", true);
           }}
-          className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all whitespace-nowrap ${paymentType === "upfront"
+          className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all whitespace-nowrap ${paymentType === "upfront"
             ? "bg-cyan-100 text-cyan-600 border border-cyan-300" : "bg-violet-100 text-violet-600 border border-violet-200"}`}>
           {paymentType === "upfront" ? "Upfront" : "Sub"}
         </button>
       </td>
       {/* Sale */}
-      <td className="text-center px-1 py-1">
+      <td className={`text-center px-2 py-1.5 ${cellBorder}`}>
         <select value={client.salesPerson || ""} onChange={e => onUpdate("salesPerson", e.target.value || null)}
-          className={`w-full px-1 py-0.5 rounded text-[10px] font-semibold focus:outline-none border ${
+          className={`w-full px-1.5 py-1 rounded text-[11px] font-semibold focus:outline-none border ${
             client.salesPerson === "Yaman" ? "bg-blue-50 border-blue-200 text-blue-600"
             : client.salesPerson === "Suzie" ? "bg-pink-50 border-pink-200 text-pink-600"
             : "bg-transparent border-gray-200 text-gray-400"}`}>
@@ -362,11 +377,11 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
         </select>
       </td>
       {/* Notes */}
-      <td className="px-2 py-1">
+      <td className={`px-2 py-1.5 ${cellBorder}`}>
         <input type="text" defaultValue={client.notes || ""} placeholder="..."
           onBlur={e => { const v = e.target.value || null; if (v !== (client.notes || null)) onUpdate("notes", v); }}
           onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-          className="w-full px-1.5 py-0.5 rounded border border-gray-200 text-gray-600 text-[10px] placeholder:text-gray-300 focus:outline-none focus:border-violet-400 bg-transparent" />
+          className="w-full px-1.5 py-1 rounded border border-gray-200 text-gray-600 text-[11px] placeholder:text-gray-300 focus:outline-none focus:border-violet-400 bg-transparent" />
       </td>
       {/* Finalise */}
       <td className="px-2 py-2">

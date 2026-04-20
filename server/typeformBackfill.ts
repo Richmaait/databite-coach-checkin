@@ -125,42 +125,118 @@ function getDayOfWeek(
   return map[day] ?? null;
 }
 
-/** Normalise a name for fuzzy matching (lowercase, trim, collapse spaces). */
+/** Normalise a name for fuzzy matching (lowercase, trim, collapse spaces, strip suffixes). */
 function normaliseName(s: string): string {
-  return s.toLowerCase().trim().replace(/\s+/g, " ");
+  return s.toLowerCase().replace(/\(.*?\)/g, "").replace(/\s+/g, " ").trim();
 }
 
-/** Find the best matching client name from the roster. Returns null if no match. */
+/** Find the best matching client name from the roster. Returns null if no match.
+ *
+ * Handles common roster patterns:
+ *   - Full name: "Melanie Secrieru" ↔ "Melanie Secrieru"
+ *   - Last initial: "MELANIE S" ↔ "Melanie Secrieru"
+ *   - First name only: "MALIA" ↔ "Malia Franklin-Apted"
+ *   - First initial: "E Khoury" ↔ "Elie Khoury"
+ *   - Abbreviated: "CHRIS" ↔ "Chris Borg"
+ */
 function matchClientName(
   firstName: string,
   lastName: string,
   rosterClients: string[]
 ): string | null {
-  const fullName = normaliseName(`${firstName} ${lastName}`);
-  // Exact match first
+  const fn = normaliseName(firstName);
+  const ln = normaliseName(lastName);
+  const fullName = `${fn} ${ln}`.trim();
+
+  // Pass 1: exact match
   for (const c of rosterClients) {
     if (normaliseName(c) === fullName) return c;
   }
-  // Partial match: roster name starts with the submitted name, or vice versa
+
+  // Pass 2: roster has "FIRSTNAME L" (first name + last initial)
+  for (const c of rosterClients) {
+    const cn = normaliseName(c);
+    const parts = cn.split(" ");
+    if (parts.length === 2 && parts[1].length === 1) {
+      // Roster is "firstname X" — match if first names match and initial matches last name
+      if (parts[0] === fn && ln.startsWith(parts[1])) return c;
+    }
+  }
+
+  // Pass 3: roster has first name only (e.g. "MALIA", "CHRIS", "AMELIA")
+  for (const c of rosterClients) {
+    const cn = normaliseName(c);
+    if (!cn.includes(" ") && cn === fn) return c;
+  }
+
+  // Pass 4: submitted name starts with roster name or vice versa
   for (const c of rosterClients) {
     const cn = normaliseName(c);
     if (cn.startsWith(fullName) || fullName.startsWith(cn)) return c;
   }
-  // Last name + first letter of first name
-  const lastNorm = normaliseName(lastName);
-  const firstInitial = normaliseName(firstName).charAt(0);
+
+  // Pass 5: first name match + last name starts with roster last part (or vice versa)
   for (const c of rosterClients) {
     const cn = normaliseName(c);
-    if (cn.includes(lastNorm) && cn.includes(firstInitial)) return c;
+    const parts = cn.split(" ");
+    if (parts.length >= 2) {
+      const rosterFirst = parts[0];
+      const rosterLast = parts.slice(1).join(" ");
+      if (rosterFirst === fn && (ln.startsWith(rosterLast) || rosterLast.startsWith(ln))) return c;
+    }
   }
-  // Fuzzy: first 3 chars of first name + first 3 chars of last name
-  const first3 = normaliseName(firstName).slice(0, 3);
-  const last3 = normaliseName(lastName).slice(0, 3);
+
+  // Pass 6: first 3 chars of first name + first 3 chars of last name
+  if (fn.length >= 3 && ln.length >= 3) {
+    const f3 = fn.slice(0, 3);
+    const l3 = ln.slice(0, 3);
+    for (const c of rosterClients) {
+      const cn = normaliseName(c);
+      if (cn.includes(f3) && cn.includes(l3)) return c;
+    }
+  }
+
+  // Pass 7: first name only match (no last name in roster, fuzzy on first)
   for (const c of rosterClients) {
     const cn = normaliseName(c);
-    if (cn.includes(first3) && cn.includes(last3)) return c;
+    if (!cn.includes(" ") && fn.startsWith(cn)) return c;
   }
+
+  // Pass 8: close-enough first name (1-2 char difference) + matching last initial or no last name
+  for (const c of rosterClients) {
+    const cn = normaliseName(c);
+    const parts = cn.split(" ");
+    const rosterFirst = parts[0];
+    const rosterLastPart = parts[1] || "";
+    // Allow 1-2 character Levenshtein distance on first name
+    if (rosterFirst.length >= 3 && fn.length >= 3 && levenshtein(rosterFirst, fn) <= 2) {
+      // If roster has no last name or just an initial that matches, accept
+      if (!rosterLastPart || (rosterLastPart.length === 1 && ln.startsWith(rosterLastPart))) return c;
+      // If roster has full last name that matches
+      if (rosterLastPart.length > 1 && (ln.startsWith(rosterLastPart) || rosterLastPart.startsWith(ln))) return c;
+    }
+  }
+
   return null;
+}
+
+/** Simple Levenshtein distance for short strings. */
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) => {
+    const row = new Array(n + 1).fill(0);
+    row[0] = i;
+    return row;
+  });
+  for (let j = 1; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i-1] === b[j-1]
+        ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+    }
+  }
+  return dp[m][n];
 }
 
 export interface BackfillResult {

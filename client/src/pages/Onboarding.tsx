@@ -254,12 +254,12 @@ function OnboardingRow({ client, coaches, idx, isDueToday, onUpdate, onAlertVide
     onUpdate(key, newVal);
   };
 
-  const rowBg = isDueToday ? "bg-orange-100" : idx % 2 === 0 ? "bg-white" : "bg-gray-50/70";
+  const rowBg = isDueToday ? "bg-orange-50/80" : idx % 2 === 0 ? "bg-white" : "bg-gray-50/70";
   const rowBorder = isDueToday ? "border-l-4 border-l-orange-500" : "";
   const cellBorder = "border-r border-gray-200";
 
   return (
-    <tr className={`${rowBg} ${rowBorder} border-b border-gray-200 hover:bg-violet-50/60 transition-colors group`}>
+    <tr className={`${rowBg} ${rowBorder} border-b border-gray-200 ${isDueToday ? "" : "hover:bg-violet-100/70"} transition-colors group`}>
       {/* Delete + Edit */}
       <td className={`pl-2 py-2.5 ${cellBorder}`}>
         <div className="flex items-center gap-0.5">

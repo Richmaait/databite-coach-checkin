@@ -89,7 +89,14 @@ export async function fetchRosterForCoach(
   }
 
   // Fallback: Google Sheets (for coaches not yet in DB roster)
-  return fetchRosterForCoachFromSheet(coachName);
+  const roster = await fetchRosterForCoachFromSheet(coachName);
+
+  // Rich's Friday section is onboarding clients, not a real roster day
+  if (coachName === "Rich") {
+    roster.friday = [];
+  }
+
+  return roster;
 }
 
 async function fetchRosterForCoachFromSheet(

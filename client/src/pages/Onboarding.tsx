@@ -240,15 +240,27 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
   const coach = coaches.find(c => c.name === client.coach);
   const canFinalise = client.coach && selectedDay && coach;
   const stripe = idx % 2 === 0 ? "bg-white" : "bg-gray-50/70";
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState(client.clientName);
 
   return (
     <tr className={`${stripe} border-b border-gray-100 hover:bg-violet-100/80 transition-colors group`}>
-      {/* Delete */}
+      {/* Delete + Edit */}
       <td className="pl-2 py-2">
-        <button onClick={onDelete} className="w-5 h-5 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 text-[10px] font-bold">✕</button>
+        <div className="flex items-center gap-0.5">
+          <button onClick={onDelete} className="w-5 h-5 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 text-[10px] font-bold">✕</button>
+          <button onClick={() => { setNameValue(client.clientName); setEditingName(true); }} className="w-5 h-5 rounded text-gray-300 hover:text-violet-500 hover:bg-violet-50 transition-colors opacity-0 group-hover:opacity-100 text-[10px]">✎</button>
+        </div>
       </td>
       {/* Name */}
-      <td className="px-3 py-2 font-semibold text-gray-800 text-[11px]">{client.clientName}</td>
+      <td className="px-3 py-2 font-semibold text-gray-800 text-[11px]">
+        {editingName ? (
+          <input autoFocus value={nameValue} onChange={e => setNameValue(e.target.value)}
+            onBlur={() => { const v = nameValue.trim(); if (v && v !== client.clientName) onUpdate("clientName", v); setEditingName(false); }}
+            onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditingName(false); }}
+            className="w-full px-1.5 py-0.5 rounded border border-violet-300 text-gray-800 text-[11px] font-semibold focus:outline-none focus:border-violet-500 bg-white" />
+        ) : client.clientName}
+      </td>
       {/* Dates */}
       {(["datePaid", "dateDue", "requestedPhotos"] as const).map(field => (
         <td key={field} className="px-1 py-1">

@@ -153,24 +153,20 @@ export default function ClientCheckins() {
   // ── Coach selection ────────────────────────────────────────────────────────
   const { data: coaches } = trpc.coaches.list.useQuery();
   const { data: myCoach } = trpc.coaches.myCoach.useQuery(undefined, {
-    enabled: !!user && user.role !== "admin",
+    enabled: !!user,
   });
 
   const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
 
-  // Default: managers default to first coach (Steve), coaches to their own
+  // Default: always default to your own coach if you have one, otherwise first coach
   useEffect(() => {
     if (selectedCoachId) return;
-    if (isAdmin && coaches && coaches.length > 0) {
-      // Try to find Steve, otherwise default to first coach
-      const steve = coaches.find(
-        (c) => c.name.toLowerCase().includes("steve"),
-      );
-      setSelectedCoachId(steve?.id ?? coaches[0].id);
-    } else if (myCoach) {
+    if (myCoach) {
       setSelectedCoachId(myCoach.id);
+    } else if (coaches && coaches.length > 0) {
+      setSelectedCoachId(coaches[0].id);
     }
-  }, [isAdmin, coaches, myCoach, selectedCoachId]);
+  }, [coaches, myCoach, selectedCoachId]);
 
   const effectiveCoachId = isAdmin ? selectedCoachId : (myCoach?.id ?? null);
   const effectiveCoachName = useMemo(() => {

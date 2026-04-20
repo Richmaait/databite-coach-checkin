@@ -254,7 +254,7 @@ function OnboardingRow({ client, coaches, idx, isDueToday, onUpdate, onAlertVide
     onUpdate(key, newVal);
   };
 
-  const rowBg = isDueToday ? "bg-orange-50/80" : idx % 2 === 0 ? "bg-white" : "bg-gray-50/70";
+  const rowBg = isDueToday ? "bg-orange-100/60" : idx % 2 === 0 ? "bg-white" : "bg-gray-50/70";
   const rowBorder = isDueToday ? "border-l-4 border-l-orange-500" : "";
   const cellBorder = "border-r border-gray-200";
 

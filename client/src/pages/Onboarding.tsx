@@ -17,7 +17,7 @@ const BOOL_FIELDS_AFTER_VIDEO = [
 ] as const;
 
 const DAY_OPTIONS = ["monday", "tuesday", "wednesday", "thursday", "friday"] as const;
-const DAY_LABELS: Record<string, string> = { monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu", friday: "Fri" };
+const DAY_LABELS: Record<string, string> = { monday: "Monday", tuesday: "Tuesday", wednesday: "Wednesday", thursday: "Thursday", friday: "Friday" };
 
 const COACH_COLORS: Record<string, string> = {
   Steve: "text-blue-600", Luke: "text-emerald-600", Kyah: "text-fuchsia-600",
@@ -186,7 +186,7 @@ export default function Onboarding() {
             <div className="text-center text-gray-400 py-16">{tab === "onboarding" ? "No clients in onboarding." : "No completed clients yet."}</div>
           ) : tab === "onboarding" ? (
             <div className="bg-white rounded-xl border border-gray-300 shadow-sm overflow-x-auto -mx-6 px-0 sm:mx-0">
-              <table className="text-xs whitespace-nowrap min-w-[1200px] w-full border-collapse">
+              <table className="text-xs whitespace-nowrap min-w-[1400px] w-full border-collapse">
                 <thead>
                   <tr className="bg-gray-100 border-b-2 border-gray-300">
                     <th className="w-10 border-r border-gray-200" />
@@ -198,10 +198,10 @@ export default function Onboarding() {
                     <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[60px]">Video</th>
                     {BOOL_FIELDS_AFTER_VIDEO.map(f => <th key={f.key} className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[80px]">{f.label}</th>)}
                     <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[70px]">Sent</th>
-                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[80px]">Coach</th>
-                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[70px]">Day</th>
-                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[70px]">Type</th>
-                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[70px]">Sale</th>
+                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[110px]">Coach</th>
+                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[100px]">Day</th>
+                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[80px]">Type</th>
+                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[100px]">Sale</th>
                     <th className="text-left px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[200px]">Notes</th>
                     <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] min-w-[70px]">Finalise</th>
                   </tr>
@@ -337,7 +337,7 @@ function OnboardingRow({ client, coaches, idx, isDueToday, onUpdate, onAlertVide
             : "bg-transparent border-gray-200 text-gray-400";
           return (
             <select value={client.coach || ""} onChange={e => onUpdate("coach", e.target.value || null)}
-              className={`w-full px-1.5 py-1 rounded border text-[11px] font-semibold focus:outline-none focus:border-violet-400 ${bg}`}>
+              className={`w-full px-2 py-1.5 rounded border text-xs font-semibold focus:outline-none focus:border-violet-400 ${bg}`}>
               <option value="">—</option>
               {coaches.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select>
@@ -347,7 +347,7 @@ function OnboardingRow({ client, coaches, idx, isDueToday, onUpdate, onAlertVide
       {/* Day */}
       <td className={`px-2 py-1.5 ${cellBorder}`}>
         <select value={selectedDay} onChange={e => onUpdate("assignedDay", e.target.value || null)}
-          className="w-full px-1.5 py-1 rounded border border-gray-200 text-gray-700 text-[11px] focus:outline-none focus:border-violet-400 bg-transparent">
+          className="w-full px-2 py-1.5 rounded border border-gray-200 text-gray-700 text-xs focus:outline-none focus:border-violet-400 bg-transparent">
           <option value="">—</option>
           {DAY_OPTIONS.map(d => <option key={d} value={d}>{DAY_LABELS[d]}</option>)}
         </select>
@@ -367,7 +367,7 @@ function OnboardingRow({ client, coaches, idx, isDueToday, onUpdate, onAlertVide
       {/* Sale */}
       <td className={`text-center px-2 py-1.5 ${cellBorder}`}>
         <select value={client.salesPerson || ""} onChange={e => onUpdate("salesPerson", e.target.value || null)}
-          className={`w-full px-1.5 py-1 rounded text-[11px] font-semibold focus:outline-none border ${
+          className={`w-full px-2 py-1.5 rounded text-xs font-semibold focus:outline-none border ${
             client.salesPerson === "Yaman" ? "bg-blue-50 border-blue-200 text-blue-600"
             : client.salesPerson === "Suzie" ? "bg-pink-50 border-pink-200 text-pink-600"
             : "bg-transparent border-gray-200 text-gray-400"}`}>

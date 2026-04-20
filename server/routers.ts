@@ -17,6 +17,7 @@ import {
   UNAUTHED_ERR_MSG,
   CLIENT_CHECKINS_EPOCH,
   DAYS,
+  HIDDEN_COACH_NAMES,
   TEAM_SLACK_CHANNEL,
   ONBOARDING_SLACK_CHANNEL,
 } from "../shared/const";
@@ -796,7 +797,7 @@ const clientCheckinsRouter = t.router({
         endDate: z.string().optional(),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await requireDb();
 
       // Support both weekStart (single) and weekStarts (array)
@@ -807,15 +808,18 @@ const clientCheckinsRouter = t.router({
       const weekStart = weekStartList[0];
 
       // Get all coaches if no specific coachId
+      const isAdmin = ctx.user?.role === "admin";
       let coachList: Array<{ id: number; name: string }>;
       if (input.coachId) {
         const [coach] = await db.select().from(coaches).where(eq(coaches.id, input.coachId)).limit(1);
-        coachList = coach ? [{ id: coach.id, name: coach.name }] : [];
+        if (coach && HIDDEN_COACH_NAMES.includes(coach.name) && !isAdmin) coachList = [];
+        else coachList = coach ? [{ id: coach.id, name: coach.name }] : [];
       } else {
-        coachList = await db
+        const all = await db
           .select({ id: coaches.id, name: coaches.name })
           .from(coaches)
           .where(eq(coaches.isActive, 1));
+        coachList = isAdmin ? all : all.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
       }
 
       const results: Array<{
@@ -997,7 +1001,7 @@ const clientCheckinsRouter = t.router({
     }),
 
   /** Compute disengaged clients — missed 1+ consecutive weeks. */
-  getAllDisengagedClients: protectedProcedure.query(async () => {
+  getAllDisengagedClients: protectedProcedure.query(async ({ ctx }) => {
     const db = await requireDb();
     const today = getTodayMelbourne();
     const currentWeek = getMonday(today);
@@ -1005,10 +1009,11 @@ const clientCheckinsRouter = t.router({
     const lastWeek = (() => { const d = new Date(currentWeek + "T00:00:00"); d.setDate(d.getDate() - 7); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })();
     const epochWeek = getMonday(CLIENT_CHECKINS_EPOCH);
 
-    const coachList = await db
+    const allCoaches = await db
       .select({ id: coaches.id, name: coaches.name })
       .from(coaches)
       .where(eq(coaches.isActive, 1));
+    const coachList = ctx.user?.role === "admin" ? allCoaches : allCoaches.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
 
     const allWeeks = getWeeksBetween(epochWeek, lastWeek); // newest first, excludes current week
 
@@ -1124,7 +1129,7 @@ const clientCheckinsRouter = t.router({
   }),
 
   /** Consecutive missed weeks per client. */
-  getAllMissedStreaks: protectedProcedure.query(async () => {
+  getAllMissedStreaks: protectedProcedure.query(async ({ ctx }) => {
     const db = await requireDb();
     const today = getTodayMelbourne();
     const currentWeek = getMonday(today);
@@ -1132,10 +1137,11 @@ const clientCheckinsRouter = t.router({
     const lastWeek = (() => { const d = new Date(currentWeek + "T00:00:00"); d.setDate(d.getDate() - 7); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })();
     const epochWeek = getMonday(CLIENT_CHECKINS_EPOCH);
 
-    const coachList = await db
+    const allCoaches = await db
       .select({ id: coaches.id, name: coaches.name })
       .from(coaches)
       .where(eq(coaches.isActive, 1));
+    const coachList = ctx.user?.role === "admin" ? allCoaches : allCoaches.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
 
     const allWeeks = getWeeksBetween(epochWeek, lastWeek);
 
@@ -1618,7 +1624,7 @@ const clientCheckinsRouter = t.router({
         date: z.string(),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await requireDb();
       const weekStart = getMonday(input.date);
       const dayKey = getDayKey(input.date);
@@ -1626,6 +1632,7 @@ const clientCheckinsRouter = t.router({
 
       const [coach] = await db.select().from(coaches).where(eq(coaches.id, input.coachId)).limit(1);
       if (!coach) return [];
+      if (HIDDEN_COACH_NAMES.includes(coach.name) && ctx.user?.role !== "admin") return [];
 
       const roster = await fetchRosterForCoach(coach.name);
       const todayClients = roster[dayKey] ?? [];
@@ -1921,13 +1928,15 @@ const clientCheckinsRouter = t.router({
   /** Get ALL client check-in rows for a given week (across all coaches). */
   getWeekStatusAll: protectedProcedure
     .input(z.object({ weekStart: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await requireDb();
       const rows = await db
         .select()
         .from(clientCheckIns)
         .where(eq(clientCheckIns.weekStart, input.weekStart));
-      return rows.map((r) => ({
+      const isAdmin = ctx.user?.role === "admin";
+      const filtered = isAdmin ? rows : rows.filter(r => !HIDDEN_COACH_NAMES.includes(r.coachName));
+      return filtered.map((r) => ({
         id: r.id,
         coachId: r.coachId,
         coachName: r.coachName,
@@ -1944,7 +1953,7 @@ const clientCheckinsRouter = t.router({
   /** Get the Google Sheets roster for a specific coach. */
   getRosterByCoach: protectedProcedure
     .input(z.object({ coachId: z.number(), weekStart: z.string().optional() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await requireDb();
       const [coach] = await db
         .select()
@@ -1952,6 +1961,9 @@ const clientCheckinsRouter = t.router({
         .where(eq(coaches.id, input.coachId))
         .limit(1);
       if (!coach) throw new TRPCError({ code: "NOT_FOUND", message: "Coach not found" });
+      if (HIDDEN_COACH_NAMES.includes(coach.name) && ctx.user?.role !== "admin") {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Coach not found" });
+      }
       const roster = await fetchRosterForCoach(coach.name);
       return roster as Record<DayKey, string[]>;
     }),
@@ -1959,8 +1971,10 @@ const clientCheckinsRouter = t.router({
   /** Get active pauses for a coach. */
   getActivePauses: protectedProcedure
     .input(z.object({ coachId: z.number() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await requireDb();
+      const [coach] = await db.select().from(coaches).where(eq(coaches.id, input.coachId)).limit(1);
+      if (coach && HIDDEN_COACH_NAMES.includes(coach.name) && ctx.user?.role !== "admin") return [];
       const rows = await db
         .select()
         .from(pausedClients)
@@ -2005,7 +2019,7 @@ const clientCheckinsRouter = t.router({
   /** Get excuses for a given week, optionally filtered by coach. */
   getExcusesForWeek: protectedProcedure
     .input(z.object({ weekStart: z.string(), coachId: z.number().optional() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const db = await requireDb();
       const conditions = [eq(excusedClients.weekStart, input.weekStart)];
       if (input.coachId != null) {
@@ -2015,7 +2029,11 @@ const clientCheckinsRouter = t.router({
         .select()
         .from(excusedClients)
         .where(and(...conditions));
-      return rows;
+      if (ctx.user?.role === "admin") return rows;
+      // Filter out hidden coaches
+      const hiddenCoaches = await db.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq(coaches.isActive, 1));
+      const hiddenIds = new Set(hiddenCoaches.filter(c => HIDDEN_COACH_NAMES.includes(c.name)).map(c => c.id));
+      return rows.filter(r => !hiddenIds.has(r.coachId));
     }),
 
   /** Get clients with upcoming UPFRONT end dates (parsed from client names). */
@@ -2206,9 +2224,11 @@ const clientCheckinsRouter = t.router({
 
 const coachesRouter = t.router({
   /** All active coaches. */
-  list: protectedProcedure.query(async () => {
+  list: protectedProcedure.query(async ({ ctx }) => {
     const db = await requireDb();
-    return db.select().from(coaches).where(eq(coaches.isActive, 1)).orderBy(asc(coaches.name));
+    const all = await db.select().from(coaches).where(eq(coaches.isActive, 1)).orderBy(asc(coaches.name));
+    if (ctx.user?.role === "admin") return all;
+    return all.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
   }),
 
   /** Coach profile linked to current user. */

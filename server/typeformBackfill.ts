@@ -88,6 +88,12 @@ const FORM_CONFIGS: FormConfig[] = [
     firstNameFieldId: "de7XNkkJt4ST",
     lastNameFieldId: "Q1ixmNUmrUJ1",
   },
+  {
+    formId: "Ink0VfO1",
+    coachName: "Alex ",
+    firstNameFieldId: "iD2NJmDuvn5P",
+    lastNameFieldId: "0XgE5XTg0TBk",
+  },
 ];
 
 /** Returns the ISO date string (YYYY-MM-DD) for Monday of the week containing `date`, in AEST (UTC+10). */

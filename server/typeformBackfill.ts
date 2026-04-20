@@ -270,8 +270,12 @@ async function backfillForm(config: FormConfig, weekStart: string): Promise<Back
   // Fetch roster for this coach using the shared roster parser
   const roster = await fetchRosterForCoach(config.coachName);
   const allClients: string[] = [];
+  const clientToDay: Record<string, string> = {};
   for (const day of ROSTER_DAYS) {
-    allClients.push(...(roster[day] ?? []));
+    for (const name of (roster[day] ?? [])) {
+      allClients.push(name);
+      clientToDay[name] = day; // maps client name to their roster day
+    }
   }
   const uniqueClients = Array.from(new Set(allClients));
 
@@ -304,8 +308,8 @@ async function backfillForm(config: FormConfig, weekStart: string): Promise<Back
     if (!firstName && !lastName) continue;
 
     const submittedAt: string = item.submitted_at ?? "";
-    const dayOfWeek = getDayOfWeek(submittedAt);
-    if (!dayOfWeek) continue; // weekend submission — skip
+    const submissionDayOfWeek = getDayOfWeek(submittedAt);
+    if (!submissionDayOfWeek) continue; // Saturday submission — skip
 
     // weekStart for this submission (may differ from current week if backfilling old data)
     const submissionWeekStart = getWeekStart(new Date(submittedAt));
@@ -316,12 +320,15 @@ async function backfillForm(config: FormConfig, weekStart: string): Promise<Back
       continue;
     }
 
+    // Use the client's roster day, not the submission timestamp day
+    const rosterDay = clientToDay[matchedClient] || submissionDayOfWeek;
+
     try {
       await toggleClientSubmitted({
         coachId: coach.id,
         coachName: coach.name,
         clientName: matchedClient,
-        dayOfWeek,
+        dayOfWeek: rosterDay,
         weekStart: submissionWeekStart,
         newValue: true,
         submittedByUserId: 0, // 0 = system/Typeform backfill

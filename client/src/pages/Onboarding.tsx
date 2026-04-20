@@ -141,8 +141,8 @@ export default function Onboarding() {
 
           {/* Sales summary */}
           {tab === "completed" && salesStats && salesStats.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto mb-4">
-              <table className="w-full text-xs">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto -mx-6 px-0 sm:mx-0 mb-4">
+              <table className="text-xs whitespace-nowrap w-full">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Month</th>
@@ -185,8 +185,8 @@ export default function Onboarding() {
           ) : filtered.length === 0 ? (
             <div className="text-center text-gray-400 py-16">{tab === "onboarding" ? "No clients in onboarding." : "No completed clients yet."}</div>
           ) : tab === "onboarding" ? (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
-              <table className="w-full text-xs min-w-[1100px]">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto -mx-6 px-0 sm:mx-0">
+              <table className="text-xs whitespace-nowrap min-w-[1100px] w-full">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
                     <th className="w-6" />
@@ -382,8 +382,8 @@ function OnboardingRow({ client, coaches, idx, onUpdate, onAlertVideo, onUndoVid
 
 function CompletedTable({ groupedByMonth }: { groupedByMonth: [string, any[]][] }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
-      <table className="w-full text-xs min-w-[700px]">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto -mx-6 px-0 sm:mx-0">
+      <table className="text-xs whitespace-nowrap min-w-[700px] w-full">
         <thead>
           <tr className="bg-gray-50 border-b border-gray-200">
             <th className="text-left px-3 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Client</th>

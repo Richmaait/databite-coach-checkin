@@ -413,12 +413,12 @@ export default function ClientCheckins() {
   }, [roster]);
 
   const dayStats = useMemo(() => {
-    const stats: Record<DayKey, { completed: number; total: number }> = {
-      monday: { completed: 0, total: 0 },
-      tuesday: { completed: 0, total: 0 },
-      wednesday: { completed: 0, total: 0 },
-      thursday: { completed: 0, total: 0 },
-      friday: { completed: 0, total: 0 },
+    const stats: Record<DayKey, { completed: number; submitted: number; total: number }> = {
+      monday: { completed: 0, submitted: 0, total: 0 },
+      tuesday: { completed: 0, submitted: 0, total: 0 },
+      wednesday: { completed: 0, submitted: 0, total: 0 },
+      thursday: { completed: 0, submitted: 0, total: 0 },
+      friday: { completed: 0, submitted: 0, total: 0 },
     };
     if (!roster) return stats;
     for (const day of DAYS) {
@@ -428,10 +428,13 @@ export default function ClientCheckins() {
         if (localCompleted.has(`${clientName}|${day}`)) {
           stats[day].completed++;
         }
+        if (localSubmitted.has(`${clientName}|${day}`)) {
+          stats[day].submitted++;
+        }
       }
     }
     return stats;
-  }, [roster, localCompleted]);
+  }, [roster, localCompleted, localSubmitted]);
   const clientSubmittedSet = localSubmitted;
 
   // Stats from weeklyStats (for header)
@@ -772,8 +775,15 @@ export default function ClientCheckins() {
                           <span className="text-xs text-white/40">{getDayShortLabel(weekStart, day)}</span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-lg font-bold text-white/80">{stats.completed}<span className="text-white/30">/{stats.total}</span></span>
+                      <div className="text-right space-y-0.5">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <span className="text-[10px] text-white/40 uppercase tracking-wide">Sub</span>
+                          <span className="text-sm font-bold text-white/70">{stats.submitted}<span className="text-white/25">/{stats.total}</span></span>
+                        </div>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <span className="text-[10px] text-white/40 uppercase tracking-wide">Done</span>
+                          <span className="text-lg font-bold text-white/80">{stats.completed}<span className="text-white/30">/{stats.total}</span></span>
+                        </div>
                       </div>
                     </div>
 

@@ -322,7 +322,8 @@ export async function registerAuthRoutes(app: Express) {
 
       if (!user) {
         const isAdmin = ADMIN_EMAILS.includes(email);
-        const knownName = isAdmin ? "Rich" : COACH_EMAILS[email] || null;
+        const ADMIN_NAMES: Record<string, string> = { "rich@databite.com.au": "Rich", "suzie@databite.com.au": "Suzie" };
+        const knownName = isAdmin ? (ADMIN_NAMES[email] || null) : COACH_EMAILS[email] || null;
         const [result] = await db.insert(users).values({
           email,
           name: knownName || userInfo.name || email.split("@")[0],
@@ -382,7 +383,8 @@ export async function registerAuthRoutes(app: Express) {
       });
 
       res.redirect("/");
-    } catch {
+    } catch (err) {
+      console.error("[Google OAuth] Callback error:", err);
       res.redirect("/login?error=google_failed");
     }
   });

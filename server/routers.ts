@@ -1938,8 +1938,10 @@ const clientCheckinsRouter = t.router({
         .select()
         .from(clientCheckIns)
         .where(eq(clientCheckIns.weekStart, input.weekStart));
+      // Admins can see hidden coach rows (for their own roster view)
+      // Non-admins never see hidden coach data
       const isAdmin = ctx.user?.role === "admin";
-      const filtered = rows.filter(r => !HIDDEN_COACH_NAMES.includes(r.coachName));
+      const filtered = isAdmin ? rows : rows.filter(r => !HIDDEN_COACH_NAMES.includes(r.coachName));
       return filtered.map((r) => ({
         id: r.id,
         coachId: r.coachId,
@@ -2033,7 +2035,10 @@ const clientCheckinsRouter = t.router({
         .select()
         .from(excusedClients)
         .where(and(...conditions));
-      // Always filter out hidden coaches from aggregate data
+      // If querying a specific coach, return all (admin already checked upstream)
+      // If aggregate (no coachId), filter out hidden coaches for non-admins
+      if (input.coachId != null) return rows;
+      if (ctx.user?.role === "admin") return rows;
       const hiddenCoaches = await db.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq(coaches.isActive, 1));
       const hiddenIds = new Set(hiddenCoaches.filter(c => HIDDEN_COACH_NAMES.includes(c.name)).map(c => c.id));
       return rows.filter(r => !hiddenIds.has(r.coachId));

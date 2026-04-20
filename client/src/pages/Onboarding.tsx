@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { toast } from "sonner";
+import { todayMelbourne } from "@/lib/utils";
 import { useLocation } from "wouter";
 
 const BOOL_FIELDS = [
@@ -208,9 +209,7 @@ export default function Onboarding() {
                 </thead>
                 <tbody>
                   {filtered.map((client, idx) => {
-                    const now = new Date();
-                    const aest = new Date(now.getTime() + (10 * 60 * 60 * 1000));
-                    const today = aest.toISOString().slice(0, 10);
+                    const today = todayMelbourne();
                     const isDueToday = client.dateDue === today;
                     return (
                     <OnboardingRow key={client.id} client={client} coaches={coaches} idx={idx} isDueToday={isDueToday}
@@ -320,7 +319,7 @@ function OnboardingRow({ client, coaches, idx, isDueToday, onUpdate, onAlertVide
           const val = client.sentToClient;
           const auDate = val ? `${val.slice(8)}/${val.slice(5,7)}` : null;
           return (
-            <button onClick={() => onUpdate("sentToClient", val ? null : new Date().toISOString().slice(0, 10))}
+            <button onClick={() => onUpdate("sentToClient", val ? null : todayMelbourne())}
               className={`px-2 py-1 rounded text-[10px] font-medium transition-all ${val
                 ? "bg-emerald-100 text-emerald-600 border border-emerald-300" : "bg-gray-100 border border-gray-200 text-gray-400 hover:border-gray-300"}`}>
               {auDate || "—"}

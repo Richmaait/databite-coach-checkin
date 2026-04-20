@@ -92,24 +92,30 @@ const FORM_CONFIGS: FormConfig[] = [
 
 /** Returns the ISO date string (YYYY-MM-DD) for Monday of the week containing `date`, in AEST (UTC+10). */
 function getWeekStart(date: Date): string {
-  // Shift to AEST (UTC+10) before computing the week start
   const AEST_OFFSET_MS = 10 * 60 * 60 * 1000;
   const local = new Date(date.getTime() + AEST_OFFSET_MS);
   const day = local.getUTCDay(); // 0=Sun, 1=Mon, ...
-  const diff = day === 0 ? -6 : 1 - day; // shift to Monday
+  // Sunday submissions belong to the NEXT week (clients submit Sunday for Monday check-in)
+  if (day === 0) {
+    local.setUTCDate(local.getUTCDate() + 1); // Sunday → next Monday
+    return local.toISOString().slice(0, 10);
+  }
+  const diff = 1 - day; // shift to Monday
   local.setUTCDate(local.getUTCDate() + diff);
   return local.toISOString().slice(0, 10);
 }
 
-/** Map a UTC submission timestamp to the day-of-week key (AEST UTC+10/+11). */
+/** Map a UTC submission timestamp to the day-of-week key (AEST UTC+10/+11).
+ * Sunday maps to "monday" — clients submit Sunday for their Monday check-in.
+ * Saturday returns null and is skipped. */
 function getDayOfWeek(
   submittedAt: string
 ): "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | null {
-  // AEST is UTC+10, AEDT is UTC+11. Use +10 as conservative offset.
   const AEST_OFFSET_MS = 10 * 60 * 60 * 1000;
   const local = new Date(new Date(submittedAt).getTime() + AEST_OFFSET_MS);
   const day = local.getUTCDay();
   const map: Record<number, "monday" | "tuesday" | "wednesday" | "thursday" | "friday"> = {
+    0: "monday", // Sunday → Monday
     1: "monday",
     2: "tuesday",
     3: "wednesday",

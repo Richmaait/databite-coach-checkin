@@ -208,7 +208,9 @@ export default function Onboarding() {
                 </thead>
                 <tbody>
                   {filtered.map((client, idx) => {
-                    const today = new Date().toISOString().slice(0, 10);
+                    const now = new Date();
+                    const aest = new Date(now.getTime() + (10 * 60 * 60 * 1000));
+                    const today = aest.toISOString().slice(0, 10);
                     const isDueToday = client.dateDue === today;
                     return (
                     <OnboardingRow key={client.id} client={client} coaches={coaches} idx={idx} isDueToday={isDueToday}

@@ -815,11 +815,12 @@ const clientCheckinsRouter = t.router({
         if (coach && HIDDEN_COACH_NAMES.includes(coach.name) && !isAdmin) coachList = [];
         else coachList = coach ? [{ id: coach.id, name: coach.name }] : [];
       } else {
+        // Always exclude hidden coaches from aggregate stats — they are personal, not team metrics
         const all = await db
           .select({ id: coaches.id, name: coaches.name })
           .from(coaches)
           .where(eq(coaches.isActive, 1));
-        coachList = isAdmin ? all : all.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
+        coachList = all.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
       }
 
       const results: Array<{
@@ -871,10 +872,11 @@ const clientCheckinsRouter = t.router({
       }
       if (!input.weekStart) throw new TRPCError({ code: "BAD_REQUEST", message: "weekStart or startDate required" });
       const db = await requireDb();
-      const coachList = await db
+      const allCoaches = await db
         .select({ id: coaches.id, name: coaches.name })
         .from(coaches)
         .where(eq(coaches.isActive, 1));
+      const coachList = allCoaches.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
 
       const results: Array<{
         coachId: number;
@@ -1013,7 +1015,7 @@ const clientCheckinsRouter = t.router({
       .select({ id: coaches.id, name: coaches.name })
       .from(coaches)
       .where(eq(coaches.isActive, 1));
-    const coachList = ctx.user?.role === "admin" ? allCoaches : allCoaches.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
+    const coachList = allCoaches.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
 
     const allWeeks = getWeeksBetween(epochWeek, lastWeek); // newest first, excludes current week
 
@@ -1141,7 +1143,7 @@ const clientCheckinsRouter = t.router({
       .select({ id: coaches.id, name: coaches.name })
       .from(coaches)
       .where(eq(coaches.isActive, 1));
-    const coachList = ctx.user?.role === "admin" ? allCoaches : allCoaches.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
+    const coachList = allCoaches.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
 
     const allWeeks = getWeeksBetween(epochWeek, lastWeek);
 
@@ -1368,10 +1370,11 @@ const clientCheckinsRouter = t.router({
     )
     .query(async ({ input }) => {
       const db = await requireDb();
-      const coachList = await db
+      const allCoachRows = await db
         .select({ id: coaches.id, name: coaches.name })
         .from(coaches)
         .where(eq(coaches.isActive, 1));
+      const coachList = allCoachRows.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
 
       const todayMon = getMonday(getTodayMelbourne());
       const isPastWeek = input.weekStart < todayMon;
@@ -1511,10 +1514,11 @@ const clientCheckinsRouter = t.router({
         const [coach] = await db.select().from(coaches).where(eq(coaches.id, input.coachId)).limit(1);
         coachList = coach ? [{ id: coach.id, name: coach.name }] : [];
       } else {
-        coachList = await db
+        const allRows = await db
           .select({ id: coaches.id, name: coaches.name })
           .from(coaches)
           .where(eq(coaches.isActive, 1));
+        coachList = allRows.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
       }
 
       const weeklyData: Array<{
@@ -1935,7 +1939,7 @@ const clientCheckinsRouter = t.router({
         .from(clientCheckIns)
         .where(eq(clientCheckIns.weekStart, input.weekStart));
       const isAdmin = ctx.user?.role === "admin";
-      const filtered = isAdmin ? rows : rows.filter(r => !HIDDEN_COACH_NAMES.includes(r.coachName));
+      const filtered = rows.filter(r => !HIDDEN_COACH_NAMES.includes(r.coachName));
       return filtered.map((r) => ({
         id: r.id,
         coachId: r.coachId,
@@ -2029,8 +2033,7 @@ const clientCheckinsRouter = t.router({
         .select()
         .from(excusedClients)
         .where(and(...conditions));
-      if (ctx.user?.role === "admin") return rows;
-      // Filter out hidden coaches
+      // Always filter out hidden coaches from aggregate data
       const hiddenCoaches = await db.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq(coaches.isActive, 1));
       const hiddenIds = new Set(hiddenCoaches.filter(c => HIDDEN_COACH_NAMES.includes(c.name)).map(c => c.id));
       return rows.filter(r => !hiddenIds.has(r.coachId));

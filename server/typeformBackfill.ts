@@ -8,6 +8,7 @@
  *   lRvWjdgl → Steve  (first name field: zTLboa1Y892a, last name: KLsh0B5X4l2V)
  *   i9de5jMN → Luke   (first name field: X9l68HkBqahH, last name: kkVVNqmKSCZp)
  *   hrGCn0V0 → Kyah   (first name field: x0Li5tbrkvGK, last name: GIqMvcsNnfLH)
+ *   Ol9CZ2Lu → Rich   (first name field: de7XNkkJt4ST, last name: Q1ixmNUmrUJ1)
  */
 
 import { getAllCoaches, toggleClientSubmitted } from "./db";
@@ -80,6 +81,12 @@ const FORM_CONFIGS: FormConfig[] = [
     coachName: "Kyah",
     firstNameFieldId: "x0Li5tbrkvGK",
     lastNameFieldId: "GIqMvcsNnfLH",
+  },
+  {
+    formId: "Ol9CZ2Lu",
+    coachName: "Rich",
+    firstNameFieldId: "de7XNkkJt4ST",
+    lastNameFieldId: "Q1ixmNUmrUJ1",
   },
 ];
 

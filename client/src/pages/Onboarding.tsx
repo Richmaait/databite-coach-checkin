@@ -186,24 +186,24 @@ export default function Onboarding() {
             <div className="text-center text-gray-400 py-16">{tab === "onboarding" ? "No clients in onboarding." : "No completed clients yet."}</div>
           ) : tab === "onboarding" ? (
             <div className="bg-white rounded-xl border border-gray-300 shadow-sm overflow-x-auto -mx-6 px-0 sm:mx-0">
-              <table className="text-xs whitespace-nowrap min-w-[1400px] w-full border-collapse">
+              <table className="text-xs whitespace-nowrap border-collapse" style={{ width: "max-content", minWidth: "100%" }}>
                 <thead>
                   <tr className="bg-gray-100 border-b-2 border-gray-300">
-                    <th className="w-10 border-r border-gray-200" />
-                    <th className="text-left px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[160px]">Client</th>
-                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[100px]">Date Paid</th>
-                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[100px]">Due Date</th>
-                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[100px]">Photos</th>
-                    {BOOL_FIELDS.map(f => <th key={f.key} className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[70px]">{f.label}</th>)}
-                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[60px]">Video</th>
-                    {BOOL_FIELDS_AFTER_VIDEO.map(f => <th key={f.key} className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[80px]">{f.label}</th>)}
-                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[70px]">Sent</th>
-                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[110px]">Coach</th>
-                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[100px]">Day</th>
-                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[80px]">Type</th>
-                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[100px]">Sale</th>
-                    <th className="text-left px-3 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 min-w-[200px]">Notes</th>
-                    <th className="text-center px-3 py-3 font-bold text-gray-700 text-[11px] min-w-[70px]">Finalise</th>
+                    <th className="w-[50px] border-r border-gray-200" />
+                    <th className="text-left px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[180px]">Client</th>
+                    <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[120px]">Date Paid</th>
+                    <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[120px]">Due Date</th>
+                    <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[120px]">Photos</th>
+                    {BOOL_FIELDS.map(f => <th key={f.key} className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[90px]">{f.label}</th>)}
+                    <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[70px]">Video</th>
+                    {BOOL_FIELDS_AFTER_VIDEO.map(f => <th key={f.key} className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[100px]">{f.label}</th>)}
+                    <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[80px]">Sent</th>
+                    <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[120px]">Coach</th>
+                    <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[120px]">Day</th>
+                    <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[90px]">Type</th>
+                    <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[110px]">Sale</th>
+                    <th className="text-left px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[220px]">Notes</th>
+                    <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] w-[80px]">Finalise</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -254,8 +254,8 @@ function OnboardingRow({ client, coaches, idx, isDueToday, onUpdate, onAlertVide
     onUpdate(key, newVal);
   };
 
-  const rowBg = isDueToday ? "bg-orange-50" : idx % 2 === 0 ? "bg-white" : "bg-gray-50/70";
-  const rowBorder = isDueToday ? "border-l-4 border-l-orange-400" : "";
+  const rowBg = isDueToday ? "bg-orange-100" : idx % 2 === 0 ? "bg-white" : "bg-gray-50/70";
+  const rowBorder = isDueToday ? "border-l-4 border-l-orange-500" : "";
   const cellBorder = "border-r border-gray-200";
 
   return (

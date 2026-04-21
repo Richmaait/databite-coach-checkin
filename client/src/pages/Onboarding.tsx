@@ -298,9 +298,12 @@ function OnboardingRow({ client, coaches, idx, isDueToday, onUpdate, onAlertVide
       ))}
       {/* Training */}
       <td className={`text-center px-2 py-1.5 ${cellBorder}`}>
-        <select value={getBool("training") ? "yes" : "no"} onChange={e => { const val = e.target.value === "yes"; setLocalBools(prev => ({ ...prev, training: val })); onUpdate("training", val); }}
+        <select value={client.training == null ? "" : client.training ? "yes" : "no"} onChange={e => { const v = e.target.value; onUpdate("training", v === "" ? null : v === "yes"); }}
           className={`w-full px-2 py-1.5 rounded border text-xs font-semibold focus:outline-none ${
-            getBool("training") ? "bg-emerald-50 border-emerald-300 text-emerald-700" : "bg-red-50 border-red-300 text-red-600"}`}>
+            client.training === true ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+            : client.training === false ? "bg-red-50 border-red-300 text-red-600"
+            : "bg-transparent border-gray-200 text-gray-400"}`}>
+          <option value="">—</option>
           <option value="yes">Yes</option>
           <option value="no">No</option>
         </select>

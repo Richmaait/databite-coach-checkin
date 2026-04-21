@@ -196,6 +196,7 @@ export default function Onboarding() {
                     <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[120px]">Due Date</th>
                     <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[120px]">Photos</th>
                     {BOOL_FIELDS.map(f => <th key={f.key} className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[90px]">{f.label}</th>)}
+                    <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[90px]">Training</th>
                     <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[70px]">Video</th>
                     {BOOL_FIELDS_AFTER_VIDEO.map(f => <th key={f.key} className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[100px]">{f.label}</th>)}
                     <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[80px]">Sent</th>
@@ -295,6 +296,15 @@ function OnboardingRow({ client, coaches, idx, isDueToday, onUpdate, onAlertVide
           </button>
         </td>
       ))}
+      {/* Training */}
+      <td className={`text-center px-2 py-1.5 ${cellBorder}`}>
+        <select value={getBool("training") ? "yes" : "no"} onChange={e => { const val = e.target.value === "yes"; setLocalBools(prev => ({ ...prev, training: val })); onUpdate("training", val); }}
+          className={`w-full px-2 py-1.5 rounded border text-xs font-semibold focus:outline-none ${
+            getBool("training") ? "bg-emerald-50 border-emerald-300 text-emerald-700" : "bg-red-50 border-red-300 text-red-600"}`}>
+          <option value="yes">Yes</option>
+          <option value="no">No</option>
+        </select>
+      </td>
       {/* Video */}
       <td className={`text-center px-2 py-2.5 ${cellBorder}`}>
         <button onClick={videoSent ? onUndoVideo : onAlertVideo}

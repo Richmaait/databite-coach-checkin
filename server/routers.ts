@@ -3533,7 +3533,7 @@ const onboardingRouter = t.router({
       contractSent: z.boolean().optional(),
       requestedPhotos: z.string().nullable().optional(),
       mealPlan: z.boolean().optional(),
-      training: z.boolean().optional(),
+      training: z.union([z.boolean(), z.number()]).optional(),
       sentToRich: z.boolean().optional(),
       welcomeVideo: z.boolean().optional(),
       sentToClient: z.string().nullable().optional(),
@@ -3556,7 +3556,7 @@ const onboardingRouter = t.router({
       if (fields.contractSent !== undefined) update.contractSent = fields.contractSent ? 1 : 0;
       if (fields.requestedPhotos !== undefined) update.requestedPhotos = fields.requestedPhotos;
       if (fields.mealPlan !== undefined) update.mealPlan = fields.mealPlan ? 1 : 0;
-      if (fields.training !== undefined) update.training = fields.training ? 1 : 0;
+      if (fields.training !== undefined) update.training = typeof fields.training === "number" ? fields.training : fields.training ? 1 : 0;
       if (fields.sentToRich !== undefined) update.sentToRich = fields.sentToRich ? 1 : 0;
       if (fields.welcomeVideo !== undefined) update.welcomeVideo = fields.welcomeVideo ? 1 : 0;
       if (fields.sentToClient !== undefined) update.sentToClient = fields.sentToClient;

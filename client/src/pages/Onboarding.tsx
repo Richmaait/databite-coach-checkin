@@ -298,15 +298,21 @@ function OnboardingRow({ client, coaches, idx, isDueToday, onUpdate, onAlertVide
       ))}
       {/* Training */}
       <td className={`text-center px-2 py-1.5 ${cellBorder}`}>
-        <select value={client.training == null ? "" : client.training ? "yes" : "no"} onChange={e => { const v = e.target.value; onUpdate("training", v === "" ? null : v === "yes"); }}
-          className={`w-full px-2 py-1.5 rounded border text-xs font-semibold focus:outline-none ${
-            client.training === true ? "bg-emerald-50 border-emerald-300 text-emerald-700"
-            : client.training === false ? "bg-red-50 border-red-300 text-red-600"
-            : "bg-transparent border-gray-200 text-gray-400"}`}>
-          <option value="">—</option>
-          <option value="yes">Yes</option>
-          <option value="no">No</option>
-        </select>
+        {(() => {
+          const val = localBools.training !== undefined ? localBools.training : client.training;
+          const display = val === 1 ? "yes" : val === 2 ? "no" : "";
+          const bg = val === 1 ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+            : val === 2 ? "bg-red-50 border-red-300 text-red-600"
+            : "bg-transparent border-gray-200 text-gray-400";
+          return (
+            <select value={display} onChange={e => { const v = e.target.value === "yes" ? 1 : e.target.value === "no" ? 2 : 0; setLocalBools(prev => ({ ...prev, training: v })); onUpdate("training", v); }}
+              className={`w-full px-2 py-1.5 rounded border text-xs font-semibold focus:outline-none ${bg}`}>
+              <option value="">—</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          );
+        })()}
       </td>
       {/* Video */}
       <td className={`text-center px-2 py-2.5 ${cellBorder}`}>

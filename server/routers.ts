@@ -18,6 +18,7 @@ import {
   CLIENT_CHECKINS_EPOCH,
   DAYS,
   HIDDEN_COACH_NAMES,
+  EXCLUDED_FROM_STATS,
   TEAM_SLACK_CHANNEL,
   ONBOARDING_SLACK_CHANNEL,
 } from "../shared/const";
@@ -820,7 +821,7 @@ const clientCheckinsRouter = t.router({
           .select({ id: coaches.id, name: coaches.name })
           .from(coaches)
           .where(eq(coaches.isActive, 1));
-        coachList = all.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
+        coachList = all.filter(c => !EXCLUDED_FROM_STATS.includes(c.name));
       }
 
       const results: Array<{
@@ -876,7 +877,7 @@ const clientCheckinsRouter = t.router({
         .select({ id: coaches.id, name: coaches.name })
         .from(coaches)
         .where(eq(coaches.isActive, 1));
-      const coachList = allCoaches.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
+      const coachList = allCoaches.filter(c => !EXCLUDED_FROM_STATS.includes(c.name));
 
       const results: Array<{
         coachId: number;
@@ -1015,7 +1016,7 @@ const clientCheckinsRouter = t.router({
       .select({ id: coaches.id, name: coaches.name })
       .from(coaches)
       .where(eq(coaches.isActive, 1));
-    const coachList = allCoaches.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
+    const coachList = allCoaches.filter(c => !EXCLUDED_FROM_STATS.includes(c.name));
 
     const allWeeks = getWeeksBetween(epochWeek, lastWeek); // newest first, excludes current week
 
@@ -1143,7 +1144,7 @@ const clientCheckinsRouter = t.router({
       .select({ id: coaches.id, name: coaches.name })
       .from(coaches)
       .where(eq(coaches.isActive, 1));
-    const coachList = allCoaches.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
+    const coachList = allCoaches.filter(c => !EXCLUDED_FROM_STATS.includes(c.name));
 
     const allWeeks = getWeeksBetween(epochWeek, lastWeek);
 
@@ -1374,7 +1375,7 @@ const clientCheckinsRouter = t.router({
         .select({ id: coaches.id, name: coaches.name })
         .from(coaches)
         .where(eq(coaches.isActive, 1));
-      const coachList = allCoachRows.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
+      const coachList = allCoachRows.filter(c => !EXCLUDED_FROM_STATS.includes(c.name));
 
       const todayMon = getMonday(getTodayMelbourne());
       const isPastWeek = input.weekStart < todayMon;
@@ -1518,7 +1519,7 @@ const clientCheckinsRouter = t.router({
           .select({ id: coaches.id, name: coaches.name })
           .from(coaches)
           .where(eq(coaches.isActive, 1));
-        coachList = allRows.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
+        coachList = allRows.filter(c => !EXCLUDED_FROM_STATS.includes(c.name));
       }
 
       const weeklyData: Array<{

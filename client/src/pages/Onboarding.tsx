@@ -152,7 +152,7 @@ export default function Onboarding() {
                 <textarea
                   value={videoAlertNote}
                   onChange={e => setVideoAlertNote(e.target.value)}
-                  placeholder="Add a note (e.g. referral from Candice Haggerty)..."
+                  placeholder="Add a note..."
                   rows={3}
                   className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-violet-400 mb-4 resize-none"
                 />

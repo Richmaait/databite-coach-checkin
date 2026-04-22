@@ -20,6 +20,7 @@ import Sales from "./pages/Sales";
 import FridayAudit from "./pages/FridayAudit";
 import Onboarding from "./pages/Onboarding";
 import Milestones from "./pages/Milestones";
+import MealPlanner from "./pages/MealPlanner";
 
 function Router() {
   return (
@@ -40,6 +41,7 @@ function Router() {
       <Route path="/audit" component={FridayAudit} />
       <Route path="/onboarding" component={Onboarding} />
       <Route path="/milestones" component={Milestones} />
+      <Route path="/meal-planner" component={MealPlanner} />
       <Route path="/client-performance"><Redirect to="/client-progress" /></Route>
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

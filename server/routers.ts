@@ -3636,13 +3636,14 @@ const onboardingRouter = t.router({
     }),
 
   alertWelcomeVideo: adminProcedure
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: z.number(), note: z.string().optional() }))
     .mutation(async ({ input }) => {
       const db = await requireDb();
       const [client] = await db.select().from(onboardingClients).where(eq(onboardingClients.id, input.id)).limit(1);
       if (!client) throw new TRPCError({ code: "NOT_FOUND" });
 
-      const msg = `🎬 *Welcome video needed*\n\n*${client.clientName}*${client.coach ? ` → *${client.coach}*` : ""}\n\nPlease record and send their welcome video.`;
+      const noteSection = input.note?.trim() ? `\n\n📝 *Note:* ${input.note.trim()}` : "";
+      const msg = `🎬 *Welcome video needed*\n\n*${client.clientName}*${client.coach ? ` → *${client.coach}*` : ""}${noteSection}\n\nPlease record and send their welcome video.`;
       await sendSlackDM(ONBOARDING_SLACK_CHANNEL, msg);
       const today = getTodayMelbourne();
       await db.update(onboardingClients).set({ videoAlertSentAt: today }).where(eq(onboardingClients.id, input.id));

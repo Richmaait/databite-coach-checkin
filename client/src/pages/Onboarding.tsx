@@ -47,6 +47,8 @@ export default function Onboarding() {
   const [tab, setTab] = useState<Tab>("onboarding");
   const [search, setSearch] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
+  const [videoAlertClient, setVideoAlertClient] = useState<{ id: number; name: string } | null>(null);
+  const [videoAlertNote, setVideoAlertNote] = useState("");
   const [showAllMonths, setShowAllMonths] = useState(false);
 
   const { data: onboardingClients, refetch: refetchOnboarding, isLoading: loadingOnboarding } = trpc.onboarding.list.useQuery({ status: "onboarding" });
@@ -140,6 +142,30 @@ export default function Onboarding() {
             </div>
           )}
 
+          {/* Video alert modal with note */}
+          {videoAlertClient && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setVideoAlertClient(null)} />
+              <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl p-6 w-full max-w-md mx-4">
+                <h3 className="text-base font-bold text-gray-800 mb-1">Send welcome video alert</h3>
+                <p className="text-sm text-gray-500 mb-4">This will notify Rich to record a welcome video for <strong>{videoAlertClient.name}</strong>.</p>
+                <textarea
+                  value={videoAlertNote}
+                  onChange={e => setVideoAlertNote(e.target.value)}
+                  placeholder="Add a note (e.g. referral from Candice Haggerty)..."
+                  rows={3}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-violet-400 mb-4 resize-none"
+                />
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => setVideoAlertClient(null)}
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors">Cancel</button>
+                  <button onClick={() => { alertVideoMutation.mutate({ id: videoAlertClient.id, note: videoAlertNote.trim() || undefined }); setVideoAlertClient(null); }}
+                    className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 transition-colors">Send Alert</button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Sales summary */}
           {tab === "completed" && salesStats && salesStats.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto -mx-6 px-0 sm:mx-0 mb-4">
@@ -215,7 +241,7 @@ export default function Onboarding() {
                     return (
                     <OnboardingRow key={client.id} client={client} coaches={coaches} idx={idx} isDueToday={isDueToday}
                       onUpdate={(f, v) => onUpdate(client.id, f, v)}
-                      onAlertVideo={() => { if (confirm(`Send welcome video alert to Rich for ${client.clientName}?`)) alertVideoMutation.mutate({ id: client.id }); }}
+                      onAlertVideo={() => { setVideoAlertClient({ id: client.id, name: client.clientName }); setVideoAlertNote(""); }}
                       onUndoVideo={() => { if (confirm(`Undo video alert for ${client.clientName}?`)) undoVideoMutation.mutate({ id: client.id }); }}
                       onDelete={() => { if (confirm(`Delete ${client.clientName}? This cannot be undone.`)) deleteMutation.mutate({ id: client.id }); }}
                       onFinalise={(cid, cn, d, pt, uw) => finaliseMutation.mutate({ id: client.id, coachId: cid, coachName: cn, dayOfWeek: d as any, paymentType: pt, upfrontWeeks: uw })} />

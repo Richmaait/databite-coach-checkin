@@ -164,24 +164,11 @@ function matchClientName(
     const cn = normaliseName(c);
     const parts = cn.split(" ");
     if (parts.length === 2 && parts[1].length === 1) {
-      // Roster is "firstname X" — match if first names match and initial matches last name
       if (parts[0] === fn && ln.startsWith(parts[1])) return c;
     }
   }
 
-  // Pass 3: roster has first name only (e.g. "MALIA", "CHRIS", "AMELIA")
-  for (const c of rosterClients) {
-    const cn = normaliseName(c);
-    if (!cn.includes(" ") && cn === fn) return c;
-  }
-
-  // Pass 4: submitted name starts with roster name or vice versa
-  for (const c of rosterClients) {
-    const cn = normaliseName(c);
-    if (cn.startsWith(fullName) || fullName.startsWith(cn)) return c;
-  }
-
-  // Pass 5: first name match + last name starts with roster last part (or vice versa)
+  // Pass 3: first name match + last name partial match (prefer fuller matches over first-name-only)
   for (const c of rosterClients) {
     const cn = normaliseName(c);
     const parts = cn.split(" ");
@@ -190,6 +177,18 @@ function matchClientName(
       const rosterLast = parts.slice(1).join(" ");
       if (rosterFirst === fn && (ln.startsWith(rosterLast) || rosterLast.startsWith(ln))) return c;
     }
+  }
+
+  // Pass 4: submitted full name starts with roster name or vice versa
+  for (const c of rosterClients) {
+    const cn = normaliseName(c);
+    if (cn.includes(" ") && (cn.startsWith(fullName) || fullName.startsWith(cn))) return c;
+  }
+
+  // Pass 5: roster has first name only (e.g. "MALIA", "CHRIS") — only after all multi-word matches tried
+  for (const c of rosterClients) {
+    const cn = normaliseName(c);
+    if (!cn.includes(" ") && cn === fn) return c;
   }
 
   // Pass 6: first 3 chars of first name + first 3 chars of last name

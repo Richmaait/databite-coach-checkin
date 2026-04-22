@@ -17,7 +17,7 @@ const allMenuItems = [
   { icon: LayoutDashboard, label: "Home", path: "/", adminOnly: false },
   { icon: ClipboardCheck, label: "My Check-Ins", path: "/coach", adminOnly: false },
   { icon: ListChecks, label: "Client Check-Ins", path: "/client-checkins", adminOnly: false },
-  { icon: UtensilsCrossed, label: "Meal Planner", path: "/meal-planner", adminOnly: false },
+  { icon: UtensilsCrossed, label: "Meal Planner", path: "https://portal-production-e449.up.railway.app/", adminOnly: false, external: true },
   { icon: BarChart3, label: "Dashboard", path: "/dashboard", adminOnly: true },
   { icon: TrendingUp, label: "Coach Activity", path: "/coach-performance", adminOnly: true },
   { icon: Activity, label: "Client Progress", path: "/client-progress", adminOnly: false },
@@ -114,31 +114,53 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         {/* Nav items */}
         <nav className="flex-1 py-2 overflow-hidden">
           {menuItems.map(item => {
-            const isActive = location === item.path;
+            const isExternal = (item as any).external === true;
+            const isActive = !isExternal && location === item.path;
+            const className = `
+              flex items-center gap-3 w-full px-3 py-2.5 text-sm font-normal transition-colors rounded-lg mx-0
+              ${isActive
+                ? "text-white bg-white/10"
+                : "text-white/50 hover:bg-white/[0.06] hover:text-white/80"
+              }
+            `;
+            const label = (
+              <span
+                className="whitespace-nowrap overflow-hidden transition-all duration-150"
+                style={{
+                  opacity: hovered ? 1 : 0,
+                  maxWidth: hovered ? 160 : 0,
+                  pointerEvents: "none",
+                }}
+              >
+                {item.label}
+              </span>
+            );
+            const icon = <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-white" : "text-white/50"}`} />;
+
+            if (isExternal) {
+              return (
+                <a
+                  key={item.path}
+                  href={item.path}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={!hovered ? item.label : undefined}
+                  className={className}
+                >
+                  {icon}
+                  {label}
+                </a>
+              );
+            }
             return (
               <button
                 key={item.path}
                 onClick={() => setLocation(item.path)}
                 title={!hovered ? item.label : undefined}
-                className={`
-                  flex items-center gap-3 w-full px-3 py-2.5 text-sm font-normal transition-colors rounded-lg mx-0
-                  ${isActive
-                    ? "text-white bg-white/10"
-                    : "text-white/50 hover:bg-white/[0.06] hover:text-white/80"
-                  }
-                `}
+                className={className}
               >
-                <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-white" : "text-white/50"}`} />
-                <span
-                  className="whitespace-nowrap overflow-hidden transition-all duration-150"
-                  style={{
-                    opacity: hovered ? 1 : 0,
-                    maxWidth: hovered ? 160 : 0,
-                    pointerEvents: "none",
-                  }}
-                >
-                  {item.label}
-                </span>
+                {icon}
+                {label}
               </button>
             );
           })}

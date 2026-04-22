@@ -131,6 +131,12 @@ function getDayOfWeek(
   return map[day] ?? null;
 }
 
+/** Clients who submit under alternate last names (maiden/married/etc.) */
+const LAST_NAME_ALIASES: Record<string, string[]> = {
+  gill: ["kervin"],
+  kervin: ["gill"],
+};
+
 /** Normalise a name for fuzzy matching (lowercase, trim, collapse spaces, strip suffixes). */
 function normaliseName(s: string): string {
   return s.toLowerCase().replace(/\(.*?\)/g, "").replace(/\s+/g, " ").trim();
@@ -157,6 +163,22 @@ function matchClientName(
   // Pass 1: exact match
   for (const c of rosterClients) {
     if (normaliseName(c) === fullName) return c;
+  }
+
+  // Pass 1b: try alternate last names (e.g. Kervin ↔ Gill)
+  const altLastNames = LAST_NAME_ALIASES[ln] || [];
+  for (const altLn of altLastNames) {
+    const altFull = `${fn} ${altLn}`.trim();
+    for (const c of rosterClients) {
+      const cn = normaliseName(c);
+      if (cn === altFull) return c;
+      // Also check first name + alt last initial
+      const parts = cn.split(" ");
+      if (parts.length >= 2 && parts[0] === fn) {
+        const rosterLast = parts.slice(1).join(" ");
+        if (rosterLast === altLn || rosterLast.startsWith(altLn) || altLn.startsWith(rosterLast)) return c;
+      }
+    }
   }
 
   // Pass 2: roster has "FIRSTNAME L" (first name + last initial)

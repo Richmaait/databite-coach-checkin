@@ -71,9 +71,21 @@ export default function Onboarding() {
 
   const filtered = useMemo(() => {
     if (!clients) return [];
-    if (!search.trim()) return clients;
-    const q = search.toLowerCase();
-    return clients.filter(c => c.clientName.toLowerCase().includes(q) || (c.coach ?? "").toLowerCase().includes(q) || (c.notes ?? "").toLowerCase().includes(q));
+    const today = todayMelbourne();
+    let result = clients;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(c => c.clientName.toLowerCase().includes(q) || (c.coach ?? "").toLowerCase().includes(q) || (c.notes ?? "").toLowerCase().includes(q));
+    }
+    return [...result].sort((a, b) => {
+      const aSent = !!a.videoAlertSentAt;
+      const bSent = !!b.videoAlertSentAt;
+      if (aSent !== bSent) return aSent ? -1 : 1;
+      const aPending = !aSent && !!a.dateDue && a.dateDue <= today;
+      const bPending = !bSent && !!b.dateDue && b.dateDue <= today;
+      if (aPending !== bPending) return aPending ? -1 : 1;
+      return (a.dateDue || "").localeCompare(b.dateDue || "");
+    });
   }, [clients, search]);
 
   const groupedByMonth = useMemo(() => {

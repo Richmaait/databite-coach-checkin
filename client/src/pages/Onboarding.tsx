@@ -237,9 +237,9 @@ export default function Onboarding() {
                 <tbody>
                   {filtered.map((client, idx) => {
                     const today = todayMelbourne();
-                    const isDueToday = client.dateDue === today;
+                    const isPending = !!client.dateDue && client.dateDue <= today && !client.videoAlertSentAt;
                     return (
-                    <OnboardingRow key={client.id} client={client} coaches={coaches} idx={idx} isDueToday={isDueToday}
+                    <OnboardingRow key={client.id} client={client} coaches={coaches} idx={idx} isPending={isPending}
                       onUpdate={(f, v) => onUpdate(client.id, f, v)}
                       onAlertVideo={() => { setVideoAlertClient({ id: client.id, name: client.clientName }); setVideoAlertNote(""); }}
                       onUndoVideo={() => { if (confirm(`Undo video alert for ${client.clientName}?`)) undoVideoMutation.mutate({ id: client.id }); }}
@@ -261,8 +261,8 @@ export default function Onboarding() {
   );
 }
 
-function OnboardingRow({ client, coaches, idx, isDueToday, onUpdate, onAlertVideo, onUndoVideo, onDelete, onFinalise }: {
-  client: any; coaches: Array<{ id: number; name: string }>; idx: number; isDueToday: boolean;
+function OnboardingRow({ client, coaches, idx, isPending, onUpdate, onAlertVideo, onUndoVideo, onDelete, onFinalise }: {
+  client: any; coaches: Array<{ id: number; name: string }>; idx: number; isPending: boolean;
   onUpdate: (field: string, value: any) => void; onAlertVideo: () => void; onUndoVideo: () => void; onDelete: () => void;
   onFinalise: (coachId: number, coachName: string, day: string, paymentType: "subscription" | "upfront", upfrontWeeks?: number) => void;
 }) {
@@ -282,12 +282,12 @@ function OnboardingRow({ client, coaches, idx, isDueToday, onUpdate, onAlertVide
     onUpdate(key, newVal);
   };
 
-  const rowBg = isDueToday ? "bg-orange-100/60" : idx % 2 === 0 ? "bg-white" : "bg-gray-50/70";
-  const rowBorder = isDueToday ? "border-l-4 border-l-orange-500" : "";
+  const rowBg = isPending ? "bg-orange-100/60" : videoSent ? "bg-sky-100/60" : idx % 2 === 0 ? "bg-white" : "bg-gray-50/70";
+  const rowBorder = isPending ? "border-l-4 border-l-orange-500" : videoSent ? "border-l-4 border-l-sky-400" : "";
   const cellBorder = "border-r border-gray-200";
 
   return (
-    <tr className={`${rowBg} ${rowBorder} border-b border-gray-200 ${isDueToday ? "" : "hover:bg-violet-100/70"} transition-colors group`}>
+    <tr className={`${rowBg} ${rowBorder} border-b border-gray-200 ${isPending || videoSent ? "" : "hover:bg-violet-100/70"} transition-colors group`}>
       {/* Delete + Edit */}
       <td className={`pl-2 py-2.5 ${cellBorder}`}>
         <div className="flex items-center gap-0.5">
@@ -342,7 +342,11 @@ function OnboardingRow({ client, coaches, idx, isDueToday, onUpdate, onAlertVide
       </td>
       {/* Video */}
       <td className={`text-center px-2 py-2.5 ${cellBorder}`}>
-        <button onClick={videoSent ? onUndoVideo : onAlertVideo}
+        <button onClick={() => {
+          if (videoSent) { onUndoVideo(); return; }
+          if (!client.coach) { toast.error("Please select a coach first"); return; }
+          onAlertVideo();
+        }}
           className={`w-6 h-6 rounded text-[10px] transition-all ${videoSent
             ? "bg-emerald-100 text-emerald-600 border border-emerald-300 hover:bg-red-400" : "bg-fuchsia-100 border border-fuchsia-200 text-fuchsia-500 hover:bg-fuchsia-200"}`}>
           🎬

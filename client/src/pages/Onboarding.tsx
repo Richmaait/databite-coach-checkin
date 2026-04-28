@@ -321,7 +321,7 @@ function OnboardingRow({ client, coaches, idx, isPending, onUpdate, onAlertVideo
         <td key={field} className={`px-2 py-1.5 ${cellBorder}`}>
           <input type="date" value={client[field] || ""} onChange={e => onUpdate(field, e.target.value || null)}
             onClick={e => (e.target as HTMLInputElement).showPicker?.()}
-            className="w-full px-1.5 py-1 rounded border border-gray-200 text-gray-700 text-[11px] focus:outline-none focus:border-violet-400 bg-transparent cursor-pointer hover:bg-gray-50" />
+            className={`w-full px-1.5 py-1 rounded border border-gray-200 text-gray-700 text-[11px] focus:outline-none focus:border-violet-400 bg-transparent cursor-pointer hover:bg-gray-50 ${!client[field] ? "date-empty" : ""}`} />
         </td>
       ))}
       {/* Bool checklist */}

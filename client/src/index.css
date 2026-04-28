@@ -3,6 +3,14 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Empty date input — colour the calendar icon orange so unset dates stand out */
+@layer base {
+  .date-empty::-webkit-calendar-picker-indicator {
+    filter: invert(60%) sepia(85%) saturate(1800%) hue-rotate(345deg) brightness(101%) contrast(95%);
+    opacity: 1;
+  }
+}
+
 /* Cancellation tooltip */
 @layer base {
   .cancel-tip { position: relative; display: inline-flex; }

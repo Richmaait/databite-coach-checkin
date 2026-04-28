@@ -69,9 +69,9 @@ export async function fetchRosterForCoach(
     monday: [], tuesday: [], wednesday: [], thursday: [], friday: [],
   };
 
-  // Read from DB roster
+  // Read from DB roster (skip for Rich — always use live Google Sheet)
   const db = await getDb();
-  if (db) {
+  if (db && coachName !== "Rich") {
     const rows = await db.select().from(rosterAssignments)
       .where(and(
         eq(rosterAssignments.coachName, coachName),
@@ -88,10 +88,10 @@ export async function fetchRosterForCoach(
     }
   }
 
-  // Fallback: Google Sheets (for coaches not yet in DB roster)
+  // Google Sheets roster
   const roster = await fetchRosterForCoachFromSheet(coachName);
 
-  // Rich's Friday section is onboarding clients, not a real roster day
+  // Rich's Friday/Onboarding column is not a real roster day
   if (coachName === "Rich") {
     roster.friday = [];
   }

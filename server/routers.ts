@@ -2548,8 +2548,12 @@ const performanceRouter = t.router({
       for (const day of DAYS) {
         const clean = roster[day] ?? [];
         const raw = rawRoster[day] ?? [];
-        for (let i = 0; i < clean.length && i < raw.length; i++) {
-          if (clean[i] !== raw[i]) rawNameMap[clean[i]] = raw[i];
+        // Match by cleaning each raw name and comparing to the clean name
+        for (const rawName of raw) {
+          const cleaned = rawName.replace(/\s*\(.*?\)\s*/g, "").replace(/\*+$/, "").trim();
+          if (cleaned !== rawName.trim() && clean.includes(cleaned)) {
+            rawNameMap[cleaned] = rawName;
+          }
         }
       }
       const allClients = new Set<string>();

@@ -180,22 +180,7 @@ export async function fetchRawRosterForCoach(
     monday: [], tuesday: [], wednesday: [], thursday: [], friday: [],
   };
 
-  // DB roster stores raw names with suffixes
-  const db = await getDb();
-  if (db) {
-    const rows = await db.select().from(rosterAssignments)
-      .where(and(
-        eq(rosterAssignments.coachName, coachName),
-        eq(rosterAssignments.isActive, 1),
-      ));
-    if (rows.length > 0) {
-      const days: Record<DayKey, string[]> = { ...empty };
-      for (const r of rows) days[r.dayOfWeek as DayKey].push(r.clientName);
-      return days;
-    }
-  }
-
-  // Fallback: Google Sheets
+  // Always use live Google Sheets
   const rows = await fetchSheetRows();
   if (rows.length === 0) return empty;
 

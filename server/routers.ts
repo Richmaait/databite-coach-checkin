@@ -3513,13 +3513,17 @@ const onboardingRouter = t.router({
     }))
     .mutation(async ({ input }) => {
       const db = await requireDb();
+      const paymentType = (input.paymentType as any) ?? "subscription";
       const [result] = await db.insert(onboardingClients).values({
         clientName: input.clientName,
         coach: input.coach ?? null,
         datePaid: input.datePaid ?? null,
         dateDue: input.dateDue ?? null,
         salesPerson: input.salesPerson ?? null,
-        paymentType: (input.paymentType as any) ?? "subscription",
+        paymentType,
+        // Upfront = paid in full = no subscription risk → auto-tick the subscription column
+        // so coaches see at a glance which clients don't need a recurring payment chase.
+        subscription: paymentType === "upfront" ? 1 : 0,
         notes: input.notes ?? null,
         status: "onboarding",
       });

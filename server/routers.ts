@@ -3871,7 +3871,10 @@ const milestonesRouter = t.router({
       // Drop clients who are no longer on the roster (finished/gone) — but only
       // when we successfully fetched their coach's roster. Otherwise we'd
       // accidentally hide active clients during a Sheets API hiccup.
-      if (c.coach && fetchedCoaches.has(c.coach)) {
+      // Upfront clients are exempt: they live in a different section of the
+      // roster sheet that the parser doesn't reach, so the off-roster check
+      // would incorrectly hide them.
+      if (c.paymentType !== 'upfront' && c.coach && fetchedCoaches.has(c.coach)) {
         const cleanName = c.clientName ? c.clientName.trim().toLowerCase() : "";
         if (!rosterNames.has(cleanName)) return false;
       }
@@ -3920,7 +3923,9 @@ const milestonesRouter = t.router({
       if (!c.sentToClient) continue;
       // Skip clients who have dropped off the roster (only when we successfully
       // fetched their coach's roster — don't hide them on a Sheets API failure).
-      if (c.coach && fetchedCoaches.has(c.coach)) {
+      // Upfront clients are exempt — their roster section isn't parsed, so the
+      // check would incorrectly hide them.
+      if (c.paymentType !== 'upfront' && c.coach && fetchedCoaches.has(c.coach)) {
         const cleanName = c.clientName ? c.clientName.trim().toLowerCase() : "";
         if (!rosterNames.has(cleanName)) continue;
       }

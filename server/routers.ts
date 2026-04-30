@@ -3860,12 +3860,15 @@ const milestonesRouter = t.router({
       }));
       const cleanName = c.clientName ? c.clientName.trim().toLowerCase() : "";
       const cancellationDate = cleanName ? cancellationByName[cleanName] ?? null : null;
+      // Normalise paymentType — older upfront clients may have only the
+      // `subscription` tinyint set (1 = upfront) without paymentType updated.
+      const isUpfront = c.paymentType === 'upfront' || c.subscription === 1;
       return {
         id: c.id,
         clientName: c.clientName,
         coach: c.coach,
         sentToClient: c.sentToClient,
-        paymentType: c.paymentType,
+        paymentType: isUpfront ? 'upfront' : c.paymentType,
         cancellationDate,
         weekNumber,
         currentMilestone,
@@ -3944,7 +3947,8 @@ const milestonesRouter = t.router({
         const rating = (c as any)[`milestone${weekNumber}Rating`] ?? null;
         const notes = (c as any)[`milestone${weekNumber}Notes`] ?? null;
         const cancellationDate = c.clientName ? cancellationByName[c.clientName.trim().toLowerCase()] ?? null : null;
-        alerts[weekNumber].clients.push({ id: c.id, clientName: c.clientName, coach: c.coach, sentToClient: c.sentToClient, weekNumber, paymentType: c.paymentType, cancellationDate, contactedAt, rating, notes } as any);
+        const isUpfront = c.paymentType === 'upfront' || c.subscription === 1;
+        alerts[weekNumber].clients.push({ id: c.id, clientName: c.clientName, coach: c.coach, sentToClient: c.sentToClient, weekNumber, paymentType: isUpfront ? 'upfront' : c.paymentType, cancellationDate, contactedAt, rating, notes } as any);
       }
     }
 

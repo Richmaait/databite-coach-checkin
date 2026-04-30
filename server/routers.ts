@@ -3820,7 +3820,13 @@ const milestonesRouter = t.router({
         fetchedCoaches.add(coachName);
         for (const day of ["monday", "tuesday", "wednesday", "thursday", "friday"] as const) {
           for (const rawName of raw[day]) {
-            const cleanName = rawName.replace(/\s*\(.*\)\s*$/, "").trim().toLowerCase();
+            const cleanName = rawName
+              .replace(/\s*\(.*\)\s*$/, "")               // strip trailing (anything)
+              .replace(/\s*UPFRONT.*$/i, "")              // strip inline "UPFRONT ..." or "UPFRONT - 22/04"
+              .replace(/\s*DEC\s*OFFER.*$/i, "")          // strip inline "DEC OFFER ..."
+              .replace(/\s*[-–—]\s*\d{1,2}[\s/.-]+\w+.*$/, "") // strip trailing "- 22/04" date suffix
+              .trim()
+              .toLowerCase();
             if (cleanName) rosterNames.add(cleanName);
             const dateMatch = rawName.match(/\(([^)]+)\)/);
             const dateTag = dateMatch?.[1]?.trim();
@@ -3871,10 +3877,7 @@ const milestonesRouter = t.router({
       // Drop clients who are no longer on the roster (finished/gone) — but only
       // when we successfully fetched their coach's roster. Otherwise we'd
       // accidentally hide active clients during a Sheets API hiccup.
-      // Upfront clients are exempt: they live in a different section of the
-      // roster sheet that the parser doesn't reach, so the off-roster check
-      // would incorrectly hide them.
-      if (c.paymentType !== 'upfront' && c.coach && fetchedCoaches.has(c.coach)) {
+      if (c.coach && fetchedCoaches.has(c.coach)) {
         const cleanName = c.clientName ? c.clientName.trim().toLowerCase() : "";
         if (!rosterNames.has(cleanName)) return false;
       }
@@ -3900,7 +3903,13 @@ const milestonesRouter = t.router({
         fetchedCoaches.add(coachName);
         for (const day of ["monday", "tuesday", "wednesday", "thursday", "friday"] as const) {
           for (const rawName of raw[day]) {
-            const cleanName = rawName.replace(/\s*\(.*\)\s*$/, "").trim().toLowerCase();
+            const cleanName = rawName
+              .replace(/\s*\(.*\)\s*$/, "")               // strip trailing (anything)
+              .replace(/\s*UPFRONT.*$/i, "")              // strip inline "UPFRONT ..." or "UPFRONT - 22/04"
+              .replace(/\s*DEC\s*OFFER.*$/i, "")          // strip inline "DEC OFFER ..."
+              .replace(/\s*[-–—]\s*\d{1,2}[\s/.-]+\w+.*$/, "") // strip trailing "- 22/04" date suffix
+              .trim()
+              .toLowerCase();
             if (cleanName) rosterNames.add(cleanName);
             const dateMatch = rawName.match(/\(([^)]+)\)/);
             const dateTag = dateMatch?.[1]?.trim();
@@ -3923,9 +3932,7 @@ const milestonesRouter = t.router({
       if (!c.sentToClient) continue;
       // Skip clients who have dropped off the roster (only when we successfully
       // fetched their coach's roster — don't hide them on a Sheets API failure).
-      // Upfront clients are exempt — their roster section isn't parsed, so the
-      // check would incorrectly hide them.
-      if (c.paymentType !== 'upfront' && c.coach && fetchedCoaches.has(c.coach)) {
+      if (c.coach && fetchedCoaches.has(c.coach)) {
         const cleanName = c.clientName ? c.clientName.trim().toLowerCase() : "";
         if (!rosterNames.has(cleanName)) continue;
       }

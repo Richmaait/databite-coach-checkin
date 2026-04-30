@@ -3813,6 +3813,7 @@ const milestonesRouter = t.router({
     const coachNames = [...new Set(clients.map(c => c.coach).filter(Boolean) as string[])];
     const cancellationByName: Record<string, string> = {};
     const rosterNames = new Set<string>();
+    const upfrontFromRoster = new Set<string>();
     const fetchedCoaches = new Set<string>();
     await Promise.all(coachNames.map(async (coachName) => {
       try {
@@ -3828,6 +3829,11 @@ const milestonesRouter = t.router({
               .trim()
               .toLowerCase();
             if (cleanName) rosterNames.add(cleanName);
+            // If the raw roster entry mentions UPFRONT (anywhere in the name —
+            // either inline like "Kristy Botham UPFRONT" or in parens like
+            // "Kristy Botham (UPFRONT - 22/04)"), the roster is the source of
+            // truth. Mark them as upfront even if the DB fields aren't set.
+            if (cleanName && /UPFRONT/i.test(rawName)) upfrontFromRoster.add(cleanName);
             const dateMatch = rawName.match(/\(([^)]+)\)/);
             const dateTag = dateMatch?.[1]?.trim();
             if (!dateTag) continue;
@@ -3860,9 +3866,13 @@ const milestonesRouter = t.router({
       }));
       const cleanName = c.clientName ? c.clientName.trim().toLowerCase() : "";
       const cancellationDate = cleanName ? cancellationByName[cleanName] ?? null : null;
-      // Normalise paymentType — older upfront clients may have only the
-      // `subscription` tinyint set (1 = upfront) without paymentType updated.
-      const isUpfront = c.paymentType === 'upfront' || c.subscription === 1;
+      // Upfront detection — three sources of truth, any of them counts:
+      //   1. paymentType === 'upfront' (newer DB field)
+      //   2. subscription === 1 (legacy DB tinyint, 1 = upfront)
+      //   3. Name appears with "UPFRONT" tag in the live roster sheet
+      // Suzie marks clients in the sheet directly, so the roster wins for
+      // anyone whose DB fields haven't been updated.
+      const isUpfront = c.paymentType === 'upfront' || c.subscription === 1 || upfrontFromRoster.has(cleanName);
       return {
         id: c.id,
         clientName: c.clientName,
@@ -3899,6 +3909,7 @@ const milestonesRouter = t.router({
     const coachNames = [...new Set(clients.map(c => c.coach).filter(Boolean) as string[])];
     const cancellationByName: Record<string, string> = {};
     const rosterNames = new Set<string>();
+    const upfrontFromRoster = new Set<string>();
     const fetchedCoaches = new Set<string>();
     await Promise.all(coachNames.map(async (coachName) => {
       try {
@@ -3914,6 +3925,11 @@ const milestonesRouter = t.router({
               .trim()
               .toLowerCase();
             if (cleanName) rosterNames.add(cleanName);
+            // If the raw roster entry mentions UPFRONT (anywhere in the name —
+            // either inline like "Kristy Botham UPFRONT" or in parens like
+            // "Kristy Botham (UPFRONT - 22/04)"), the roster is the source of
+            // truth. Mark them as upfront even if the DB fields aren't set.
+            if (cleanName && /UPFRONT/i.test(rawName)) upfrontFromRoster.add(cleanName);
             const dateMatch = rawName.match(/\(([^)]+)\)/);
             const dateTag = dateMatch?.[1]?.trim();
             if (!dateTag) continue;
@@ -3946,8 +3962,9 @@ const milestonesRouter = t.router({
         const contactedAt = (c as any)[`milestone${weekNumber}ContactedAt`] ?? null;
         const rating = (c as any)[`milestone${weekNumber}Rating`] ?? null;
         const notes = (c as any)[`milestone${weekNumber}Notes`] ?? null;
-        const cancellationDate = c.clientName ? cancellationByName[c.clientName.trim().toLowerCase()] ?? null : null;
-        const isUpfront = c.paymentType === 'upfront' || c.subscription === 1;
+        const lowerName = c.clientName ? c.clientName.trim().toLowerCase() : "";
+        const cancellationDate = lowerName ? cancellationByName[lowerName] ?? null : null;
+        const isUpfront = c.paymentType === 'upfront' || c.subscription === 1 || upfrontFromRoster.has(lowerName);
         alerts[weekNumber].clients.push({ id: c.id, clientName: c.clientName, coach: c.coach, sentToClient: c.sentToClient, weekNumber, paymentType: isUpfront ? 'upfront' : c.paymentType, cancellationDate, contactedAt, rating, notes } as any);
       }
     }

@@ -3817,6 +3817,7 @@ const milestonesRouter = t.router({
     //      successfully — a temporary Sheets API failure must not hide live clients.)
     const coachNames = [...new Set(clients.map(c => c.coach).filter(Boolean) as string[])];
     const cancellationByName: Record<string, string> = {};
+    const pausedByName: Record<string, string> = {};
     const rosterNames = new Set<string>();
     const fetchedCoaches = new Set<string>();
     await Promise.all(coachNames.map(async (coachName) => {
@@ -3829,6 +3830,7 @@ const milestonesRouter = t.router({
               .replace(/\s*\(.*\)\s*$/, "")               // strip trailing (anything)
               .replace(/\s*UPFRONT.*$/i, "")              // strip inline "UPFRONT ..." or "UPFRONT - 22/04"
               .replace(/\s*DEC\s*OFFER.*$/i, "")          // strip inline "DEC OFFER ..."
+              .replace(/\s*PAUSE.*$/i, "")                // strip inline "PAUSED ..." or "PAUSE - 22/04"
               .replace(/\s*[-–—]\s*\d{1,2}[\s/.-]+\w+.*$/, "") // strip trailing "- 22/04" date suffix
               .trim()
               .toLowerCase();
@@ -3837,6 +3839,11 @@ const milestonesRouter = t.router({
             const dateTag = dateMatch?.[1]?.trim();
             if (!dateTag) continue;
             const isUpfrontOrDec = /UPFRONT|DEC.OFFER/i.test(dateTag);
+            const isPause = /PAUSE/i.test(dateTag);
+            if (isPause) {
+              pausedByName[cleanName] = dateTag;
+              continue; // paused is not cancellation
+            }
             const isCancellation = !isUpfrontOrDec && /\d/.test(dateTag);
             if (!isCancellation) continue;
             cancellationByName[cleanName] = dateTag;
@@ -3865,6 +3872,7 @@ const milestonesRouter = t.router({
       }));
       const cleanName = c.clientName ? c.clientName.trim().toLowerCase() : "";
       const cancellationDate = cleanName ? cancellationByName[cleanName] ?? null : null;
+      const pausedDate = cleanName ? pausedByName[cleanName] ?? null : null;
       const isUpfront = c.paymentType === 'upfront';
       return {
         id: c.id,
@@ -3873,6 +3881,7 @@ const milestonesRouter = t.router({
         sentToClient: c.sentToClient,
         paymentType: isUpfront ? 'upfront' : c.paymentType,
         cancellationDate,
+        pausedDate,
         weekNumber,
         currentMilestone,
         nextMilestone,
@@ -3901,6 +3910,7 @@ const milestonesRouter = t.router({
     // dropped off the roster.
     const coachNames = [...new Set(clients.map(c => c.coach).filter(Boolean) as string[])];
     const cancellationByName: Record<string, string> = {};
+    const pausedByName: Record<string, string> = {};
     const rosterNames = new Set<string>();
     const fetchedCoaches = new Set<string>();
     await Promise.all(coachNames.map(async (coachName) => {
@@ -3913,6 +3923,7 @@ const milestonesRouter = t.router({
               .replace(/\s*\(.*\)\s*$/, "")               // strip trailing (anything)
               .replace(/\s*UPFRONT.*$/i, "")              // strip inline "UPFRONT ..." or "UPFRONT - 22/04"
               .replace(/\s*DEC\s*OFFER.*$/i, "")          // strip inline "DEC OFFER ..."
+              .replace(/\s*PAUSE.*$/i, "")                // strip inline "PAUSED ..." or "PAUSE - 22/04"
               .replace(/\s*[-–—]\s*\d{1,2}[\s/.-]+\w+.*$/, "") // strip trailing "- 22/04" date suffix
               .trim()
               .toLowerCase();
@@ -3921,6 +3932,11 @@ const milestonesRouter = t.router({
             const dateTag = dateMatch?.[1]?.trim();
             if (!dateTag) continue;
             const isUpfrontOrDec = /UPFRONT|DEC.OFFER/i.test(dateTag);
+            const isPause = /PAUSE/i.test(dateTag);
+            if (isPause) {
+              pausedByName[cleanName] = dateTag;
+              continue; // paused is not cancellation
+            }
             const isCancellation = !isUpfrontOrDec && /\d/.test(dateTag);
             if (!isCancellation) continue;
             cancellationByName[cleanName] = dateTag;
@@ -3930,7 +3946,7 @@ const milestonesRouter = t.router({
     }));
 
     const todayMon = getMonday(getTodayMelbourne());
-    const alerts: Record<number, { milestone: typeof MILESTONES[number]; clients: Array<{ id: number; clientName: string; coach: string | null; sentToClient: string | null; weekNumber: number; paymentType: string | null; cancellationDate: string | null }> }> = {};
+    const alerts: Record<number, { milestone: typeof MILESTONES[number]; clients: Array<{ id: number; clientName: string; coach: string | null; sentToClient: string | null; weekNumber: number; paymentType: string | null; cancellationDate: string | null; pausedDate: string | null }> }> = {};
 
     for (const m of MILESTONES) alerts[m.week] = { milestone: m, clients: [] };
 
@@ -3951,8 +3967,9 @@ const milestonesRouter = t.router({
         const notes = (c as any)[`milestone${weekNumber}Notes`] ?? null;
         const lowerName = c.clientName ? c.clientName.trim().toLowerCase() : "";
         const cancellationDate = lowerName ? cancellationByName[lowerName] ?? null : null;
+        const pausedDate = lowerName ? pausedByName[lowerName] ?? null : null;
         const isUpfront = c.paymentType === 'upfront';
-        alerts[weekNumber].clients.push({ id: c.id, clientName: c.clientName, coach: c.coach, sentToClient: c.sentToClient, weekNumber, paymentType: isUpfront ? 'upfront' : c.paymentType, cancellationDate, contactedAt, rating, notes } as any);
+        alerts[weekNumber].clients.push({ id: c.id, clientName: c.clientName, coach: c.coach, sentToClient: c.sentToClient, weekNumber, paymentType: isUpfront ? 'upfront' : c.paymentType, cancellationDate, pausedDate, contactedAt, rating, notes } as any);
       }
     }
 

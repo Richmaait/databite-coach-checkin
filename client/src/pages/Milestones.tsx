@@ -91,6 +91,12 @@ export default function Milestones() {
                                 <span className="cancel-tip-text">Finishes {c.cancellationDate}</span>
                               </span>
                             )}
+                            {!c.cancellationDate && c.pausedDate && (
+                              <span className="cancel-tip shrink-0" title={`Paused — ${c.pausedDate}`}>
+                                <span className="w-4 h-4 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-[8px] font-bold text-blue-300 cursor-default">P</span>
+                                <span className="cancel-tip-text">Paused — {c.pausedDate}</span>
+                              </span>
+                            )}
                             {c.paymentType === 'upfront' && (
                               <span className="shrink-0 text-[8px] font-bold text-amber-300 bg-amber-500/15 border border-amber-400/30 rounded px-1 py-0.5 leading-none" title="Paid upfront — no subscription churn risk">UPFRONT</span>
                             )}
@@ -176,6 +182,7 @@ export default function Milestones() {
                   const colors = milestone ? MILESTONE_COLORS[milestone.week] : null;
                   const history = (c as any).milestoneHistory as Array<{ week: number; label: string; contactedAt: string | null; rating: string | null; notes: string | null }> | undefined;
                   const cancellationDate = (c as any).cancellationDate as string | null | undefined;
+                  const pausedDate = (c as any).pausedDate as string | null | undefined;
                   const paymentType = (c as any).paymentType as string | null | undefined;
                   return (
                     <tr key={c.id} className={`border-b border-white/[0.04] hover:bg-violet-500/[0.08] transition-colors ${cancellationDate ? "opacity-60" : ""}`}>
@@ -186,6 +193,12 @@ export default function Milestones() {
                             <span className="cancel-tip shrink-0" title={`Finishes ${cancellationDate}`}>
                               <span className="w-4 h-4 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-[8px] font-bold text-red-400 cursor-default">C</span>
                               <span className="cancel-tip-text">Finishes {cancellationDate}</span>
+                            </span>
+                          )}
+                          {!cancellationDate && pausedDate && (
+                            <span className="cancel-tip shrink-0" title={`Paused — ${pausedDate}`}>
+                              <span className="w-4 h-4 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-[8px] font-bold text-blue-300 cursor-default">P</span>
+                              <span className="cancel-tip-text">Paused — {pausedDate}</span>
                             </span>
                           )}
                           {paymentType === 'upfront' && (

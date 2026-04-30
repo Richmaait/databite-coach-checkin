@@ -3605,11 +3605,16 @@ const onboardingRouter = t.router({
 
       const today = getTodayMelbourne();
 
-      // Mark onboarding as active + set sent to client date
+      // Mark onboarding as active + set sent to client date.
+      // Also persist paymentType + subscription so the Milestones page (which
+      // reads from onboardingClients) sees the correct upfront flag — the
+      // finalise dropdown can override the original Add Client selection.
       await db.update(onboardingClients).set({
         status: "active",
         coach: input.coachName,
         sentToClient: today,
+        paymentType: input.paymentType,
+        subscription: input.paymentType === "upfront" ? 1 : 0,
       }).where(eq(onboardingClients.id, input.id));
 
       // Add to roster

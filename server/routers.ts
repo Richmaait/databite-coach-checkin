@@ -3830,7 +3830,7 @@ const milestonesRouter = t.router({
         nextMilestone,
         milestoneHistory,
       };
-    }).filter(c => c.weekNumber != null && c.weekNumber > 0 && c.weekNumber <= 14);
+    }).filter(c => c.weekNumber != null && c.weekNumber > 0 && c.weekNumber <= 16);
   }),
 
   getAlerts: adminProcedure.query(async () => {

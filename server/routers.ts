@@ -3802,24 +3802,32 @@ const milestonesRouter = t.router({
     const clients = await db.select().from(onboardingClients)
       .where(and(eq(onboardingClients.status, "active"), isNull(onboardingClients.cancelledAt)));
 
-    // Cross-reference each client name against the live roster to catch pending
-    // cancellations (clients with a finish-date tag like "(15/12)" in their roster
-    // entry). The DB only flips to cancelled once they've actually finished, so
-    // this is the earlier signal that lets coaches deprioritise milestone effort.
+    // Cross-reference each client name against the live roster to catch:
+    //   1. PENDING cancellations — clients with a finish-date tag like "(15/12)"
+    //      in their roster entry. DB doesn't flip to cancelled until they've
+    //      actually finished, so this is the earlier signal.
+    //   2. ALREADY-FINISHED clients — anyone whose name no longer appears on any
+    //      coach's roster. They're effectively gone and shouldn't show up in
+    //      milestone outreach. (Only applied when the coach's roster fetched
+    //      successfully — a temporary Sheets API failure must not hide live clients.)
     const coachNames = [...new Set(clients.map(c => c.coach).filter(Boolean) as string[])];
     const cancellationByName: Record<string, string> = {};
+    const rosterNames = new Set<string>();
+    const fetchedCoaches = new Set<string>();
     await Promise.all(coachNames.map(async (coachName) => {
       try {
         const raw = await fetchRawRosterForCoach(coachName);
+        fetchedCoaches.add(coachName);
         for (const day of ["monday", "tuesday", "wednesday", "thursday", "friday"] as const) {
           for (const rawName of raw[day]) {
+            const cleanName = rawName.replace(/\s*\(.*\)\s*$/, "").trim().toLowerCase();
+            if (cleanName) rosterNames.add(cleanName);
             const dateMatch = rawName.match(/\(([^)]+)\)/);
             const dateTag = dateMatch?.[1]?.trim();
             if (!dateTag) continue;
             const isUpfrontOrDec = /UPFRONT|DEC.OFFER/i.test(dateTag);
             const isCancellation = !isUpfrontOrDec && /\d/.test(dateTag);
             if (!isCancellation) continue;
-            const cleanName = rawName.replace(/\s*\(.*\)\s*$/, "").trim().toLowerCase();
             cancellationByName[cleanName] = dateTag;
           }
         }
@@ -3844,7 +3852,8 @@ const milestonesRouter = t.router({
         rating: (c as any)[`milestone${m.week}Rating`] ?? null,
         notes: (c as any)[`milestone${m.week}Notes`] ?? null,
       }));
-      const cancellationDate = c.clientName ? cancellationByName[c.clientName.trim().toLowerCase()] ?? null : null;
+      const cleanName = c.clientName ? c.clientName.trim().toLowerCase() : "";
+      const cancellationDate = cleanName ? cancellationByName[cleanName] ?? null : null;
       return {
         id: c.id,
         clientName: c.clientName,
@@ -3857,7 +3866,17 @@ const milestonesRouter = t.router({
         nextMilestone,
         milestoneHistory,
       };
-    }).filter(c => c.weekNumber != null && c.weekNumber > 0 && c.weekNumber <= 16);
+    }).filter(c => {
+      if (c.weekNumber == null || c.weekNumber <= 0 || c.weekNumber > 16) return false;
+      // Drop clients who are no longer on the roster (finished/gone) — but only
+      // when we successfully fetched their coach's roster. Otherwise we'd
+      // accidentally hide active clients during a Sheets API hiccup.
+      if (c.coach && fetchedCoaches.has(c.coach)) {
+        const cleanName = c.clientName ? c.clientName.trim().toLowerCase() : "";
+        if (!rosterNames.has(cleanName)) return false;
+      }
+      return true;
+    });
   }),
 
   getAlerts: adminProcedure.query(async () => {
@@ -3865,22 +3884,27 @@ const milestonesRouter = t.router({
     const clients = await db.select().from(onboardingClients)
       .where(and(eq(onboardingClients.status, "active"), isNull(onboardingClients.cancelledAt)));
 
-    // Same roster cross-reference as getAll — surface pending cancellations on
-    // this-week's milestone alerts so coaches don't waste effort on cancelled clients.
+    // Roster cross-reference — same as getAll. Pulls pending cancellations
+    // (date-tagged names) AND filters out anyone who's already finished and
+    // dropped off the roster.
     const coachNames = [...new Set(clients.map(c => c.coach).filter(Boolean) as string[])];
     const cancellationByName: Record<string, string> = {};
+    const rosterNames = new Set<string>();
+    const fetchedCoaches = new Set<string>();
     await Promise.all(coachNames.map(async (coachName) => {
       try {
         const raw = await fetchRawRosterForCoach(coachName);
+        fetchedCoaches.add(coachName);
         for (const day of ["monday", "tuesday", "wednesday", "thursday", "friday"] as const) {
           for (const rawName of raw[day]) {
+            const cleanName = rawName.replace(/\s*\(.*\)\s*$/, "").trim().toLowerCase();
+            if (cleanName) rosterNames.add(cleanName);
             const dateMatch = rawName.match(/\(([^)]+)\)/);
             const dateTag = dateMatch?.[1]?.trim();
             if (!dateTag) continue;
             const isUpfrontOrDec = /UPFRONT|DEC.OFFER/i.test(dateTag);
             const isCancellation = !isUpfrontOrDec && /\d/.test(dateTag);
             if (!isCancellation) continue;
-            const cleanName = rawName.replace(/\s*\(.*\)\s*$/, "").trim().toLowerCase();
             cancellationByName[cleanName] = dateTag;
           }
         }
@@ -3894,6 +3918,12 @@ const milestonesRouter = t.router({
 
     for (const c of clients) {
       if (!c.sentToClient) continue;
+      // Skip clients who have dropped off the roster (only when we successfully
+      // fetched their coach's roster — don't hide them on a Sheets API failure).
+      if (c.coach && fetchedCoaches.has(c.coach)) {
+        const cleanName = c.clientName ? c.clientName.trim().toLowerCase() : "";
+        if (!rosterNames.has(cleanName)) continue;
+      }
       const startMon = getMonday(c.sentToClient);
       const diff = new Date(todayMon + "T00:00:00").getTime() - new Date(startMon + "T00:00:00").getTime();
       const weekNumber = Math.floor(diff / (7 * 86400000)) + 1;

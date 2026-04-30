@@ -83,7 +83,18 @@ export default function Milestones() {
                     <div className="space-y-2">
                       {alert.clients.map((c: any) => (
                         <div key={c.id} className="flex items-center gap-3">
-                          <span className="text-sm text-white/80 font-medium min-w-[140px]">{c.clientName}</span>
+                          <span className="text-sm text-white/80 font-medium min-w-[140px] flex items-center gap-1.5">
+                            {c.clientName}
+                            {c.cancellationDate && (
+                              <span className="cancel-tip shrink-0" title={`Finishes ${c.cancellationDate}`}>
+                                <span className="w-4 h-4 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-[8px] font-bold text-red-400 cursor-default">C</span>
+                                <span className="cancel-tip-text">Finishes {c.cancellationDate}</span>
+                              </span>
+                            )}
+                            {c.paymentType === 'upfront' && (
+                              <span className="shrink-0 text-[8px] font-bold text-amber-300 bg-amber-500/15 border border-amber-400/30 rounded px-1 py-0.5 leading-none" title="Paid upfront — no subscription churn risk">UPFRONT</span>
+                            )}
+                          </span>
                           <span className="text-xs text-white/40 min-w-[50px]">{c.coach}</span>
 
                           <button
@@ -164,9 +175,24 @@ export default function Milestones() {
                   const milestone = c.currentMilestone;
                   const colors = milestone ? MILESTONE_COLORS[milestone.week] : null;
                   const history = (c as any).milestoneHistory as Array<{ week: number; label: string; contactedAt: string | null; rating: string | null; notes: string | null }> | undefined;
+                  const cancellationDate = (c as any).cancellationDate as string | null | undefined;
+                  const paymentType = (c as any).paymentType as string | null | undefined;
                   return (
-                    <tr key={c.id} className="border-b border-white/[0.04] hover:bg-violet-500/[0.08] transition-colors">
-                      <td className="px-3 py-2 font-medium text-white/80">{c.clientName}</td>
+                    <tr key={c.id} className={`border-b border-white/[0.04] hover:bg-violet-500/[0.08] transition-colors ${cancellationDate ? "opacity-60" : ""}`}>
+                      <td className="px-3 py-2 font-medium text-white/80">
+                        <div className="flex items-center gap-1.5">
+                          <span>{c.clientName}</span>
+                          {cancellationDate && (
+                            <span className="cancel-tip shrink-0" title={`Finishes ${cancellationDate}`}>
+                              <span className="w-4 h-4 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-[8px] font-bold text-red-400 cursor-default">C</span>
+                              <span className="cancel-tip-text">Finishes {cancellationDate}</span>
+                            </span>
+                          )}
+                          {paymentType === 'upfront' && (
+                            <span className="shrink-0 text-[8px] font-bold text-amber-300 bg-amber-500/15 border border-amber-400/30 rounded px-1 py-0.5 leading-none" title="Paid upfront — no subscription churn risk">UPFRONT</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-2 py-2 text-white/50">{c.coach || "—"}</td>
                       <td className="px-2 py-2 text-white/50">{c.sentToClient ? c.sentToClient.split("-").reverse().join("/") : "—"}</td>
                       <td className="text-center px-2 py-2">

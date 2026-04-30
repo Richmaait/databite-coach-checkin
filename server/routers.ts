@@ -3802,6 +3802,30 @@ const milestonesRouter = t.router({
     const clients = await db.select().from(onboardingClients)
       .where(and(eq(onboardingClients.status, "active"), isNull(onboardingClients.cancelledAt)));
 
+    // Cross-reference each client name against the live roster to catch pending
+    // cancellations (clients with a finish-date tag like "(15/12)" in their roster
+    // entry). The DB only flips to cancelled once they've actually finished, so
+    // this is the earlier signal that lets coaches deprioritise milestone effort.
+    const coachNames = [...new Set(clients.map(c => c.coach).filter(Boolean) as string[])];
+    const cancellationByName: Record<string, string> = {};
+    await Promise.all(coachNames.map(async (coachName) => {
+      try {
+        const raw = await fetchRawRosterForCoach(coachName);
+        for (const day of ["monday", "tuesday", "wednesday", "thursday", "friday"] as const) {
+          for (const rawName of raw[day]) {
+            const dateMatch = rawName.match(/\(([^)]+)\)/);
+            const dateTag = dateMatch?.[1]?.trim();
+            if (!dateTag) continue;
+            const isUpfrontOrDec = /UPFRONT|DEC.OFFER/i.test(dateTag);
+            const isCancellation = !isUpfrontOrDec && /\d/.test(dateTag);
+            if (!isCancellation) continue;
+            const cleanName = rawName.replace(/\s*\(.*\)\s*$/, "").trim().toLowerCase();
+            cancellationByName[cleanName] = dateTag;
+          }
+        }
+      } catch { /* roster fetch errors don't break milestones */ }
+    }));
+
     const todayMon = getMonday(getTodayMelbourne());
     return clients.map(c => {
       let weekNumber: number | null = null;
@@ -3820,11 +3844,14 @@ const milestonesRouter = t.router({
         rating: (c as any)[`milestone${m.week}Rating`] ?? null,
         notes: (c as any)[`milestone${m.week}Notes`] ?? null,
       }));
+      const cancellationDate = c.clientName ? cancellationByName[c.clientName.trim().toLowerCase()] ?? null : null;
       return {
         id: c.id,
         clientName: c.clientName,
         coach: c.coach,
         sentToClient: c.sentToClient,
+        paymentType: c.paymentType,
+        cancellationDate,
         weekNumber,
         currentMilestone,
         nextMilestone,
@@ -3838,8 +3865,30 @@ const milestonesRouter = t.router({
     const clients = await db.select().from(onboardingClients)
       .where(and(eq(onboardingClients.status, "active"), isNull(onboardingClients.cancelledAt)));
 
+    // Same roster cross-reference as getAll — surface pending cancellations on
+    // this-week's milestone alerts so coaches don't waste effort on cancelled clients.
+    const coachNames = [...new Set(clients.map(c => c.coach).filter(Boolean) as string[])];
+    const cancellationByName: Record<string, string> = {};
+    await Promise.all(coachNames.map(async (coachName) => {
+      try {
+        const raw = await fetchRawRosterForCoach(coachName);
+        for (const day of ["monday", "tuesday", "wednesday", "thursday", "friday"] as const) {
+          for (const rawName of raw[day]) {
+            const dateMatch = rawName.match(/\(([^)]+)\)/);
+            const dateTag = dateMatch?.[1]?.trim();
+            if (!dateTag) continue;
+            const isUpfrontOrDec = /UPFRONT|DEC.OFFER/i.test(dateTag);
+            const isCancellation = !isUpfrontOrDec && /\d/.test(dateTag);
+            if (!isCancellation) continue;
+            const cleanName = rawName.replace(/\s*\(.*\)\s*$/, "").trim().toLowerCase();
+            cancellationByName[cleanName] = dateTag;
+          }
+        }
+      } catch { /* roster fetch errors don't break milestones */ }
+    }));
+
     const todayMon = getMonday(getTodayMelbourne());
-    const alerts: Record<number, { milestone: typeof MILESTONES[number]; clients: Array<{ id: number; clientName: string; coach: string | null; sentToClient: string | null; weekNumber: number }> }> = {};
+    const alerts: Record<number, { milestone: typeof MILESTONES[number]; clients: Array<{ id: number; clientName: string; coach: string | null; sentToClient: string | null; weekNumber: number; paymentType: string | null; cancellationDate: string | null }> }> = {};
 
     for (const m of MILESTONES) alerts[m.week] = { milestone: m, clients: [] };
 
@@ -3852,7 +3901,8 @@ const milestonesRouter = t.router({
         const contactedAt = (c as any)[`milestone${weekNumber}ContactedAt`] ?? null;
         const rating = (c as any)[`milestone${weekNumber}Rating`] ?? null;
         const notes = (c as any)[`milestone${weekNumber}Notes`] ?? null;
-        alerts[weekNumber].clients.push({ id: c.id, clientName: c.clientName, coach: c.coach, sentToClient: c.sentToClient, weekNumber, contactedAt, rating, notes });
+        const cancellationDate = c.clientName ? cancellationByName[c.clientName.trim().toLowerCase()] ?? null : null;
+        alerts[weekNumber].clients.push({ id: c.id, clientName: c.clientName, coach: c.coach, sentToClient: c.sentToClient, weekNumber, paymentType: c.paymentType, cancellationDate, contactedAt, rating, notes } as any);
       }
     }
 

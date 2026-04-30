@@ -3860,7 +3860,7 @@ const milestonesRouter = t.router({
       }));
       const cleanName = c.clientName ? c.clientName.trim().toLowerCase() : "";
       const cancellationDate = cleanName ? cancellationByName[cleanName] ?? null : null;
-      const isUpfront = c.paymentType === 'upfront' || c.subscription === 1;
+      const isUpfront = c.paymentType === 'upfront';
       return {
         id: c.id,
         clientName: c.clientName,
@@ -3946,7 +3946,7 @@ const milestonesRouter = t.router({
         const notes = (c as any)[`milestone${weekNumber}Notes`] ?? null;
         const lowerName = c.clientName ? c.clientName.trim().toLowerCase() : "";
         const cancellationDate = lowerName ? cancellationByName[lowerName] ?? null : null;
-        const isUpfront = c.paymentType === 'upfront' || c.subscription === 1;
+        const isUpfront = c.paymentType === 'upfront';
         alerts[weekNumber].clients.push({ id: c.id, clientName: c.clientName, coach: c.coach, sentToClient: c.sentToClient, weekNumber, paymentType: isUpfront ? 'upfront' : c.paymentType, cancellationDate, contactedAt, rating, notes } as any);
       }
     }

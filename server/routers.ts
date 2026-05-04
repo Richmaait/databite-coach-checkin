@@ -2591,10 +2591,11 @@ const performanceRouter = t.router({
     )
     .query(async ({ input }) => {
       const db = await requireDb();
-      const coachList = await db
+      const allCoachRows = await db
         .select({ id: coaches.id, name: coaches.name, workdays: coaches.workdays })
         .from(coaches)
         .where(eq(coaches.isActive, 1));
+      const coachList = allCoachRows.filter(c => !EXCLUDED_FROM_STATS.includes(c.name));
 
       const coachSummaries: Array<{
         coachId: number;
@@ -2628,19 +2629,25 @@ const performanceRouter = t.router({
         let effectiveScheduled: number;
 
         if (isPastWeek && snap?.scheduled != null) {
-          // Use snapshot for scheduled/completed but LIVE excuse count
+          // Use snapshot for scheduled but LIVE completed + excuse counts (late check-ins count)
           scheduled = snap.scheduled;
-          completed = snap.completed ?? 0;
+          const liveCompletions = await db.select().from(clientCheckIns).where(and(
+            eq(clientCheckIns.coachId, coach.id), eq(clientCheckIns.weekStart, input.weekStart),
+          ));
+          completed = liveCompletions.filter(c => c.completedAt != null).length;
           const liveExcuses = await db.select().from(excusedClients).where(and(
             eq(excusedClients.coachId, coach.id), eq(excusedClients.weekStart, input.weekStart), eq(excusedClients.status, "approved"),
           ));
           excusedCount = liveExcuses.length;
           effectiveScheduled = Math.max(scheduled - excusedCount, 0);
         } else {
-          // Live calculation for current week
+          // Live calculation for current week (exclude paused clients)
           const roster = await fetchRosterForCoach(coach.name);
+          const paused = await db.select().from(pausedClients)
+            .where(and(eq(pausedClients.coachId, coach.id), isNull(pausedClients.resumedAt)));
+          const pausedSet = new Set(paused.map(p => p.clientName));
           scheduled = 0;
-          for (const day of DAYS) scheduled += (roster[day] ?? []).length;
+          for (const day of DAYS) scheduled += (roster[day] ?? []).filter(c => !pausedSet.has(c)).length;
 
           const completions = await db
             .select()
@@ -2661,7 +2668,7 @@ const performanceRouter = t.router({
           excusedCount = excuses.length;
           effectiveScheduled = Math.max(scheduled - excusedCount, 0);
         }
-        const pct = effectiveScheduled > 0 ? Math.round((completed / effectiveScheduled) * 100) : 0;
+        const pct = effectiveScheduled > 0 ? Math.round((completed / effectiveScheduled) * 1000) / 10 : 0;
 
         // Get checkin records for the week (Monday to Friday)
         const weekEnd = addDays(input.weekStart, 4);
@@ -2698,7 +2705,7 @@ const performanceRouter = t.router({
       const totalCompleted = coachSummaries.reduce((s, c) => s + c.completed, 0);
       const totalExcused = coachSummaries.reduce((s, c) => s + c.excused, 0);
       const effectiveTotal = Math.max(totalScheduled - totalExcused, 0);
-      const overallPct = effectiveTotal > 0 ? Math.round((totalCompleted / effectiveTotal) * 100) : 0;
+      const overallPct = effectiveTotal > 0 ? Math.round((totalCompleted / effectiveTotal) * 1000) / 10 : 0;
 
       // ── Coach Activity data ──
       const weekEnd = addDays(input.weekStart, 4);

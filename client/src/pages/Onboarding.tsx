@@ -290,6 +290,12 @@ function OnboardingRow({ client, coaches, idx, isPending, onUpdate, onAlertVideo
   const getBool = (key: string) => localBools[key] ?? client[key];
   const toggleBool = (key: string) => {
     const newVal = !getBool(key);
+    // 26-week clients are on a non-standard $99/wk subscription — warn before ticking the subscription column
+    if (key === "subscription" && newVal && /\b26\s*wk\b/i.test(client.clientName || "")) {
+      if (!window.confirm("Remember, 26-week subscription, $99 per week. Double check this.")) {
+        return;
+      }
+    }
     setLocalBools(prev => ({ ...prev, [key]: newVal }));
     onUpdate(key, newVal);
   };

@@ -90,11 +90,13 @@ async function fetchRosterForCoachFromSheet(
   const rows = await fetchSheetRows();
   if (rows.length === 0) return empty;
 
-  const upperName = coachName.toUpperCase();
+  const upperName = coachName.trim().toUpperCase();
   const aliases = [
     upperName,
     upperName.replace("STEVE", "STEPHEN"),
     upperName.replace("STEPHEN", "STEVE"),
+    upperName.replace("ALEX", "ALEXANDRA"),
+    upperName.replace("ALEXANDRA", "ALEX"),
   ];
 
   let sectionStart = -1;

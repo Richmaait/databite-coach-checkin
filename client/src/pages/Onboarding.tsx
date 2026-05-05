@@ -97,6 +97,10 @@ export default function Onboarding() {
       if (!groups[key]) groups[key] = [];
       groups[key].push(c);
     }
+    // Within each month, show most recently started first (Completed tab only — Onboarding tab keeps its own sort).
+    for (const k of Object.keys(groups)) {
+      groups[k].sort((a, b) => (b.sentToClient || "").localeCompare(a.sentToClient || ""));
+    }
     return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
   }, [filtered, tab]);
 

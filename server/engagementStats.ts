@@ -105,10 +105,10 @@ export async function computeCoachWeekStats(
   const scheduled = DAYS.reduce((s, d) => s + scheduledByDay[d], 0);
   const excused = excuses.length;
 
-  // For past weeks with a snapshot, use snapshot's completed count — live count
-  // includes backdated completions added weeks later which inflate engagement
-  const finalCompleted = snapCompleted ?? completed;
-  const finalCompletedByDay = snapCompletedByDay ?? completedByDay;
+  // Always use live completed count — late/back-marked check-ins should count
+  // toward the week they were scheduled for, even if marked days later
+  const finalCompleted = completed;
+  const finalCompletedByDay = completedByDay;
 
   return {
     scheduled,

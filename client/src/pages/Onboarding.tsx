@@ -339,7 +339,7 @@ function OnboardingRow({ client, coaches, idx, isPending, onUpdate, onAlertVideo
         <td key={f.key} className={`text-center px-2 py-2.5 ${cellBorder}`}>
           <button onClick={() => toggleBool(f.key)}
             className={`w-6 h-6 rounded text-[10px] font-bold transition-all ${getBool(f.key)
-              ? "bg-emerald-100 text-emerald-600 border border-emerald-300" : "bg-gray-100 border border-gray-200 text-transparent hover:border-gray-300"}`}>
+              ? "bg-emerald-100 text-emerald-600 border border-emerald-300" : "bg-red-50 border border-red-300 text-transparent hover:border-red-400"}`}>
             ✓
           </button>
         </td>
@@ -379,7 +379,7 @@ function OnboardingRow({ client, coaches, idx, isPending, onUpdate, onAlertVideo
         <td key={f.key} className={`text-center px-2 py-2.5 ${cellBorder}`}>
           <button onClick={() => toggleBool(f.key)}
             className={`w-6 h-6 rounded text-[10px] font-bold transition-all ${getBool(f.key)
-              ? "bg-emerald-100 text-emerald-600 border border-emerald-300" : "bg-gray-100 border border-gray-200 text-transparent hover:border-gray-300"}`}>
+              ? "bg-emerald-100 text-emerald-600 border border-emerald-300" : "bg-red-50 border border-red-300 text-transparent hover:border-red-400"}`}>
             ✓
           </button>
         </td>
@@ -392,7 +392,7 @@ function OnboardingRow({ client, coaches, idx, isPending, onUpdate, onAlertVideo
           return (
             <button onClick={() => onUpdate("sentToClient", val ? null : todayMelbourne())}
               className={`px-2 py-1 rounded text-[10px] font-medium transition-all ${val
-                ? "bg-emerald-100 text-emerald-600 border border-emerald-300" : "bg-gray-100 border border-gray-200 text-gray-400 hover:border-gray-300"}`}>
+                ? "bg-emerald-100 text-emerald-600 border border-emerald-300" : "bg-red-50 border border-red-300 text-red-400 hover:border-red-400"}`}>
               {auDate || "—"}
             </button>
           );

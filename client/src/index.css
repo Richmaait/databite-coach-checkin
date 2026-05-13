@@ -3,7 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Empty date input — colour both the placeholder text and the calendar icon orange
+/* Empty date input — colour both the placeholder text and the calendar icon red
    so unset dates stand out. Webkit needs explicit colour on each datetime sub-field. */
 @layer base {
   .date-empty,
@@ -12,10 +12,10 @@
   .date-empty::-webkit-datetime-edit-month-field,
   .date-empty::-webkit-datetime-edit-year-field,
   .date-empty::-webkit-datetime-edit-text {
-    color: #fd8664 !important;
+    color: #f87171 !important;
   }
   .date-empty::-webkit-calendar-picker-indicator {
-    filter: invert(60%) sepia(85%) saturate(1800%) hue-rotate(345deg) brightness(101%) contrast(95%);
+    filter: brightness(0) saturate(100%) invert(53%) sepia(86%) saturate(1010%) hue-rotate(316deg) brightness(101%) contrast(92%);
     opacity: 1;
   }
 }

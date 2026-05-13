@@ -246,7 +246,7 @@ export default function Onboarding() {
                     <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[120px]">Day</th>
                     <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[90px]">Type</th>
                     <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[110px]">Sale</th>
-                    <th className="text-left px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[220px]">Notes</th>
+                    <th className="text-left px-4 py-3 font-bold text-gray-700 text-[11px] border-r border-gray-200 w-[280px]">Notes</th>
                     <th className="text-center px-4 py-3 font-bold text-gray-700 text-[11px] w-[80px]">Finalise</th>
                   </tr>
                 </thead>

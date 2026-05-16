@@ -15,6 +15,9 @@ let db: ReturnType<typeof drizzle> | null = null;
 
 /**
  * Get or create the database connection.
+ *
+ * Uses a pool so dropped/idle-killed connections are transparently replaced —
+ * a single `createConnection` would go permanently dead after MySQL's wait_timeout.
  */
 export async function getDb() {
   if (db) return db;
@@ -25,8 +28,14 @@ export async function getDb() {
   }
 
   try {
-    const connection = await mysql.createConnection(ENV.databaseUrl);
-    db = drizzle(connection, { schema, mode: "default" });
+    const pool = mysql.createPool({
+      uri: ENV.databaseUrl,
+      connectionLimit: 10,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 10_000,
+      idleTimeout: 60_000,
+    });
+    db = drizzle(pool, { schema, mode: "default" });
     return db;
   } catch (error) {
     console.error("Failed to connect to database:", error);

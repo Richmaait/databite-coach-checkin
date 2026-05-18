@@ -324,6 +324,7 @@ export default function Dashboard() {
   const [chartCoachFilter, setChartCoachFilter] = useState<number | "all">("all");
   // Engagement % over time graph toggle: "team" = single team line, "individual" = per-coach lines
   const [engagementTrendView, setEngagementTrendView] = useState<"team" | "individual">("team");
+  const [excludeRich, setExcludeRich] = useState(false);
 
   const { startDate, endDate } = getDateRange(range, customFrom, customTo);
   // Previous week window (same duration, shifted back 7 days) for WoW comparison
@@ -476,7 +477,7 @@ export default function Dashboard() {
     return starts;
   }, [startDate, endDate]);
   const { data: rosterStats } = trpc.clientCheckins.getRosterWeeklyStats.useQuery(
-    { weekStarts: rosterWeekStarts, startDate, endDate },
+    { weekStarts: rosterWeekStarts, startDate, endDate, excludeHidden: excludeRich },
     { enabled: !!user && isAdmin && rosterWeekStarts.length > 0, staleTime: 2 * 60 * 1000 }
   );
   // Day-by-day roster stats for the combined chart
@@ -486,7 +487,7 @@ export default function Dashboard() {
   );
   // Previous week stats for WoW comparison badges
   const { data: prevRosterStats } = trpc.clientCheckins.getRosterWeeklyStats.useQuery(
-    { weekStarts: prevWeekStarts },
+    { weekStarts: prevWeekStarts, excludeHidden: excludeRich },
     { enabled: !!user && isAdmin && prevWeekStarts.length > 0, staleTime: 5 * 60 * 1000 }
   );
 
@@ -503,7 +504,7 @@ export default function Dashboard() {
     return starts;
   }, []);
   const { data: kpiTrackerStats } = trpc.clientCheckins.getRosterWeeklyStats.useQuery(
-    { weekStarts: kpiTrackerWeekStarts },
+    { weekStarts: kpiTrackerWeekStarts, excludeHidden: excludeRich },
     { enabled: !!user && isAdmin && kpiTrackerWeekStarts.length > 0, staleTime: 5 * 60 * 1000 }
   );
 
@@ -872,6 +873,19 @@ export default function Dashboard() {
               </PopoverContent>
             </Popover>
           </div>
+        </div>
+
+        {/* Exclude Rich toggle */}
+        <div className="flex items-center justify-end">
+          <label className="inline-flex items-center gap-2 cursor-pointer text-xs text-white/60 hover:text-white/90 transition-colors">
+            <input
+              type="checkbox"
+              checked={excludeRich}
+              onChange={e => setExcludeRich(e.target.checked)}
+              className="w-3.5 h-3.5 rounded border-white/20 bg-white/5 text-violet-500 focus:ring-violet-500 focus:ring-offset-0"
+            />
+            <span className="font-medium">Exclude Rich from data</span>
+          </label>
         </div>
 
         {/* Low mood alert banner */}

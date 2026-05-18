@@ -59,10 +59,11 @@ export default function WeeklySummary() {
   // The current week (index 0) has no disengagement data until days have passed.
   const [selectedWeek, setSelectedWeek] = useState(() => weekOptions[1]?.value ?? weekOptions[0]?.value ?? "");
   const [exporting, setExporting] = useState(false);
+  const [excludeRich, setExcludeRich] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading, error } = trpc.performance.getWeeklySummary.useQuery(
-    { weekStart: selectedWeek },
+    { weekStart: selectedWeek, excludeHidden: excludeRich },
     { enabled: !!selectedWeek, staleTime: 5 * 60 * 1000 }
   );
 
@@ -139,6 +140,18 @@ export default function WeeklySummary() {
               </Button>
             )}
           </div>
+        </div>
+
+        <div className="flex items-center justify-end print:hidden">
+          <label className="inline-flex items-center gap-2 cursor-pointer text-xs text-white/60 hover:text-white/90 transition-colors">
+            <input
+              type="checkbox"
+              checked={excludeRich}
+              onChange={e => setExcludeRich(e.target.checked)}
+              className="w-3.5 h-3.5 rounded border-white/20 bg-white/5 text-violet-500 focus:ring-violet-500 focus:ring-offset-0"
+            />
+            <span className="font-medium">Exclude Rich from data</span>
+          </label>
         </div>
 
         {isLoading && (

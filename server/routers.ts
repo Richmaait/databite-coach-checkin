@@ -796,6 +796,7 @@ const clientCheckinsRouter = t.router({
         weekStarts: z.array(z.string()).optional(),
         startDate: z.string().optional(),
         endDate: z.string().optional(),
+        excludeHidden: z.boolean().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -816,12 +817,15 @@ const clientCheckinsRouter = t.router({
         if (coach && HIDDEN_COACH_NAMES.includes(coach.name) && !isAdmin) coachList = [];
         else coachList = coach ? [{ id: coach.id, name: coach.name }] : [];
       } else {
-        // Always exclude hidden coaches from aggregate stats — they are personal, not team metrics
         const all = await db
           .select({ id: coaches.id, name: coaches.name })
           .from(coaches)
           .where(eq(coaches.isActive, 1));
         coachList = all.filter(c => !EXCLUDED_FROM_STATS.includes(c.name));
+        // Admin toggle: exclude hidden coaches (Rich) from this query's aggregate
+        if (input.excludeHidden) {
+          coachList = coachList.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
+        }
       }
 
       const results: Array<{
@@ -2587,6 +2591,7 @@ const performanceRouter = t.router({
     .input(
       z.object({
         weekStart: z.string(),
+        excludeHidden: z.boolean().optional(),
       }),
     )
     .query(async ({ input }) => {
@@ -2595,7 +2600,10 @@ const performanceRouter = t.router({
         .select({ id: coaches.id, name: coaches.name, workdays: coaches.workdays })
         .from(coaches)
         .where(eq(coaches.isActive, 1));
-      const coachList = allCoachRows.filter(c => !EXCLUDED_FROM_STATS.includes(c.name));
+      let coachList = allCoachRows.filter(c => !EXCLUDED_FROM_STATS.includes(c.name));
+      if (input.excludeHidden) {
+        coachList = coachList.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
+      }
 
       const coachSummaries: Array<{
         coachId: number;

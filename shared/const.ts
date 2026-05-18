@@ -11,7 +11,7 @@ export const ADMIN_EMAILS = [
 export const HIDDEN_COACH_NAMES = ["Rich"];
 
 /** Coach names excluded from all aggregate stats (dashboard, weekly summary, engagement graphs) */
-export const EXCLUDED_FROM_STATS = ["Rich", "Alex "];
+export const EXCLUDED_FROM_STATS: string[] = [];
 
 export const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"] as const;
 export type DayKey = (typeof DAYS)[number];

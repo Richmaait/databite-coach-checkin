@@ -19,6 +19,7 @@ import {
   DAYS,
   HIDDEN_COACH_NAMES,
   EXCLUDED_FROM_STATS,
+  STATS_INCLUSION_DATE,
   TEAM_SLACK_CHANNEL,
   ONBOARDING_SLACK_CHANNEL,
 } from "../shared/const";
@@ -844,6 +845,11 @@ const clientCheckinsRouter = t.router({
       for (const ws of weekStartList) {
         const isPastWeek = ws < currentWeekMon;
         for (const coach of coachList) {
+          // Skip coaches whose stats inclusion date is after this week (aggregate queries only)
+          if (!input.coachId) {
+            const includeFrom = STATS_INCLUSION_DATE[coach.name];
+            if (includeFrom && ws < includeFrom) continue;
+          }
           const stats = await computeCoachWeekStats(db, coach.id, coach.name, ws, { preferSnapshot: isPastWeek });
           results.push({
             coachId: coach.id,
@@ -2601,6 +2607,11 @@ const performanceRouter = t.router({
         .from(coaches)
         .where(eq(coaches.isActive, 1));
       let coachList = allCoachRows.filter(c => !EXCLUDED_FROM_STATS.includes(c.name));
+      // Filter coaches whose stats inclusion date is after this week
+      coachList = coachList.filter(c => {
+        const includeFrom = STATS_INCLUSION_DATE[c.name];
+        return !includeFrom || input.weekStart >= includeFrom;
+      });
       if (input.excludeHidden) {
         coachList = coachList.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
       }

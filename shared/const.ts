@@ -13,6 +13,13 @@ export const HIDDEN_COACH_NAMES = ["Rich"];
 /** Coach names excluded from all aggregate stats (dashboard, weekly summary, engagement graphs) */
 export const EXCLUDED_FROM_STATS: string[] = [];
 
+/** Coach names with a "started counting from" date. Their stats are only included
+ * in aggregates for weeks on or after this date. weekStart is YYYY-MM-DD (Monday). */
+export const STATS_INCLUSION_DATE: Record<string, string> = {
+  "Rich": "2026-05-18",
+  "Alex ": "2026-05-18",
+};
+
 export const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"] as const;
 export type DayKey = (typeof DAYS)[number];
 

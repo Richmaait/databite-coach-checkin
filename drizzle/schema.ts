@@ -346,3 +346,17 @@ export const rosterAssignments = mysqlTable("roster_assignments", {
 }));
 
 export type RosterAssignment = typeof rosterAssignments.$inferSelect;
+
+export const rosterDayOverrides = mysqlTable("roster_day_overrides", {
+  id: int("id").autoincrement().primaryKey(),
+  coachId: int("coachId").notNull(),
+  weekStart: varchar("weekStart", { length: 10 }).notNull(),
+  clientName: varchar("clientName", { length: 256 }).notNull(),
+  dayOfWeek: mysqlEnum("dayOfWeek", ["monday", "tuesday", "wednesday", "thursday", "friday"]).notNull(),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => ({
+  uqOverride: uniqueIndex("uq_roster_day_override").on(t.coachId, t.weekStart, t.clientName),
+}));
+
+export type RosterDayOverride = typeof rosterDayOverrides.$inferSelect;

@@ -185,8 +185,8 @@ export default function ClientCheckins() {
   // ── Data queries ───────────────────────────────────────────────────────────
 
   // Roster for the selected coach
-  const { data: roster } = trpc.performance.rosterForCoach.useQuery(
-    { coachName: effectiveCoachName! },
+  const { data: roster, refetch: refetchRoster } = trpc.performance.rosterForCoach.useQuery(
+    { coachName: effectiveCoachName!, weekStart },
     { enabled: !!effectiveCoachName, staleTime: 5 * 60 * 1000 },
   );
 
@@ -455,6 +455,18 @@ export default function ClientCheckins() {
     },
     onError: (e) => toast.error(e.message),
   });
+
+  const moveClientDayMutation = trpc.performance.moveClientDay.useMutation({
+    onSuccess: (_data, variables) => {
+      refetchRoster();
+      utils.clientCheckins.getWeekStatusAll.invalidate();
+      utils.clientCheckins.getRosterWeeklyStats.invalidate();
+      toast.success(`Moved ${variables.clientName} to ${variables.newDay.charAt(0).toUpperCase() + variables.newDay.slice(1)}`);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const [moveMenuFor, setMoveMenuFor] = useState<{ clientName: string; currentDay: string } | null>(null);
 
   const undoCompleteMutation = trpc.clientCheckins.undoComplete.useMutation({
     onSuccess: (_data, variables) => {
@@ -908,8 +920,23 @@ export default function ClientCheckins() {
                                 )}
                               </div>
 
-                              {/* Right: resume/undo buttons */}
+                              {/* Right: resume/move/undo buttons */}
                               <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                {/* Move to different day button */}
+                                {canEdit && !isPaused && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setMoveMenuFor({ clientName, currentDay: day }); }}
+                                    title="Move to another day"
+                                    className="shrink-0 p-1.5 rounded-lg text-white/20 hover:text-violet-400 hover:bg-violet-500/10 transition-all opacity-0 group-hover:opacity-100"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="17 1 21 5 17 9" />
+                                      <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                                      <polyline points="7 23 3 19 7 15" />
+                                      <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                                    </svg>
+                                  </button>
+                                )}
                                 {/* Resume button for paused clients */}
                                 {isPaused && canEdit && (
                                   <button
@@ -1422,6 +1449,42 @@ export default function ClientCheckins() {
                 ? "Saving..."
                 : "Mark Complete"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Move Client Day Dialog ──────────────────────────────────────────── */}
+      <Dialog open={!!moveMenuFor} onOpenChange={(open) => !open && setMoveMenuFor(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Move {moveMenuFor?.clientName}</DialogTitle>
+            <DialogDescription>
+              Currently on {moveMenuFor?.currentDay ? DAY_LABELS[moveMenuFor.currentDay as keyof typeof DAY_LABELS] : ""}. Move them to:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-2">
+            {DAYS.filter(d => d !== moveMenuFor?.currentDay).map(d => (
+              <Button
+                key={d}
+                variant="outline"
+                onClick={() => {
+                  if (!moveMenuFor || !effectiveCoachId) return;
+                  moveClientDayMutation.mutate({
+                    coachId: effectiveCoachId,
+                    weekStart,
+                    clientName: moveMenuFor.clientName,
+                    newDay: d,
+                  });
+                  setMoveMenuFor(null);
+                }}
+                disabled={moveClientDayMutation.isPending}
+              >
+                {DAY_LABELS[d]}
+              </Button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setMoveMenuFor(null)}>Cancel</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

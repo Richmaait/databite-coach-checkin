@@ -42,6 +42,7 @@ import {
   auditHistory,
   onboardingClients,
   rosterAssignments,
+  rosterDayOverrides,
 } from "../drizzle/schema";
 import { runTypeformBackfill } from "./typeformBackfill";
 import { computeCoachWeekStats, engagementPct } from "./engagementStats";
@@ -2540,25 +2541,49 @@ const performanceRouter = t.router({
       z.object({
         coachName: z.string().optional(),
         coachId: z.number().optional(),
+        weekStart: z.string().optional(),
       }),
     )
     .query(async ({ input }) => {
+      const db = await requireDb();
       let coachName = input.coachName;
-      if (!coachName && input.coachId) {
-        const db = await requireDb();
-        const [coach] = await db.select().from(coaches).where(eq(coaches.id, input.coachId)).limit(1);
+      let coachId = input.coachId;
+      if (!coachName && coachId) {
+        const [coach] = await db.select().from(coaches).where(eq(coaches.id, coachId)).limit(1);
         if (!coach) throw new TRPCError({ code: "NOT_FOUND", message: "Coach not found" });
         coachName = coach.name;
+      } else if (coachName && !coachId) {
+        const [coach] = await db.select().from(coaches).where(eq(coaches.name, coachName)).limit(1);
+        if (coach) coachId = coach.id;
       }
       if (!coachName) throw new TRPCError({ code: "BAD_REQUEST", message: "coachName or coachId required" });
       const roster = await fetchRosterForCoach(coachName);
       const rawRoster = await fetchRawRosterForCoach(coachName);
+
+      // Apply per-week day overrides
+      if (input.weekStart && coachId) {
+        const overrides = await db.select().from(rosterDayOverrides)
+          .where(and(eq(rosterDayOverrides.coachId, coachId), eq(rosterDayOverrides.weekStart, input.weekStart)));
+        for (const ov of overrides) {
+          // Remove from any current day
+          for (const d of DAYS) {
+            roster[d] = (roster[d] ?? []).filter(c => c !== ov.clientName);
+            rawRoster[d] = (rawRoster[d] ?? []).filter(c => {
+              const cleaned = c.replace(/\s*\(.*?\)\s*/g, "").replace(/\*+$/, "").trim();
+              return cleaned !== ov.clientName;
+            });
+          }
+          // Add to new day
+          const newDay = ov.dayOfWeek as DayKey;
+          if (!roster[newDay].includes(ov.clientName)) roster[newDay].push(ov.clientName);
+        }
+      }
+
       // Build a map of clean name → raw name for clients with dates/tags
       const rawNameMap: Record<string, string> = {};
       for (const day of DAYS) {
         const clean = roster[day] ?? [];
         const raw = rawRoster[day] ?? [];
-        // Match by cleaning each raw name and comparing to the clean name
         for (const rawName of raw) {
           const cleaned = rawName.replace(/\s*\(.*?\)\s*/g, "").replace(/\*+$/, "").trim();
           if (cleaned !== rawName.trim() && clean.includes(cleaned)) {
@@ -2571,6 +2596,73 @@ const performanceRouter = t.router({
         for (const c of roster[day] ?? []) allClients.add(c);
       }
       return { ...roster, clients: [...allClients].sort(), rawNameMap };
+    }),
+
+  /** Move a client from one day to another for a specific week. */
+  moveClientDay: protectedProcedure
+    .input(z.object({
+      coachId: z.number(),
+      weekStart: z.string(),
+      clientName: z.string(),
+      newDay: z.enum(["monday", "tuesday", "wednesday", "thursday", "friday"]),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await requireDb();
+      // Upsert the override
+      const existing = await db.select().from(rosterDayOverrides).where(and(
+        eq(rosterDayOverrides.coachId, input.coachId),
+        eq(rosterDayOverrides.weekStart, input.weekStart),
+        eq(rosterDayOverrides.clientName, input.clientName),
+      )).limit(1);
+      if (existing.length > 0) {
+        await db.update(rosterDayOverrides)
+          .set({ dayOfWeek: input.newDay, createdByUserId: ctx.user.id })
+          .where(eq(rosterDayOverrides.id, existing[0].id));
+      } else {
+        await db.insert(rosterDayOverrides).values({
+          coachId: input.coachId,
+          weekStart: input.weekStart,
+          clientName: input.clientName,
+          dayOfWeek: input.newDay,
+          createdByUserId: ctx.user.id,
+        });
+      }
+      // Move any existing check-in row to the new day
+      const checkins = await db.select().from(clientCheckIns).where(and(
+        eq(clientCheckIns.coachId, input.coachId),
+        eq(clientCheckIns.weekStart, input.weekStart),
+        eq(clientCheckIns.clientName, input.clientName),
+      ));
+      for (const c of checkins) {
+        if (c.dayOfWeek !== input.newDay) {
+          // Check if there's already a row on the new day (rare but possible)
+          const conflict = checkins.find(x => x.dayOfWeek === input.newDay);
+          if (conflict) {
+            // Delete the old day row, keep the new day row
+            await db.delete(clientCheckIns).where(eq(clientCheckIns.id, c.id));
+          } else {
+            await db.update(clientCheckIns).set({ dayOfWeek: input.newDay }).where(eq(clientCheckIns.id, c.id));
+          }
+        }
+      }
+      return { ok: true };
+    }),
+
+  /** Remove a client's day override for a specific week. */
+  resetClientDay: protectedProcedure
+    .input(z.object({
+      coachId: z.number(),
+      weekStart: z.string(),
+      clientName: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      await db.delete(rosterDayOverrides).where(and(
+        eq(rosterDayOverrides.coachId, input.coachId),
+        eq(rosterDayOverrides.weekStart, input.weekStart),
+        eq(rosterDayOverrides.clientName, input.clientName),
+      ));
+      return { ok: true };
     }),
 
   /** All client ratings. */

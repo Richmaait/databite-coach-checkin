@@ -413,12 +413,12 @@ export default function ClientCheckins() {
   }, [roster]);
 
   const dayStats = useMemo(() => {
-    const stats: Record<DayKey, { completed: number; submitted: number; total: number }> = {
-      monday: { completed: 0, submitted: 0, total: 0 },
-      tuesday: { completed: 0, submitted: 0, total: 0 },
-      wednesday: { completed: 0, submitted: 0, total: 0 },
-      thursday: { completed: 0, submitted: 0, total: 0 },
-      friday: { completed: 0, submitted: 0, total: 0 },
+    const stats: Record<DayKey, { completed: number; submitted: number; total: number; excused: number; effective: number }> = {
+      monday: { completed: 0, submitted: 0, total: 0, excused: 0, effective: 0 },
+      tuesday: { completed: 0, submitted: 0, total: 0, excused: 0, effective: 0 },
+      wednesday: { completed: 0, submitted: 0, total: 0, excused: 0, effective: 0 },
+      thursday: { completed: 0, submitted: 0, total: 0, excused: 0, effective: 0 },
+      friday: { completed: 0, submitted: 0, total: 0, excused: 0, effective: 0 },
     };
     if (!roster) return stats;
     for (const day of DAYS) {
@@ -431,10 +431,14 @@ export default function ClientCheckins() {
         if (localSubmitted.has(`${clientName}|${day}`)) {
           stats[day].submitted++;
         }
+        if (localExcused.has(`${clientName}|${day}`)) {
+          stats[day].excused++;
+        }
       }
+      stats[day].effective = Math.max(stats[day].total - stats[day].excused, 0);
     }
     return stats;
-  }, [roster, localCompleted, localSubmitted]);
+  }, [roster, localCompleted, localSubmitted, localExcused]);
   const clientSubmittedSet = localSubmitted;
 
   // Stats from weeklyStats (for header)
@@ -790,12 +794,17 @@ export default function ClientCheckins() {
                       <div className="text-right space-y-0.5">
                         <div className="flex items-center justify-end gap-1.5">
                           <span className="text-[10px] text-white/40 uppercase tracking-wide">Sub</span>
-                          <span className="text-sm font-bold text-white/70">{stats.submitted}<span className="text-white/25">/{stats.total}</span></span>
+                          <span className="text-sm font-bold text-white/70">{stats.submitted}<span className="text-white/25">/{stats.effective}</span></span>
                         </div>
                         <div className="flex items-center justify-end gap-1.5">
                           <span className="text-[10px] text-white/40 uppercase tracking-wide">Done</span>
-                          <span className="text-lg font-bold text-white/80">{stats.completed}<span className="text-white/30">/{stats.total}</span></span>
+                          <span className="text-lg font-bold text-white/80">{stats.completed}<span className="text-white/30">/{stats.effective}</span></span>
                         </div>
+                        {stats.excused > 0 && (
+                          <div className="text-[10px] text-amber-300/70 font-medium">
+                            {stats.excused} excused (of {stats.total})
+                          </div>
+                        )}
                       </div>
                     </div>
 

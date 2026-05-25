@@ -7,9 +7,7 @@ import { ENV } from "../env";
 import { ADMIN_EMAILS } from "../../shared/const";
 
 /** Sales team members */
-const SALES_EMAILS: Record<string, string> = {
-  "yaman@databite.com.au": "Yaman",
-};
+const SALES_EMAILS: Record<string, string> = {};
 
 /** Check if an email is allowed to log in — admins, sales, or any active coach with an email in the DB */
 async function isEmailAllowed(email: string): Promise<boolean> {

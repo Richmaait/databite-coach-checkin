@@ -444,6 +444,7 @@ function OnboardingRow({ client, coaches, idx, isPending, onUpdate, onAlertVideo
             : client.salesPerson === "Suzie" ? "bg-pink-50 border-pink-200 text-pink-600"
             : "bg-transparent border-gray-200 text-gray-400"}`}>
           <option value="">—</option>
+          {client.salesPerson === "Yaman" && <option value="Yaman">Yaman</option>}
           <option value="Suzie">Suzie</option>
         </select>
       </td>

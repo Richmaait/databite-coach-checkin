@@ -444,7 +444,6 @@ function OnboardingRow({ client, coaches, idx, isPending, onUpdate, onAlertVideo
             : client.salesPerson === "Suzie" ? "bg-pink-50 border-pink-200 text-pink-600"
             : "bg-transparent border-gray-200 text-gray-400"}`}>
           <option value="">—</option>
-          <option value="Yaman">Yaman</option>
           <option value="Suzie">Suzie</option>
         </select>
       </td>
@@ -543,7 +542,7 @@ function AddClientForm({ coaches, onSubmit, onCancel, isPending }: {
       </label>
       <label className="flex flex-col gap-1"><span className={labelCls}>Sale By</span>
         <select value={salesPerson} onChange={e => setSalesPerson(e.target.value)} className={inputCls}>
-          <option value="">—</option><option value="Yaman">Yaman</option><option value="Suzie">Suzie</option>
+          <option value="">—</option><option value="Suzie">Suzie</option>
         </select>
       </label>
       <label className="flex flex-col gap-1"><span className={labelCls}>Payment Type</span>

@@ -965,7 +965,11 @@ export default function TeamManagement() {
                             variant="outline"
                             size="sm"
                             className="h-7 text-xs text-red-400 hover:text-red-300 bg-transparent border-red-400/30 hover:bg-red-400/10 shadow-[0_0_8px_rgba(248,113,113,0.08)]"
-                            onClick={() => deactivateCoach.mutate({ coachId: coach.id, isActive: 0 })}
+                            onClick={() => {
+                              if (window.confirm(`Deactivate ${coach.name}?\n\nThis removes them from every coach dropdown and check-in list. Only do this if they've actually left the team.`)) {
+                                deactivateCoach.mutate({ coachId: coach.id, isActive: 0 });
+                              }
+                            }}
                           >
                             Deactivate
                           </Button>

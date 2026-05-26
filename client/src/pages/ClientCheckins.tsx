@@ -413,12 +413,12 @@ export default function ClientCheckins() {
   }, [roster]);
 
   const dayStats = useMemo(() => {
-    const stats: Record<DayKey, { completed: number; submitted: number; total: number; excused: number; effective: number }> = {
-      monday: { completed: 0, submitted: 0, total: 0, excused: 0, effective: 0 },
-      tuesday: { completed: 0, submitted: 0, total: 0, excused: 0, effective: 0 },
-      wednesday: { completed: 0, submitted: 0, total: 0, excused: 0, effective: 0 },
-      thursday: { completed: 0, submitted: 0, total: 0, excused: 0, effective: 0 },
-      friday: { completed: 0, submitted: 0, total: 0, excused: 0, effective: 0 },
+    const stats: Record<DayKey, { completed: number; submitted: number; total: number; excused: number; paused: number; effective: number }> = {
+      monday: { completed: 0, submitted: 0, total: 0, excused: 0, paused: 0, effective: 0 },
+      tuesday: { completed: 0, submitted: 0, total: 0, excused: 0, paused: 0, effective: 0 },
+      wednesday: { completed: 0, submitted: 0, total: 0, excused: 0, paused: 0, effective: 0 },
+      thursday: { completed: 0, submitted: 0, total: 0, excused: 0, paused: 0, effective: 0 },
+      friday: { completed: 0, submitted: 0, total: 0, excused: 0, paused: 0, effective: 0 },
     };
     if (!roster) return stats;
     for (const day of DAYS) {
@@ -434,11 +434,14 @@ export default function ClientCheckins() {
         if (localExcused.has(`${clientName}|${day}`)) {
           stats[day].excused++;
         }
+        if (pausedSet.has(clientName)) {
+          stats[day].paused++;
+        }
       }
-      stats[day].effective = Math.max(stats[day].total - stats[day].excused, 0);
+      stats[day].effective = Math.max(stats[day].total - stats[day].excused - stats[day].paused, 0);
     }
     return stats;
-  }, [roster, localCompleted, localSubmitted, localExcused]);
+  }, [roster, localCompleted, localSubmitted, localExcused, pausedSet]);
   const clientSubmittedSet = localSubmitted;
 
   // Stats from weeklyStats (for header)
@@ -803,6 +806,11 @@ export default function ClientCheckins() {
                         {stats.excused > 0 && (
                           <div className="text-[10px] text-amber-300/70 font-medium">
                             {stats.excused} excused (of {stats.total})
+                          </div>
+                        )}
+                        {stats.paused > 0 && (
+                          <div className="text-[10px] text-violet-300/70 font-medium">
+                            {stats.paused} paused (of {stats.total})
                           </div>
                         )}
                       </div>

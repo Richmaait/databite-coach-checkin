@@ -385,7 +385,7 @@ export default function ClientCheckins() {
         if (raw) {
           const match = raw.match(/\(([^)]+)\)/);
           const tag = match?.[1]?.trim();
-          if (tag && !/UPFRONT|DEC.OFFER/i.test(tag) && /\d/.test(tag)) {
+          if (tag && !/UPFRONT|DEC.OFFER/i.test(tag) && !/paus/i.test(tag) && /\d/.test(tag)) {
             cancelled++;
           }
         }
@@ -880,8 +880,9 @@ export default function ClientCheckins() {
                           const dateMatch = rawName?.match(/\(([^)]+)\)/);
                           const dateTag = dateMatch?.[1]?.trim() ?? null;
                           const isUpfrontOrDec = dateTag && /UPFRONT|DEC.OFFER/i.test(dateTag);
-                          // Only treat as cancellation if the tag looks like a date (has a number)
-                          const isCancellation = dateTag && !isUpfrontOrDec && /\d/.test(dateTag);
+                          const isPauseTag = dateTag && /paus/i.test(dateTag);
+                          // Only treat as cancellation if the tag looks like a date (has a number) and is NOT a pause or upfront/dec offer
+                          const isCancellation = dateTag && !isUpfrontOrDec && !isPauseTag && /\d/.test(dateTag);
 
                           return (
                             <div

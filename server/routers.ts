@@ -3805,7 +3805,7 @@ const onboardingRouter = t.router({
 
     // Seller baselines — verified counts that new DB entries add on top of
     const SELLER_BASELINES: Record<string, Record<string, number>> = {
-      "2026-04": { Yaman: 10, Suzie: 5 },
+      "2026-04": { Suzie: 5 },
     };
 
     const byMonth: Record<string, { total: number; bySeller: Record<string, number> }> = {};

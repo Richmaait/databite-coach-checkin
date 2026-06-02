@@ -190,7 +190,6 @@ export default function Onboarding() {
                   <tr className="bg-gray-50 border-b border-gray-200">
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Month</th>
                     <th className="text-center px-3 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px] border-l border-gray-200">Total</th>
-                    <th className="text-center px-3 py-2.5 font-semibold text-blue-500 uppercase tracking-wider text-[10px] border-l border-gray-200 bg-blue-50/40">Yaman</th>
                     <th className="text-center px-3 py-2.5 font-semibold text-pink-500 uppercase tracking-wider text-[10px] border-l border-gray-200 bg-pink-50/40">Suzie</th>
                   </tr>
                 </thead>
@@ -202,14 +201,13 @@ export default function Onboarding() {
                       <tr key={row.month} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} border-b border-gray-100 border-l-4 ${MONTH_COLORS[mi % 12]}`}>
                         <td className="px-4 py-2 font-semibold text-gray-800">{MONTH_NAMES[mi]} {y}</td>
                         <td className="text-center px-3 py-2 font-bold text-gray-900 text-sm border-l border-gray-100">{row.total}</td>
-                        <td className="text-center px-3 py-2 font-semibold text-blue-600 border-l border-gray-100 bg-blue-50/20">{row.bySeller?.Yaman || "—"}</td>
                         <td className="text-center px-3 py-2 font-semibold text-pink-600 border-l border-gray-100 bg-pink-50/20">{row.bySeller?.Suzie || "—"}</td>
                       </tr>
                     );
                   })}
                   {salesStats.length > 5 && (
                     <tr>
-                      <td colSpan={4} className="text-center py-2">
+                      <td colSpan={3} className="text-center py-2">
                         <button onClick={() => setShowAllMonths(!showAllMonths)}
                           className="text-[10px] font-semibold text-violet-600 hover:text-violet-800 transition-colors">
                           {showAllMonths ? "Show less" : `Show all ${salesStats.length} months`}
@@ -440,11 +438,9 @@ function OnboardingRow({ client, coaches, idx, isPending, onUpdate, onAlertVideo
       <td className={`text-center px-2 py-1.5 ${cellBorder}`}>
         <select value={client.salesPerson || ""} onChange={e => onUpdate("salesPerson", e.target.value || null)}
           className={`w-full px-2 py-1.5 rounded text-xs font-semibold focus:outline-none border ${
-            client.salesPerson === "Yaman" ? "bg-blue-50 border-blue-200 text-blue-600"
-            : client.salesPerson === "Suzie" ? "bg-pink-50 border-pink-200 text-pink-600"
+            client.salesPerson === "Suzie" ? "bg-pink-50 border-pink-200 text-pink-600"
             : "bg-transparent border-gray-200 text-gray-400"}`}>
           <option value="">—</option>
-          {client.salesPerson === "Yaman" && <option value="Yaman">Yaman</option>}
           <option value="Suzie">Suzie</option>
         </select>
       </td>
@@ -498,7 +494,7 @@ function CompletedTable({ groupedByMonth }: { groupedByMonth: [string, any[]][] 
                 <tr key={c.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} border-b border-gray-100 border-l-4 ${borderColor} hover:bg-violet-100/80 transition-colors`}>
                   <td className="px-3 py-2 font-semibold text-gray-800">{c.clientName}</td>
                   <td className="text-center px-2 py-2">
-                    <span className={`text-[10px] font-semibold ${c.salesPerson === "Yaman" ? "text-blue-600" : c.salesPerson === "Suzie" ? "text-pink-600" : "text-gray-300"}`}>{c.salesPerson || "—"}</span>
+                    <span className={`text-[10px] font-semibold ${c.salesPerson === "Suzie" ? "text-pink-600" : "text-gray-300"}`}>{c.salesPerson || "—"}</span>
                   </td>
                   <td className="px-2 py-2 text-gray-500 text-[10px]">{c.datePaid ? c.datePaid.split("-").reverse().join("/") : "—"}</td>
                   <td className="px-2 py-2 text-gray-500 text-[10px]">{c.dateDue ? c.dateDue.split("-").reverse().join("/") : "—"}</td>

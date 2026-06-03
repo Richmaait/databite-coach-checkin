@@ -21,6 +21,7 @@ import FridayAudit from "./pages/FridayAudit";
 import Onboarding from "./pages/Onboarding";
 import Milestones from "./pages/Milestones";
 import Preview from "./pages/Preview";
+import GoalClarity from "./pages/GoalClarity";
 
 function Router() {
   return (
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/checkin" component={ClientCheckin} />
       <Route path="/preview" component={Preview} />
+      <Route path="/goal-clarity" component={GoalClarity} />
       <Route path="/coach" component={CoachPortal} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/team" component={TeamManagement} />

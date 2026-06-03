@@ -81,8 +81,8 @@ export default function Preview() {
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-3">
-            <img src="/databite-logo-navy.svg" alt="databite" className="h-8 invert" />
+          <div className="inline-flex items-center gap-2 mb-4">
+            <img src="/databite-logo-white.svg" alt="databite" className="h-9" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2" style={{ fontFamily: "'Comfortaa', cursive" }}>
             Weight loss projection

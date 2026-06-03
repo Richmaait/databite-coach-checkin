@@ -116,9 +116,10 @@ export default function GoalClarity() {
       {/* Header */}
       <header className="sticky top-0 z-20 backdrop-blur-xl bg-[#f8fafc]/85 border-b border-[#191772]/8">
         <div className="max-w-3xl mx-auto px-5 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#fd8664] to-[#e36a48] grid place-items-center text-white font-bold">db</div>
-            <div className="leading-tight">
+          <div className="flex items-center gap-3">
+            <img src="/databite-logo-navy.svg" alt="databite" className="h-7 sm:h-8" />
+            <div className="h-7 w-px bg-[#191772]/15 hidden sm:block" />
+            <div className="leading-tight hidden sm:block">
               <div className="text-[10px] uppercase tracking-[0.18em] font-semibold text-[#191772]/60">Goal Clarity</div>
               <div className="text-sm font-bold text-[#191772]" style={{ fontFamily: "'Comfortaa', system-ui, sans-serif" }}>Worksheet</div>
             </div>

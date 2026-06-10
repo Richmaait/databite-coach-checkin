@@ -213,7 +213,6 @@ export default function Milestones() {
                   <th className="text-left px-2 py-2 font-medium text-white/50">Coach</th>
                   <th className="text-left px-2 py-2 font-medium text-white/50">Started</th>
                   <th className="text-center px-2 py-2 font-medium text-white/50">Week</th>
-                  <th className="text-left px-2 py-2 font-medium text-emerald-300/60">Sweep</th>
                   <th className="text-center px-2 py-2 font-medium text-blue-300/60">Wk 2</th>
                   <th className="text-center px-2 py-2 font-medium text-pink-300/60">Wk 4</th>
                   <th className="text-center px-2 py-2 font-medium text-violet-300/60">Wk 8</th>
@@ -229,9 +228,6 @@ export default function Milestones() {
                   const cancellationDate = (c as any).cancellationDate as string | null | undefined;
                   const pausedDate = (c as any).pausedDate as string | null | undefined;
                   const paymentType = (c as any).paymentType as string | null | undefined;
-                  const sweepRating = (c as any).sweepRating as string | null | undefined;
-                  const sweepNotes = (c as any).sweepNotes as string | null | undefined;
-                  const sweepEmoji = sweepRating === "green" ? "🟢" : sweepRating === "yellow" ? "🟡" : sweepRating === "red" ? "🔴" : null;
                   return (
                     <tr key={c.id} className={`border-b border-white/[0.04] hover:bg-violet-500/[0.08] transition-colors ${cancellationDate ? "opacity-60" : ""}`}>
                       <td className="px-3 py-2 font-medium text-white/80">
@@ -263,16 +259,6 @@ export default function Milestones() {
                           </span>
                         ) : (
                           <span className="text-white/50">{c.weekNumber}</span>
-                        )}
-                      </td>
-                      <td className="px-2 py-2 max-w-[200px]">
-                        {sweepEmoji ? (
-                          <div className="flex items-start gap-1.5">
-                            <span className="text-[10px] mt-px shrink-0">{sweepEmoji}</span>
-                            {sweepNotes && <span className="text-[9px] text-white/45 leading-tight">{sweepNotes}</span>}
-                          </div>
-                        ) : (
-                          <span className="text-white/15">—</span>
                         )}
                       </td>
                       {(history ?? []).map(h => {

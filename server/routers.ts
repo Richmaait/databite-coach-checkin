@@ -3963,19 +3963,6 @@ const milestonesRouter = t.router({
     const clients = await db.select().from(onboardingClients)
       .where(and(eq(onboardingClients.status, "active"), isNull(onboardingClients.cancelledAt)));
 
-    // Current Client Progress "sweep" rating + note per client (independent of
-    // milestone week) so the Milestones table can show it for everyone, not
-    // just clients sitting exactly on a milestone week.
-    const sweepRatings = await db.select().from(clientRatings);
-    const sweepCoachRows = await db.select().from(coaches);
-    const sweepCoachNameById = new Map<number, string>(sweepCoachRows.map((c) => [c.id, c.name]));
-    const normCoachKey = (s: string | null | undefined) => (s ?? "").replace(/\s+/g, " ").trim().toLowerCase();
-    const cleanSweepName = (n: string | null | undefined) => (n ?? "").replace(/\s*\(.*\)\s*$/, "").trim().toLowerCase();
-    const sweepByKey = new Map<string, (typeof sweepRatings)[number]>();
-    for (const r of sweepRatings) {
-      sweepByKey.set(normCoachKey(sweepCoachNameById.get(r.coachId)) + "|" + cleanSweepName(r.clientName), r);
-    }
-
     // Cross-reference each client name against the live roster to catch:
     //   1. PENDING cancellations — clients with a finish-date tag like "(15/12)"
     //      in their roster entry. DB doesn't flip to cancelled until they've
@@ -4062,8 +4049,6 @@ const milestonesRouter = t.router({
         currentMilestone,
         nextMilestone,
         milestoneHistory,
-        sweepRating: sweepByKey.get(normCoachKey(c.coach) + "|" + cleanSweepName(c.clientName))?.rating ?? null,
-        sweepNotes: sweepByKey.get(normCoachKey(c.coach) + "|" + cleanSweepName(c.clientName))?.notes ?? null,
       };
     }).filter(c => {
       if (c.weekNumber == null || c.weekNumber <= 0 || c.weekNumber > 16) return false;

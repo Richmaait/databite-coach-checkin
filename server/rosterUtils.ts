@@ -168,8 +168,17 @@ function cleanClientName(raw: string): string {
   if (/^CLIENT NAME$/i.test(raw.trim())) return "";
   if (/^UPFRONT$/i.test(raw.trim())) return "";
   if (/^---/.test(raw.trim())) return "";
-  // Strip parenthetical suffixes
-  return raw.replace(/\s*\(.*\)\s*$/, "").trim();
+  // Strip parenthetical suffixes, then any inline status/date tags that appear
+  // WITHOUT parentheses (e.g. "Kayla Timpano UPFRONT - 26 JUL"). Without this an
+  // upfront client tagged inline on the roster fails the name match in
+  // importFromSheet and gets wrongly flagged "cancelled".
+  return raw
+    .replace(/\s*\(.*\)\s*$/, "")                      // "(UPFRONT - 6 May)" / "(16 Mar)"
+    .replace(/\s*UPFRONT.*$/i, "")                      // inline "UPFRONT - 26 JUL"
+    .replace(/\s*DEC\s*OFFER.*$/i, "")                  // inline "DEC OFFER 16 APRIL"
+    .replace(/\s*PAUSE.*$/i, "")                        // inline "PAUSED ..." / "PAUSE - 22/04"
+    .replace(/\s*[-–—]\s*\d{1,2}[\s/.-]+\w+.*$/, "")    // trailing "- 26 JUL" / "- 22/04" date
+    .trim();
 }
 
 /**

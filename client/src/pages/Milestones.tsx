@@ -40,15 +40,29 @@ export default function Milestones() {
 
   const totalAlerts = alerts?.reduce((s, a) => s + a.clients.length, 0) ?? 0;
 
+  // Normalize coach for comparison — collapses whitespace differences and
+  // case differences so "Alex", "alex ", "ALEX " all dedupe to one option.
+  const normalizeCoach = (c: string | null | undefined): string =>
+    (c ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+
   const coaches = useMemo(() => {
     if (!allClients) return [];
-    return [...new Set(allClients.map(c => c.coach).filter(Boolean) as string[])].sort();
+    const byKey = new Map<string, string>();
+    for (const c of allClients) {
+      if (!c.coach) continue;
+      const key = normalizeCoach(c.coach);
+      if (!byKey.has(key)) byKey.set(key, c.coach.replace(/\s+/g, " ").trim());
+    }
+    return [...byKey.values()].sort();
   }, [allClients]);
 
   const filtered = useMemo(() => {
     if (!allClients) return [];
     let list = allClients;
-    if (coachFilter) list = list.filter(c => c.coach === coachFilter);
+    if (coachFilter) {
+      const filterKey = normalizeCoach(coachFilter);
+      list = list.filter(c => normalizeCoach(c.coach) === filterKey);
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(c => c.clientName.toLowerCase().includes(q));

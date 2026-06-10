@@ -3995,7 +3995,7 @@ const milestonesRouter = t.router({
       return {
         id: c.id,
         clientName: c.clientName,
-        coach: c.coach,
+        coach: c.coach ? c.coach.replace(/[\s ]+/g, ' ').trim() : c.coach,
         sentToClient: c.sentToClient,
         paymentType: isUpfront ? 'upfront' : c.paymentType,
         cancellationDate,

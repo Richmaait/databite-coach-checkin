@@ -265,7 +265,7 @@ export default function Onboarding() {
               </table>
             </div>
           ) : (
-            <CompletedTable groupedByMonth={groupedByMonth!} />
+            <CompletedTable groupedByMonth={groupedByMonth!} coaches={coaches} onUpdateCoach={(id, c) => updateMutation.mutate({ id, coach: c })} />
           )}
 
           <div className="text-xs text-gray-300 text-center mt-6">{filtered.length} client{filtered.length !== 1 ? "s" : ""}</div>
@@ -463,7 +463,11 @@ function OnboardingRow({ client, coaches, idx, isPending, onUpdate, onAlertVideo
   );
 }
 
-function CompletedTable({ groupedByMonth }: { groupedByMonth: [string, any[]][] }) {
+function CompletedTable({ groupedByMonth, coaches, onUpdateCoach }: {
+  groupedByMonth: [string, any[]][];
+  coaches: Array<{ id: number; name: string }>;
+  onUpdateCoach: (id: number, coach: string) => void;
+}) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto -mx-6 px-0 sm:mx-0">
       <table className="text-xs whitespace-nowrap min-w-[700px] w-full">
@@ -499,7 +503,16 @@ function CompletedTable({ groupedByMonth }: { groupedByMonth: [string, any[]][] 
                   <td className="px-2 py-2 text-gray-500 text-[10px]">{c.datePaid ? c.datePaid.split("-").reverse().join("/") : "—"}</td>
                   <td className="px-2 py-2 text-gray-500 text-[10px]">{c.dateDue ? c.dateDue.split("-").reverse().join("/") : "—"}</td>
                   <td className="px-2 py-2 text-gray-500 text-[10px]">{c.sentToClient ? c.sentToClient.split("-").reverse().join("/") : "—"}</td>
-                  <td className={`px-2 py-2 text-[11px] font-semibold ${COACH_COLORS[c.coach] || "text-gray-400"}`}>{c.coach || "—"}</td>
+                  <td className="px-2 py-2">
+                    <select
+                      value={c.coach || ""}
+                      onChange={e => onUpdateCoach(c.id, e.target.value)}
+                      className={`text-[11px] font-semibold bg-transparent border border-gray-200 rounded px-1.5 py-0.5 focus:outline-none focus:border-violet-400 ${COACH_COLORS[c.coach] || "text-gray-400"}`}
+                      title="Change coach">
+                      <option value="">—</option>
+                      {coaches.map(co => <option key={co.id} value={co.name}>{co.name}</option>)}
+                    </select>
+                  </td>
                   <td className="px-2 py-2 text-gray-400 text-[10px]">{c.notes || ""}</td>
                 </tr>
               )),

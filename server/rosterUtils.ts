@@ -195,7 +195,12 @@ export async function fetchRawRosterForCoach(
   const rows = await fetchSheetRows();
   if (rows.length === 0) return empty;
 
-  const upperName = coachName.toUpperCase();
+  // .trim() is essential — some coaches are stored with a trailing space
+  // (e.g. "Alex "), and without trimming the header match ("ALEX  - MONDAY")
+  // fails, the roster comes back empty, and every one of that coach's clients
+  // gets wrongly filtered out of the milestone lists. fetchRosterForCoach
+  // already trims; this is the raw-name sibling and must match.
+  const upperName = coachName.trim().toUpperCase();
   const aliases = [
     upperName,
     upperName.replace("STEVE", "STEPHEN"),

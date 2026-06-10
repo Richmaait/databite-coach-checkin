@@ -45,6 +45,15 @@ export default function Milestones() {
     onSuccess: () => refetch(),
     onError: (e) => toast.error(e.message),
   });
+  const syncSweepMutation = trpc.milestones.syncFromSweep.useMutation({
+    onSuccess: (res) => {
+      refetch();
+      toast.success(res.count > 0
+        ? `Synced ${res.count} milestone${res.count !== 1 ? "s" : ""} from the sweep`
+        : "No clients at a milestone week to sync");
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   const totalAlerts = alerts?.reduce((s, a) => s + a.clients.length, 0) ?? 0;
 
@@ -83,9 +92,22 @@ export default function Milestones() {
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6 p-6 pt-20 max-w-5xl mx-auto">
-        <div>
-          <h1 className="text-3xl font-bold text-white/90" style={{ fontFamily: "'Comfortaa', cursive" }}>Milestones</h1>
-          <p className="text-sm text-white/50 mt-1">Client milestone alerts — weeks 2, 4, 8, 12</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white/90" style={{ fontFamily: "'Comfortaa', cursive" }}>Milestones</h1>
+            <p className="text-sm text-white/50 mt-1">Client milestone alerts — weeks 2, 4, 8, 12</p>
+          </div>
+          <button
+            onClick={() => {
+              if (confirm("Pull the latest 🟢🟡🔴 ratings + notes from Client Progress into the milestones for any client currently at week 2, 4, 8 or 12?")) {
+                syncSweepMutation.mutate({});
+              }
+            }}
+            disabled={syncSweepMutation.isPending}
+            title="Pull Client Progress ratings + notes into milestones for clients at a milestone week"
+            className="shrink-0 px-3 py-2 rounded-xl bg-violet-500/20 border border-violet-400/30 text-violet-200 text-xs font-semibold hover:bg-violet-500/30 transition-colors disabled:opacity-50">
+            {syncSweepMutation.isPending ? "Syncing…" : "⟳ Sync from sweep"}
+          </button>
         </div>
 
         {/* This week's alerts */}

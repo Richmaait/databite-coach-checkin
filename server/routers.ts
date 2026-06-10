@@ -4226,6 +4226,76 @@ const milestonesRouter = t.router({
       }
       return { ok: true };
     }),
+
+  /**
+   * Pull the Client Progress "sweep" (clientRatings: 🟢🟡🔴 + notes set per
+   * client) INTO the milestone fields. For every ACTIVE client currently AT a
+   * milestone week (2/4/8/12), mark that milestone contacted and copy across
+   * the sweep's rating + notes. This is the reverse of setRating/setNotes,
+   * which already push milestone edits back out to Client Progress.
+   *
+   * Matching is by coach + cleaned client name (suffixes like "(26 wk)" /
+   * "(UPFRONT - 27 JUL)" stripped on both sides). Clients not at a milestone
+   * week, or without a sweep rating, are left untouched.
+   */
+  syncFromSweep: adminProcedure
+    .input(z.object({ coachId: z.number().optional() }).optional())
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+
+      const ratings = input?.coachId
+        ? await db.select().from(clientRatings).where(eq(clientRatings.coachId, input.coachId))
+        : await db.select().from(clientRatings);
+      if (ratings.length === 0) return { count: 0, updated: [] as Array<{ clientName: string; week: number; rating: string }> };
+
+      const coachRows = await db.select().from(coaches);
+      const coachNameById = new Map<number, string>(coachRows.map((c) => [c.id, c.name]));
+
+      const clients = await db.select().from(onboardingClients)
+        .where(and(eq(onboardingClients.status, "active"), isNull(onboardingClients.cancelledAt)));
+
+      const normCoach = (s: string | null | undefined) => (s ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+      const cleanName = (n: string | null | undefined) => (n ?? "")
+        .replace(/\s*\(.*\)\s*$/, "")
+        .replace(/\s*UPFRONT.*$/i, "")
+        .replace(/\s*DEC\s*OFFER.*$/i, "")
+        .replace(/\s*PAUSE.*$/i, "")
+        .replace(/\s*[-–—]\s*\d{1,2}[\s/.-]+\w+.*$/, "")
+        .trim()
+        .toLowerCase();
+
+      const ratingByKey = new Map<string, (typeof ratings)[number]>();
+      for (const r of ratings) {
+        ratingByKey.set(normCoach(coachNameById.get(r.coachId)) + "|" + cleanName(r.clientName), r);
+      }
+
+      const todayMon = getMonday(getTodayMelbourne());
+      const today = getTodayMelbourne();
+      const MILESTONE_WEEKS = [2, 4, 8, 12];
+      const updated: Array<{ clientName: string; week: number; rating: string }> = [];
+
+      for (const cl of clients) {
+        if (!cl.sentToClient) continue;
+        const startMon = getMonday(cl.sentToClient);
+        const week = Math.floor((new Date(todayMon + "T00:00:00").getTime() - new Date(startMon + "T00:00:00").getTime()) / (7 * 86400000)) + 1;
+        if (!MILESTONE_WEEKS.includes(week)) continue;
+
+        const r = ratingByKey.get(normCoach(cl.coach) + "|" + cleanName(cl.clientName));
+        if (!r) continue;
+
+        const ratingField = `milestone${week}Rating` as any;
+        const notesField = `milestone${week}Notes` as any;
+        const contactedField = `milestone${week}ContactedAt` as any;
+        const set: Record<string, any> = { [ratingField]: r.rating, [notesField]: r.notes ?? null };
+        // Mark contacted only if not already — don't overwrite an existing contact date.
+        if (!(cl as any)[contactedField]) set[contactedField] = today;
+
+        await db.update(onboardingClients).set(set).where(eq(onboardingClients.id, cl.id));
+        updated.push({ clientName: cl.clientName, week, rating: r.rating });
+      }
+
+      return { count: updated.length, updated };
+    }),
 });
 
 const rosterRouter = t.router({

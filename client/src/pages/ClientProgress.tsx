@@ -543,6 +543,7 @@ export default function ClientProgress() {
   const [searchQuery, setSearchQuery] = useState("");
   const [clientSort, setClientSort] = useState<"alpha" | "status">("alpha");
   const [focusedCoachId, setFocusedCoachId] = useState<number | null>(null);
+  const [excludeRich, setExcludeRich] = useState(false);
 
   // Coach display order — persisted in localStorage
   const [coachOrder, setCoachOrder] = useState<number[]>(() => {
@@ -720,10 +721,33 @@ export default function ClientProgress() {
   };
 
   const allVisibleCoaches = useMemo(() => {
-    if (isAdmin) return orderedActiveCoaches;
-    const myCoach = activeCoaches.find(c => c.userId === user?.id);
-    return myCoach ? [myCoach] : [];
-  }, [isAdmin, orderedActiveCoaches, activeCoaches, user?.id]);
+    const base = isAdmin
+      ? orderedActiveCoaches
+      : (() => {
+          const myCoach = activeCoaches.find(c => c.userId === user?.id);
+          return myCoach ? [myCoach] : [];
+        })();
+    return excludeRich ? base.filter(c => c.name !== "Rich") : base;
+  }, [isAdmin, orderedActiveCoaches, activeCoaches, user?.id, excludeRich]);
+
+  // KPI data with Rich filtered out when toggle is on
+  const displayKpiData = useMemo(() => {
+    if (!kpiData) return kpiData;
+    if (!excludeRich) return kpiData;
+    const filteredCoaches = (kpiData.coaches ?? []).filter(c => c.coachName !== "Rich");
+    const overall = filteredCoaches.reduce(
+      (acc, c) => ({
+        green: acc.green + c.green,
+        yellow: acc.yellow + c.yellow,
+        red: acc.red + c.red,
+        total: acc.total + c.total,
+        greenPct: 0,
+      }),
+      { green: 0, yellow: 0, red: 0, total: 0, greenPct: 0 },
+    );
+    overall.greenPct = overall.total > 0 ? (overall.green / overall.total) * 100 : 0;
+    return { ...kpiData, coaches: filteredCoaches, overall };
+  }, [kpiData, excludeRich]);
 
   // When a coach is focused, show only that coach's card
   const visibleCoaches = useMemo(() => {
@@ -795,6 +819,21 @@ export default function ClientProgress() {
           )}
         </div>
 
+        {/* Exclude Rich toggle (admin only) */}
+        {isAdmin && (
+          <div className="flex items-center justify-end">
+            <label className="inline-flex items-center gap-2 cursor-pointer text-xs text-white/60 hover:text-white/90 transition-colors">
+              <input
+                type="checkbox"
+                checked={excludeRich}
+                onChange={e => setExcludeRich(e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-white/20 bg-white/5 text-violet-500 focus:ring-violet-500 focus:ring-offset-0"
+              />
+              <span className="font-medium">Exclude Rich from data</span>
+            </label>
+          </div>
+        )}
+
         {/* Undo banner — shows after clearing ratings */}
         {lastResetBackupId && (
           <div className="glass rounded-2xl p-4 flex items-center justify-between border border-amber-400/20">
@@ -848,48 +887,48 @@ export default function ClientProgress() {
         )}
 
         {/* KPI Summary (admin only) */}
-        {isAdmin && kpiData && (
+        {isAdmin && displayKpiData && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-white/50">
-                KPI Target: <span className="text-emerald-400">{kpiData.target}%+ On Track</span>
+                KPI Target: <span className="text-emerald-400">{displayKpiData.target}%+ On Track</span>
               </h2>
             </div>
 
             {/* Business-wide card */}
-            {kpiData.overall && (
+            {displayKpiData.overall && (
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-white/80">Business Wide</span>
-                <span className={`text-2xl font-bold ${pctColor(kpiData.overall.greenPct).text} ${pctColor(kpiData.overall.greenPct).glow}`}>
-                  {kpiData.overall.greenPct.toFixed(1)}%
+                <span className="text-sm font-semibold text-white/80">Business Wide{excludeRich ? " (excl. Rich)" : ""}</span>
+                <span className={`text-2xl font-bold ${pctColor(displayKpiData.overall.greenPct).text} ${pctColor(displayKpiData.overall.greenPct).glow}`}>
+                  {displayKpiData.overall.greenPct.toFixed(1)}%
                 </span>
               </div>
-              <KpiBar pct={kpiData.overall.greenPct} target={kpiData.target} />
+              <KpiBar pct={displayKpiData.overall.greenPct} target={displayKpiData.target} />
               <div className="flex gap-4 mt-3 text-xs">
                 <span className="flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
-                  <span className="text-emerald-400 font-medium">{kpiData.overall.green} On Track</span>
-                  {kpiData.overall.total > 0 && <span className="text-emerald-400/70">· {((kpiData.overall.green / kpiData.overall.total) * 100).toFixed(0)}%</span>}
+                  <span className="text-emerald-400 font-medium">{displayKpiData.overall.green} On Track</span>
+                  {displayKpiData.overall.total > 0 && <span className="text-emerald-400/70">· {((displayKpiData.overall.green / displayKpiData.overall.total) * 100).toFixed(0)}%</span>}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-full bg-amber-300/70 shadow-[0_0_6px_rgba(252,211,77,0.4)]" />
-                  <span className="text-amber-200 font-medium">{kpiData.overall.yellow} Neutral</span>
-                  {kpiData.overall.total > 0 && <span className="text-amber-200/60">· {((kpiData.overall.yellow / kpiData.overall.total) * 100).toFixed(0)}%</span>}
+                  <span className="text-amber-200 font-medium">{displayKpiData.overall.yellow} Neutral</span>
+                  {displayKpiData.overall.total > 0 && <span className="text-amber-200/60">· {((displayKpiData.overall.yellow / displayKpiData.overall.total) * 100).toFixed(0)}%</span>}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-full bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.7)]" />
-                  <span className="text-red-400 font-medium">{kpiData.overall.red} Off Track</span>
-                  {kpiData.overall.total > 0 && <span className="text-red-400/70">· {((kpiData.overall.red / kpiData.overall.total) * 100).toFixed(0)}%</span>}
+                  <span className="text-red-400 font-medium">{displayKpiData.overall.red} Off Track</span>
+                  {displayKpiData.overall.total > 0 && <span className="text-red-400/70">· {((displayKpiData.overall.red / displayKpiData.overall.total) * 100).toFixed(0)}%</span>}
                 </span>
-                <span className="text-white/30 ml-auto">{kpiData.overall.total} rated</span>
+                <span className="text-white/30 ml-auto">{displayKpiData.overall.total} rated</span>
               </div>
             </div>
             )}
 
             {/* Per-coach KPI row */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {(kpiData.coaches ?? []).map(c => (
+              {(displayKpiData.coaches ?? []).map(c => (
                 <button
                   key={c.coachId}
                   onClick={() => setFocusedCoachId(c.coachId)}
@@ -902,7 +941,7 @@ export default function ClientProgress() {
                       {c.greenPct.toFixed(1)}%
                     </span>
                   </div>
-                  <KpiBar pct={c.greenPct} target={kpiData.target} />
+                  <KpiBar pct={c.greenPct} target={displayKpiData.target} />
                   <div className="flex gap-3 mt-2 text-xs">
                     <span className="flex items-center gap-1 text-emerald-400/80"><span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />{c.green}{c.total > 0 ? ` · ${((c.green / c.total) * 100).toFixed(0)}%` : ""}</span>
                     <span className="flex items-center gap-1 text-amber-200/80"><span className="h-2 w-2 rounded-full bg-amber-300/70 shadow-[0_0_6px_rgba(252,211,77,0.4)]" />{c.yellow}{c.total > 0 ? ` · ${((c.yellow / c.total) * 100).toFixed(0)}%` : ""}</span>

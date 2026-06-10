@@ -3988,7 +3988,11 @@ const milestonesRouter = t.router({
         rating: (c as any)[`milestone${m.week}Rating`] ?? null,
         notes: (c as any)[`milestone${m.week}Notes`] ?? null,
       }));
-      const cleanName = c.clientName ? c.clientName.trim().toLowerCase() : "";
+      // Strip parenthetical suffixes ("(26 wk)", "(UPFRONT - 27 JUL)" etc.)
+      // so DB names with these tags still match the cleaned roster names.
+      const cleanName = c.clientName
+        ? c.clientName.replace(/\s*\(.*\)\s*$/, "").trim().toLowerCase()
+        : "";
       const cancellationDate = cleanName ? cancellationByName[cleanName] ?? null : null;
       const pausedDate = cleanName ? pausedByName[cleanName] ?? null : null;
       const isUpfront = c.paymentType === 'upfront';
@@ -4011,7 +4015,9 @@ const milestonesRouter = t.router({
       // when we successfully fetched their coach's roster. Otherwise we'd
       // accidentally hide active clients during a Sheets API hiccup.
       if (c.coach && fetchedCoaches.has(c.coach)) {
-        const cleanName = c.clientName ? c.clientName.trim().toLowerCase() : "";
+        const cleanName = c.clientName
+          ? c.clientName.replace(/\s*\(.*\)\s*$/, "").trim().toLowerCase()
+          : "";
         if (!rosterNames.has(cleanName)) return false;
       }
       return true;

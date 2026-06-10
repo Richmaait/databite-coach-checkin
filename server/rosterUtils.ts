@@ -187,7 +187,13 @@ export async function fetchRawRosterForCoach(
   if (rows.length === 0) return empty;
 
   const upperName = coachName.toUpperCase();
-  const aliases = [upperName, upperName.replace("STEVE", "STEPHEN"), upperName.replace("STEPHEN", "STEVE")];
+  const aliases = [
+    upperName,
+    upperName.replace("STEVE", "STEPHEN"),
+    upperName.replace("STEPHEN", "STEVE"),
+    upperName.replace("ALEX", "ALEXANDRA"),
+    upperName.replace("ALEXANDRA", "ALEX"),
+  ];
 
   let sectionStart = -1;
   for (let i = 0; i < rows.length; i++) {

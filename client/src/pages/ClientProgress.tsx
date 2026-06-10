@@ -182,6 +182,7 @@ function ClientButton({
   rating,
   notes,
   updatedAt,
+  milestone,
   onRate,
   onClear,
 }: {
@@ -189,12 +190,21 @@ function ClientButton({
   rating: Rating | null;
   notes: string | null;
   updatedAt: Date | null;
+  milestone: { m2: string | null; m4: string | null; m8: string | null; m12: string | null } | null;
   onRate: (r: Rating, notes: string) => void;
   onClear: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const style = rating ? RATING_STYLES[rating] : null;
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const milestoneBadges = milestone
+    ? ([
+        ["W2", milestone.m2],
+        ["W4", milestone.m4],
+        ["W8", milestone.m8],
+        ["W12", milestone.m12],
+      ] as const).filter(([, date]) => !!date)
+    : [];
 
   return (
     <div className="relative">
@@ -220,9 +230,24 @@ function ClientButton({
         <span className={`text-xs ${style ? "opacity-65" : "text-white/40"} pl-4 leading-snug line-clamp-1`}>
           {notes || (style ? "\u00A0" : "Not yet rated")}
         </span>
-        <span className={`text-xs ${style ? "opacity-50" : "text-white/30"} pl-4`}>
-          {updatedAt ? formatDateTime(updatedAt) : "\u00A0"}
-        </span>
+        <div className="flex items-center justify-between pl-4">
+          <span className={`text-xs ${style ? "opacity-50" : "text-white/30"}`}>
+            {updatedAt ? formatDateTime(updatedAt) : "\u00A0"}
+          </span>
+          {milestoneBadges.length > 0 && (
+            <span className="flex items-center gap-0.5">
+              {milestoneBadges.map(([label]) => (
+                <span
+                  key={label}
+                  className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-400/15 text-emerald-300 border border-emerald-400/25"
+                  title="Contacted"
+                >
+                  {label}
+                </span>
+              ))}
+            </span>
+          )}
+        </div>
       </button>
       {open && (
         <RatingPicker
@@ -246,6 +271,7 @@ function CoachRosterCard({
   coachId,
   coachName,
   ratings,
+  milestones,
   filterRating,
   searchQuery,
   clientSort,
@@ -261,6 +287,7 @@ function CoachRosterCard({
   coachId: number;
   coachName: string;
   ratings: Record<string, { rating: Rating; notes: string | null; updatedAt: Date }>;
+  milestones: Record<string, { m2: string | null; m4: string | null; m8: string | null; m12: string | null }>;
   filterRating: FilterRating;
   searchQuery: string;
   clientSort: "alpha" | "status";
@@ -421,6 +448,7 @@ function CoachRosterCard({
                 rating={ratings[name]?.rating ?? null}
                 notes={ratings[name]?.notes ?? null}
                 updatedAt={ratings[name]?.updatedAt ?? null}
+                milestone={milestones[name] ?? null}
                 onRate={(r, n) => onRate(coachId, name, r, n)}
                 onClear={() => onClear(coachId, name)}
               />
@@ -619,6 +647,10 @@ export default function ClientProgress() {
     undefined,
     { enabled: isAdmin, staleTime: 30 * 1000 }
   );
+  const { data: milestoneStatus } = trpc.performance.milestoneStatusAll.useQuery(
+    undefined,
+    { staleTime: 30 * 1000 }
+  );
   const { data: myRatingsData, refetch: refetchMyRatings } = trpc.performance.myRatings.useQuery(
     undefined,
     { enabled: !isAdmin, staleTime: 30 * 1000 }
@@ -644,10 +676,31 @@ export default function ClientProgress() {
     return map;
   }, [allRatingsData, myRatingsData, isAdmin]);
 
+  // Build milestone lookup: coachName → { clientName → contact dates }
+  const milestonesMap = useMemo(() => {
+    const map: Record<string, Record<string, { m2: string | null; m4: string | null; m8: string | null; m12: string | null }>> = {};
+    for (const m of milestoneStatus ?? []) {
+      if (!m.coachName) continue;
+      if (!map[m.coachName]) map[m.coachName] = {};
+      map[m.coachName][m.clientName] = {
+        m2: m.milestone2 ?? null,
+        m4: m.milestone4 ?? null,
+        m8: m.milestone8 ?? null,
+        m12: m.milestone12 ?? null,
+      };
+    }
+    return map;
+  }, [milestoneStatus]);
+
+  const utils = trpc.useUtils();
   const refetchAll = () => {
     refetchRatings();
     refetchMyRatings();
     refetchKpi();
+    // Mirror updates to Milestones page so it stays in sync if open in another tab
+    utils.milestones.getAll.invalidate();
+    utils.milestones.getAlerts.invalidate();
+    utils.performance.milestoneStatusAll.invalidate();
   };
 
   const setRatingMutation = trpc.performance.setRating.useMutation({
@@ -1090,6 +1143,7 @@ export default function ClientProgress() {
                 coachId={coach.id}
                 coachName={coach.name}
                 ratings={ratingsMap[coach.id] ?? {}}
+                milestones={milestonesMap[coach.name] ?? {}}
                 filterRating={filterRating}
                 searchQuery={searchQuery}
                 clientSort={clientSort}

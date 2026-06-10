@@ -20,10 +20,18 @@ export default function Milestones() {
   const [search, setSearch] = useState("");
   const [coachFilter, setCoachFilter] = useState("");
 
+  const utils = trpc.useUtils();
   const { data: alerts, refetch: refetchAlerts } = trpc.milestones.getAlerts.useQuery();
   const { data: allClients, refetch: refetchAll } = trpc.milestones.getAll.useQuery();
 
-  const refetch = () => { refetchAlerts(); refetchAll(); };
+  const refetch = () => {
+    refetchAlerts();
+    refetchAll();
+    // Mirror updates to Client Progress page if it's open elsewhere
+    utils.performance.allRatings.invalidate();
+    utils.performance.myRatings.invalidate();
+    utils.performance.kpiSummary.invalidate();
+  };
 
   const contactMutation = trpc.milestones.markContacted.useMutation({
     onSuccess: () => { refetch(); toast.success("Updated"); },

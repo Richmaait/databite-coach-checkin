@@ -2671,6 +2671,27 @@ const performanceRouter = t.router({
     return db.select().from(clientRatings).orderBy(asc(clientRatings.coachId), asc(clientRatings.clientName));
   }),
 
+  /** Milestone contact status for all clients (for showing contacted badges on Client Progress). */
+  milestoneStatusAll: protectedProcedure.query(async () => {
+    const db = await requireDb();
+    const rows = await db.select({
+      clientName: onboardingClients.clientName,
+      coach: onboardingClients.coach,
+      m2: onboardingClients.milestone2ContactedAt,
+      m4: onboardingClients.milestone4ContactedAt,
+      m8: onboardingClients.milestone8ContactedAt,
+      m12: onboardingClients.milestone12ContactedAt,
+    }).from(onboardingClients);
+    return rows.map(r => ({
+      clientName: r.clientName,
+      coachName: r.coach,
+      milestone2: r.m2,
+      milestone4: r.m4,
+      milestone8: r.m8,
+      milestone12: r.m12,
+    }));
+  }),
+
   /** Ratings for current user's coach. */
   myRatings: protectedProcedure.query(async ({ ctx }) => {
     const db = await requireDb();
@@ -4123,6 +4144,29 @@ const milestonesRouter = t.router({
       const db = await requireDb();
       const field = `milestone${input.week}Rating` as any;
       await db.update(onboardingClients).set({ [field]: input.rating }).where(eq(onboardingClients.id, input.id));
+
+      // Sync to general clientRatings (Client Progress page)
+      const [client] = await db.select().from(onboardingClients).where(eq(onboardingClients.id, input.id)).limit(1);
+      if (client && client.coach) {
+        const [coach] = await db.select().from(coaches).where(eq(coaches.name, client.coach)).limit(1);
+        if (coach) {
+          const existing = await db.select().from(clientRatings).where(
+            and(eq(clientRatings.coachId, coach.id), eq(clientRatings.clientName, client.clientName)),
+          ).limit(1);
+          const notesField = `milestone${input.week}Notes` as any;
+          const milestoneNotes = (client as any)[notesField] ?? null;
+          if (existing.length > 0) {
+            await db.update(clientRatings)
+              .set({ rating: input.rating, notes: milestoneNotes ?? existing[0].notes })
+              .where(eq(clientRatings.id, existing[0].id));
+          } else {
+            await db.insert(clientRatings).values({
+              coachId: coach.id, clientName: client.clientName,
+              rating: input.rating, notes: milestoneNotes,
+            });
+          }
+        }
+      }
       return { ok: true };
     }),
 
@@ -4131,7 +4175,32 @@ const milestonesRouter = t.router({
     .mutation(async ({ input }) => {
       const db = await requireDb();
       const field = `milestone${input.week}Notes` as any;
-      await db.update(onboardingClients).set({ [field]: input.notes || null }).where(eq(onboardingClients.id, input.id));
+      const cleanNotes = input.notes || null;
+      await db.update(onboardingClients).set({ [field]: cleanNotes }).where(eq(onboardingClients.id, input.id));
+
+      // Sync notes to general clientRatings (Client Progress page)
+      const [client] = await db.select().from(onboardingClients).where(eq(onboardingClients.id, input.id)).limit(1);
+      if (client && client.coach && cleanNotes != null) {
+        const [coach] = await db.select().from(coaches).where(eq(coaches.name, client.coach)).limit(1);
+        if (coach) {
+          const existing = await db.select().from(clientRatings).where(
+            and(eq(clientRatings.coachId, coach.id), eq(clientRatings.clientName, client.clientName)),
+          ).limit(1);
+          const ratingField = `milestone${input.week}Rating` as any;
+          const currentRating = (client as any)[ratingField] as "green" | "yellow" | "red" | null;
+          if (existing.length > 0) {
+            await db.update(clientRatings)
+              .set({ notes: cleanNotes, ...(currentRating ? { rating: currentRating } : {}) })
+              .where(eq(clientRatings.id, existing[0].id));
+          } else if (currentRating) {
+            // Only create if we have a rating to attach the notes to
+            await db.insert(clientRatings).values({
+              coachId: coach.id, clientName: client.clientName,
+              rating: currentRating, notes: cleanNotes,
+            });
+          }
+        }
+      }
       return { ok: true };
     }),
 });

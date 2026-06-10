@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { trpc } from "@/lib/trpc";
 import { melbourneNow } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -58,12 +59,14 @@ function KpiBar({ pct, target }: { pct: number; target: number }) {
 
 // ─── Traffic Light Picker + Notes Popover ────────────────────────────────────
 function RatingPicker({
+  anchorRef,
   current,
   currentNotes,
   onSelect,
   onClear,
   onClose,
 }: {
+  anchorRef: React.RefObject<HTMLElement | null>;
   current: Rating | null;
   currentNotes: string | null;
   onSelect: (r: Rating, notes: string) => void;
@@ -73,15 +76,40 @@ function RatingPicker({
   const [notes, setNotes] = useState(currentNotes ?? "");
   const [pendingRating, setPendingRating] = useState<Rating | null>(current);
   const ref = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ top: number; left: number; placeAbove: boolean } | null>(null);
+
+  // Compute portal position from anchor's bounding rect, flipping above if no room below
+  useEffect(() => {
+    const compute = () => {
+      const anchor = anchorRef.current;
+      if (!anchor) return;
+      const rect = anchor.getBoundingClientRect();
+      const popoverHeight = 360; // approximate
+      const popoverWidth = 240;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const placeAbove = spaceBelow < popoverHeight && rect.top > popoverHeight;
+      const top = placeAbove ? rect.top - popoverHeight - 4 : rect.bottom + 4;
+      const left = Math.min(rect.left, window.innerWidth - popoverWidth - 8);
+      setPosition({ top, left, placeAbove });
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    window.addEventListener("scroll", compute, true);
+    return () => {
+      window.removeEventListener("resize", compute);
+      window.removeEventListener("scroll", compute, true);
+    };
+  }, [anchorRef]);
 
   // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+      const target = e.target as Node;
+      if (ref.current && !ref.current.contains(target) && !anchorRef.current?.contains(target)) onClose();
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [onClose]);
+  }, [onClose, anchorRef]);
 
   const handleSave = () => {
     if (pendingRating) {
@@ -90,10 +118,13 @@ function RatingPicker({
     }
   };
 
-  return (
+  if (!position) return null;
+
+  return createPortal(
     <div
       ref={ref}
-      className="absolute z-50 top-full left-0 mt-1 bg-zinc-900 border border-white/15 rounded-xl shadow-2xl p-3 flex flex-col gap-2 min-w-[220px]"
+      style={{ position: "fixed", top: position.top, left: position.left, zIndex: 9999 }}
+      className="bg-zinc-900 border border-white/15 rounded-xl shadow-2xl p-3 flex flex-col gap-2 min-w-[220px]"
     >
       {/* Rating options */}
       <div className="flex flex-col gap-1">
@@ -140,7 +171,8 @@ function RatingPicker({
           </button>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -162,10 +194,12 @@ function ClientButton({
 }) {
   const [open, setOpen] = useState(false);
   const style = rating ? RATING_STYLES[rating] : null;
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   return (
     <div className="relative">
       <button
+        ref={triggerRef}
         onClick={() => setOpen(v => !v)}
         className={`
           w-full text-left px-3 py-2.5 rounded-lg border text-sm font-medium
@@ -192,6 +226,7 @@ function ClientButton({
       </button>
       {open && (
         <RatingPicker
+          anchorRef={triggerRef}
           current={rating}
           currentNotes={notes}
           onSelect={onRate}

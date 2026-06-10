@@ -265,7 +265,13 @@ export default function Onboarding() {
               </table>
             </div>
           ) : (
-            <CompletedTable groupedByMonth={groupedByMonth!} coaches={coaches} onUpdateCoach={(id, c) => updateMutation.mutate({ id, coach: c })} />
+            <CompletedTable
+              groupedByMonth={groupedByMonth!}
+              coaches={coaches}
+              onUpdateCoach={(id, c) => updateMutation.mutate({ id, coach: c })}
+              onUpdatePaymentType={(id, pt) => updateMutation.mutate({ id, paymentType: pt as any })}
+              onUpdateName={(id, name) => updateMutation.mutate({ id, clientName: name })}
+            />
           )}
 
           <div className="text-xs text-gray-300 text-center mt-6">{filtered.length} client{filtered.length !== 1 ? "s" : ""}</div>
@@ -463,10 +469,12 @@ function OnboardingRow({ client, coaches, idx, isPending, onUpdate, onAlertVideo
   );
 }
 
-function CompletedTable({ groupedByMonth, coaches, onUpdateCoach }: {
+function CompletedTable({ groupedByMonth, coaches, onUpdateCoach, onUpdatePaymentType, onUpdateName }: {
   groupedByMonth: [string, any[]][];
   coaches: Array<{ id: number; name: string }>;
   onUpdateCoach: (id: number, coach: string) => void;
+  onUpdatePaymentType: (id: number, pt: "subscription" | "upfront") => void;
+  onUpdateName: (id: number, name: string) => void;
 }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto -mx-6 px-0 sm:mx-0">
@@ -479,6 +487,7 @@ function CompletedTable({ groupedByMonth, coaches, onUpdateCoach }: {
             <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Due</th>
             <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Started</th>
             <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Coach</th>
+            <th className="text-center px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Type</th>
             <th className="text-left px-2 py-2 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Notes</th>
           </tr>
         </thead>
@@ -490,13 +499,15 @@ function CompletedTable({ groupedByMonth, coaches, onUpdateCoach }: {
             const borderColor = mi >= 0 ? MONTH_COLORS[mi % 12] : "";
             return [
               <tr key={`header-${monthKey}`}>
-                <td colSpan={7} className={`px-4 py-2 font-bold text-xs ${barColor}`}>
+                <td colSpan={8} className={`px-4 py-2 font-bold text-xs ${barColor}`}>
                   {monthLabel} <span className="font-medium ml-1 opacity-70">({monthClients.length})</span>
                 </td>
               </tr>,
               ...monthClients.map((c: any, idx: number) => (
                 <tr key={c.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} border-b border-gray-100 border-l-4 ${borderColor} hover:bg-violet-100/80 transition-colors`}>
-                  <td className="px-3 py-2 font-semibold text-gray-800">{c.clientName}</td>
+                  <td className="px-3 py-2">
+                    <EditableName initial={c.clientName} onSave={(name) => onUpdateName(c.id, name)} />
+                  </td>
                   <td className="text-center px-2 py-2">
                     <span className={`text-[10px] font-semibold ${c.salesPerson === "Suzie" ? "text-pink-600" : "text-gray-300"}`}>{c.salesPerson || "—"}</span>
                   </td>
@@ -513,6 +524,16 @@ function CompletedTable({ groupedByMonth, coaches, onUpdateCoach }: {
                       {coaches.map(co => <option key={co.id} value={co.name}>{co.name}</option>)}
                     </select>
                   </td>
+                  <td className="text-center px-2 py-2">
+                    <select
+                      value={c.paymentType || "subscription"}
+                      onChange={e => onUpdatePaymentType(c.id, e.target.value as "subscription" | "upfront")}
+                      className={`text-[10px] font-bold rounded px-1.5 py-0.5 focus:outline-none focus:border-violet-400 border ${c.paymentType === "upfront" ? "bg-amber-100 text-amber-700 border-amber-300" : "bg-gray-100 text-gray-600 border-gray-200"}`}
+                      title="Change payment type">
+                      <option value="subscription">Sub</option>
+                      <option value="upfront">Upfront</option>
+                    </select>
+                  </td>
                   <td className="px-2 py-2 text-gray-400 text-[10px]">{c.notes || ""}</td>
                 </tr>
               )),
@@ -521,6 +542,28 @@ function CompletedTable({ groupedByMonth, coaches, onUpdateCoach }: {
         </tbody>
       </table>
     </div>
+  );
+}
+
+function EditableName({ initial, onSave }: { initial: string; onSave: (name: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(initial);
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        onBlur={() => { const v = value.trim(); if (v && v !== initial) onSave(v); setEditing(false); }}
+        onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") { setValue(initial); setEditing(false); } }}
+        className="w-full px-1.5 py-0.5 rounded border border-violet-300 text-gray-800 text-[11px] font-semibold focus:outline-none focus:border-violet-500 bg-white" />
+    );
+  }
+  return (
+    <button onClick={() => { setValue(initial); setEditing(true); }}
+      className="font-semibold text-gray-800 text-[11px] text-left hover:text-violet-600 transition-colors" title="Click to rename">
+      {initial}
+    </button>
   );
 }
 

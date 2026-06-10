@@ -3909,18 +3909,35 @@ const onboardingRouter = t.router({
         const status = !row.sentToClient ? "onboarding" : isOnRoster ? "active" : "cancelled";
 
         try {
+          // UPSERT: on duplicate (clientName, coach) update synced fields so
+          // re-running the import corrects stale statuses (e.g. clients that
+          // were flagged "cancelled" because the roster fetch failed at the
+          // time of an earlier import). Milestone progress fields are NOT
+          // touched — only the sheet-sourced columns.
           await db.execute(sql`INSERT INTO onboarding_clients
             (clientName, coach, status, datePaid, dateDue, appInviteSent, contractSent, requestedPhotos, mealPlan, training, sentToRich, welcomeVideo, sentToClient, subscription, notes)
             VALUES (${row.clientName}, ${row.coach || null}, ${status}, ${row.datePaid}, ${row.dateDue},
               ${row.appInviteSent ? 1 : 0}, ${row.contractSent ? 1 : 0}, ${row.requestedPhotos},
               ${row.mealPlan ? 1 : 0}, ${row.training ? 1 : 0}, ${row.sentToRich ? 1 : 0},
               ${row.welcomeVideo ? 1 : 0}, ${row.sentToClient}, ${row.subscription ? 1 : 0},
-              ${row.notes || null})`);
+              ${row.notes || null})
+            ON DUPLICATE KEY UPDATE
+              status = VALUES(status),
+              datePaid = VALUES(datePaid),
+              dateDue = VALUES(dateDue),
+              appInviteSent = VALUES(appInviteSent),
+              contractSent = VALUES(contractSent),
+              requestedPhotos = VALUES(requestedPhotos),
+              mealPlan = VALUES(mealPlan),
+              training = VALUES(training),
+              sentToRich = VALUES(sentToRich),
+              welcomeVideo = VALUES(welcomeVideo),
+              sentToClient = VALUES(sentToClient),
+              subscription = VALUES(subscription),
+              notes = VALUES(notes)`);
           imported++;
         } catch (err: any) {
-          const msg = err?.message ?? "";
-          if (err.code === "ER_DUP_ENTRY" || msg.includes("Duplicate entry") || msg.includes("ER_DUP_ENTRY")) skipped++;
-          else throw err;
+          throw err;
         }
       }
 

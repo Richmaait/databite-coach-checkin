@@ -2980,7 +2980,7 @@ const performanceRouter = t.router({
         coachId: z.number(),
         clientName: z.string(),
         rating: z.enum(["green", "yellow", "red"]),
-        notes: z.string().optional(),
+        notes: z.string().nullable().optional(),
       }),
     )
     .mutation(async ({ input }) => {
@@ -3007,7 +3007,7 @@ const performanceRouter = t.router({
         coachId: input.coachId,
         clientName: input.clientName,
         rating: input.rating,
-        notes: input.notes,
+        notes: input.notes ?? null,
       });
       return { id: result.insertId };
     }),

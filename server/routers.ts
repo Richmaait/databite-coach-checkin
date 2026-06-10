@@ -3983,6 +3983,9 @@ const milestonesRouter = t.router({
               pausedByName[cleanName] = dateTag;
               continue; // paused is not cancellation
             }
+            // "26 wk" / "14 wks" / "26 weeks" = subscription length, NOT a cancellation date.
+            const isSubscriptionLength = /\b\d+\s*(wk|wks|week|weeks)\b/i.test(dateTag);
+            if (isSubscriptionLength) continue;
             const isCancellation = !isUpfrontOrDec && /\d/.test(dateTag);
             if (!isCancellation) continue;
             cancellationByName[cleanName] = dateTag;
@@ -4082,6 +4085,9 @@ const milestonesRouter = t.router({
               pausedByName[cleanName] = dateTag;
               continue; // paused is not cancellation
             }
+            // "26 wk" / "14 wks" / "26 weeks" = subscription length, NOT a cancellation date.
+            const isSubscriptionLength = /\b\d+\s*(wk|wks|week|weeks)\b/i.test(dateTag);
+            if (isSubscriptionLength) continue;
             const isCancellation = !isUpfrontOrDec && /\d/.test(dateTag);
             if (!isCancellation) continue;
             cancellationByName[cleanName] = dateTag;

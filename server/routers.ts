@@ -4123,7 +4123,10 @@ const milestonesRouter = t.router({
       // Skip clients who have dropped off the roster (only when we successfully
       // fetched their coach's roster — don't hide them on a Sheets API failure).
       if (c.coach && fetchedCoaches.has(c.coach)) {
-        const cleanName = c.clientName ? c.clientName.trim().toLowerCase() : "";
+        // Strip parenthetical suffixes ("(26 wk)", "(UPFRONT - 27 JUL)") before
+        // matching — roster names are already cleaned, so a raw DB name like
+        // "Alex Smith (26 wk)" would otherwise miss and be wrongly hidden.
+        const cleanName = c.clientName ? c.clientName.replace(/\s*\(.*\)\s*$/, "").trim().toLowerCase() : "";
         if (!rosterNames.has(cleanName)) continue;
       }
       const startMon = getMonday(c.sentToClient);
@@ -4133,7 +4136,7 @@ const milestonesRouter = t.router({
         const contactedAt = (c as any)[`milestone${weekNumber}ContactedAt`] ?? null;
         const rating = (c as any)[`milestone${weekNumber}Rating`] ?? null;
         const notes = (c as any)[`milestone${weekNumber}Notes`] ?? null;
-        const lowerName = c.clientName ? c.clientName.trim().toLowerCase() : "";
+        const lowerName = c.clientName ? c.clientName.replace(/\s*\(.*\)\s*$/, "").trim().toLowerCase() : "";
         const cancellationDate = lowerName ? cancellationByName[lowerName] ?? null : null;
         const pausedDate = lowerName ? pausedByName[lowerName] ?? null : null;
         const isUpfront = c.paymentType === 'upfront';

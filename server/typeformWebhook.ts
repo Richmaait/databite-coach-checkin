@@ -147,6 +147,8 @@ const NICKNAME_MAP: Record<string, string> = {
   julia: "lia",
   dee: "denise",
   denise: "dee",
+  lori: "loribeth",
+  loribeth: "lori",
 };
 
 /**

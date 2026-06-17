@@ -137,6 +137,12 @@ const LAST_NAME_ALIASES: Record<string, string[]> = {
   kervin: ["gill"],
 };
 
+/** Clients who submit under abbreviated/different first names */
+const FIRST_NAME_ALIASES: Record<string, string[]> = {
+  lori: ["loribeth"],
+  loribeth: ["lori"],
+};
+
 /** Normalise a name for fuzzy matching (lowercase, trim, collapse spaces, strip suffixes). */
 function normaliseName(s: string): string {
   return s.toLowerCase().replace(/\(.*?\)/g, "").replace(/\s+/g, " ").trim();
@@ -178,6 +184,24 @@ function matchClientName(
         const rosterLast = parts.slice(1).join(" ");
         if (rosterLast === altLn || rosterLast.startsWith(altLn) || altLn.startsWith(rosterLast)) return c;
       }
+    }
+  }
+
+  // Pass 1c: try alternate first names (e.g. Lori ↔ Loribeth)
+  const altFirstNames = FIRST_NAME_ALIASES[fn] || [];
+  for (const altFn of altFirstNames) {
+    const altFull = `${altFn} ${ln}`.trim();
+    for (const c of rosterClients) {
+      const cn = normaliseName(c);
+      if (cn === altFull) return c;
+      const parts = cn.split(" ");
+      // First name + last name match using alias
+      if (parts.length >= 2 && parts[0] === altFn) {
+        const rosterLast = parts.slice(1).join(" ");
+        if (rosterLast === ln || rosterLast.startsWith(ln) || ln.startsWith(rosterLast)) return c;
+      }
+      // First name only roster entry using alias (e.g. roster "LORIBETH" + submission "Lori X")
+      if (parts.length === 1 && parts[0] === altFn) return c;
     }
   }
 

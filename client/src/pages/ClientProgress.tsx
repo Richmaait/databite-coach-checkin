@@ -8,7 +8,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { useLocation } from "wouter";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type Rating = "green" | "yellow" | "red";
+type Rating = "green" | "yellow" | "red" | "blue";
 const TARGET_PCT = 70;
 
 // ─── Traffic light colour helpers ────────────────────────────────────────────
@@ -16,6 +16,7 @@ const RATING_STYLES: Record<Rating, { bg: string; border: string; text: string; 
   green:  { bg: "bg-emerald-400/20",  border: "border-emerald-400/30", text: "text-emerald-300", label: "On Track",  glow: "shadow-[0_0_8px_rgba(52,211,153,0.2)]"  },
   yellow: { bg: "bg-amber-300/15", border: "border-amber-300/25", text: "text-amber-200", label: "Neutral",   glow: "shadow-[0_0_8px_rgba(252,211,77,0.15)]"  },
   red:    { bg: "bg-red-400/20",      border: "border-red-400/30",     text: "text-red-300", label: "Off Track", glow: "shadow-[0_0_8px_rgba(248,113,113,0.2)]"  },
+  blue:   { bg: "bg-sky-400/20",      border: "border-sky-400/30",     text: "text-sky-300", label: "New",       glow: "shadow-[0_0_8px_rgba(56,189,248,0.2)]"  },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -128,7 +129,7 @@ function RatingPicker({
     >
       {/* Rating options */}
       <div className="flex flex-col gap-1">
-        {(["green", "yellow", "red"] as Rating[]).map(r => (
+        {(["blue", "green", "yellow", "red"] as Rating[]).map(r => (
           <button
             key={r}
             onClick={() => setPendingRating(r)}
@@ -264,7 +265,7 @@ function ClientButton({
 }
 
 // ─── Filter type (used by CoachRosterCard and main page) ───────────────────
-type FilterRating = "all" | "green" | "yellow" | "red" | "unrated";
+type FilterRating = "all" | "green" | "yellow" | "red" | "blue" | "unrated";
 
 // ─── Coach Roster Card ────────────────────────────────────────────────────────
 function CoachRosterCard({
@@ -466,6 +467,7 @@ const FILTER_OPTIONS: { value: FilterRating; label: string; dot?: string }[] = [
   { value: "red",     label: "Off Track",   dot: "bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.7)]" },
   { value: "yellow",  label: "Neutral",     dot: "bg-amber-300/70 shadow-[0_0_6px_rgba(252,211,77,0.4)]" },
   { value: "green",   label: "On Track",    dot: "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" },
+  { value: "blue",    label: "New",         dot: "bg-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.7)]" },
   { value: "unrated", label: "Not Yet Rated" },
 ];
 

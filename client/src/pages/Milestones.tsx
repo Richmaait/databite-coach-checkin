@@ -161,13 +161,14 @@ export default function Milestones() {
                           </button>
 
                           <div className="flex rounded-lg overflow-hidden border border-white/10">
-                            {([["green", "🟢", "On Track"], ["yellow", "🟡", "Neutral"], ["red", "🔴", "Off Track"]] as const).map(([val, emoji, label]) => (
+                            {([["blue", "🔵", "New"], ["green", "🟢", "On Track"], ["yellow", "🟡", "Neutral"], ["red", "🔴", "Off Track"]] as const).map(([val, emoji, label]) => (
                               <button key={val}
                                 onClick={() => ratingMutation.mutate({ id: c.id, week: alert.milestone.week, rating: val })}
                                 className={`px-1.5 py-0.5 text-[9px] font-semibold transition-colors ${c.rating === val
                                   ? val === "green" ? "bg-emerald-500/25 text-emerald-300"
                                     : val === "yellow" ? "bg-amber-500/25 text-amber-300"
-                                    : "bg-red-500/25 text-red-300"
+                                    : val === "red" ? "bg-red-500/25 text-red-300"
+                                    : "bg-sky-500/25 text-sky-300"
                                   : "bg-white/5 text-white/30 hover:bg-white/10"
                                 }`}>
                                 {emoji}
@@ -262,7 +263,7 @@ export default function Milestones() {
                         )}
                       </td>
                       {(history ?? []).map(h => {
-                        const ratingEmoji = h.rating === "green" ? "🟢" : h.rating === "yellow" ? "🟡" : h.rating === "red" ? "🔴" : null;
+                        const ratingEmoji = h.rating === "green" ? "🟢" : h.rating === "yellow" ? "🟡" : h.rating === "red" ? "🔴" : h.rating === "blue" ? "🔵" : null;
                         const past = (c.weekNumber ?? 0) >= h.week;
                         const mColors = MILESTONE_COLORS[h.week];
                         return (

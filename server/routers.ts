@@ -3000,7 +3000,7 @@ const performanceRouter = t.router({
       z.object({
         coachId: z.number(),
         clientName: z.string(),
-        rating: z.enum(["green", "yellow", "red"]),
+        rating: z.enum(["green", "yellow", "red", "blue"]),
         notes: z.string().nullable().optional(),
       }),
     )
@@ -3187,6 +3187,7 @@ const sweepReportRouter = t.router({
         const green = ratings.filter((r) => r.rating === "green").length;
         const yellow = ratings.filter((r) => r.rating === "yellow").length;
         const red = ratings.filter((r) => r.rating === "red").length;
+        const blue = ratings.filter((r) => r.rating === "blue").length;
 
         snapshot.coaches.push({
           coachId: coach.id,
@@ -3195,7 +3196,7 @@ const sweepReportRouter = t.router({
           completed,
           excused: excuses.length,
           pct: scheduled > 0 ? Math.round((completed / Math.max(scheduled - excuses.length, 1)) * 100) : 0,
-          ratings: { green, yellow, red },
+          ratings: { green, yellow, red, blue },
           roster,
           ratingDetails: ratings.map((r) => ({
             clientName: r.clientName,
@@ -3568,7 +3569,7 @@ const auditsRouter = t.router({
       clientName: z.string(),
       loomLink: z.string().optional(),
       notes: z.string().optional(),
-      rating: z.enum(["green", "yellow", "red"]).optional(),
+      rating: z.enum(["green", "yellow", "red", "blue"]).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await requireDb();
@@ -3592,7 +3593,7 @@ const auditsRouter = t.router({
       if (allDone) {
         const managerSlackId = ENV.managerSlackId;
         if (managerSlackId && ENV.slackBotToken) {
-          const ratingEmojis: Record<string, string> = { green: "🟢 On Track", yellow: "🟡 Neutral", red: "🔴 Off Track" };
+          const ratingEmojis: Record<string, string> = { green: "🟢 On Track", yellow: "🟡 Neutral", red: "🔴 Off Track", blue: "🔵 New" };
           const summary = clients.map(c =>
             `• *${c.name}* (${c.day}) — ${ratingEmojis[c.rating ?? ""] ?? "No rating"}${c.loomLink ? ` — <${c.loomLink}|Loom/Fireflies>` : ""}${c.notes ? `\n  _${c.notes}_` : ""}`
           ).join("\n");
@@ -4165,7 +4166,7 @@ const milestonesRouter = t.router({
     }),
 
   setRating: adminProcedure
-    .input(z.object({ id: z.number(), week: z.number(), rating: z.enum(["green", "yellow", "red"]) }))
+    .input(z.object({ id: z.number(), week: z.number(), rating: z.enum(["green", "yellow", "red", "blue"]) }))
     .mutation(async ({ input }) => {
       const db = await requireDb();
       const field = `milestone${input.week}Rating` as any;
@@ -4213,7 +4214,7 @@ const milestonesRouter = t.router({
             and(eq(clientRatings.coachId, coach.id), eq(clientRatings.clientName, client.clientName)),
           ).limit(1);
           const ratingField = `milestone${input.week}Rating` as any;
-          const currentRating = (client as any)[ratingField] as "green" | "yellow" | "red" | null;
+          const currentRating = (client as any)[ratingField] as "green" | "yellow" | "red" | "blue" | null;
           if (existing.length > 0) {
             await db.update(clientRatings)
               .set({ notes: cleanNotes, ...(currentRating ? { rating: currentRating } : {}) })

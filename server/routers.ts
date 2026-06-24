@@ -4052,7 +4052,7 @@ const milestonesRouter = t.router({
         milestoneHistory,
       };
     }).filter(c => {
-      if (c.weekNumber == null || c.weekNumber <= 0 || c.weekNumber > 16) return false;
+      if (c.weekNumber == null || c.weekNumber <= 0 || c.weekNumber > 17) return false;
       // Drop clients who are no longer on the roster (finished/gone) — but only
       // when we successfully fetched their coach's roster. Otherwise we'd
       // accidentally hide active clients during a Sheets API hiccup.

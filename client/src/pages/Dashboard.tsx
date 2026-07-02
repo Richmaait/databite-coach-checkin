@@ -1939,10 +1939,12 @@ export default function Dashboard() {
                             {typeLabels[noteType] ?? noteType}
                           </span>
                           <span className="text-[10px] text-white/50 ml-auto">
-                            {new Date(note.createdAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                            {(note as any).submittedAt || (note as any).createdAt
+                              ? new Date((note as any).submittedAt ?? (note as any).createdAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+                              : ""}
                           </span>
                         </div>
-                        <p className="text-xs text-white/50 leading-relaxed">{note.notes}</p>
+                        <p className="text-xs text-white/50 leading-relaxed">{(note as any).note ?? (note as any).notes ?? ""}</p>
                       </div>
                     </div>
                   );

@@ -184,10 +184,41 @@ function SweepReportHistorySection() {
     { staleTime: 60 * 1000 }
   );
 
+  // Derive missing top-level percentages from snapshotJson.coaches when the
+  // saved report was generated without them (pre-schema-change reports).
+  const enrichedReports = useMemo(() => {
+    if (!savedReports) return [];
+    return savedReports.map((r: any) => {
+      const snap = r.snapshotJson ?? {};
+      const coaches: any[] = Array.isArray(snap.coaches) ? snap.coaches : [];
+      // Green %: fraction of green ratings across coaches
+      let green = 0, yellow = 0, red = 0, scheduled = 0, completed = 0, excused = 0;
+      for (const c of coaches) {
+        green += Number(c?.ratings?.green ?? 0);
+        yellow += Number(c?.ratings?.yellow ?? 0);
+        red += Number(c?.ratings?.red ?? 0);
+        scheduled += Number(c?.scheduled ?? 0);
+        completed += Number(c?.completed ?? 0);
+        excused += Number(c?.excused ?? 0);
+      }
+      const rated = green + yellow + red;
+      const derivedGreenPct = rated > 0 ? (green / rated) * 100 : 0;
+      const effScheduled = Math.max(scheduled - excused, 1);
+      const derivedEngagementPct = scheduled > 0 ? (completed / effScheduled) * 100 : 0;
+      return {
+        ...r,
+        greenPct: (typeof r.greenPct === "number" ? r.greenPct : snap.greenPct) ?? derivedGreenPct,
+        overallEngagementPct: (typeof r.overallEngagementPct === "number" ? r.overallEngagementPct : snap.overallEngagementPct) ?? derivedEngagementPct,
+        greenCount: r.greenCount ?? snap.greenCount ?? green,
+        yellowCount: r.yellowCount ?? snap.yellowCount ?? yellow,
+        redCount: r.redCount ?? snap.redCount ?? red,
+      };
+    });
+  }, [savedReports]);
+
   // Build chart data: each saved report becomes a data point
   const chartData = useMemo(() => {
-    if (!savedReports) return [];
-    return [...savedReports].reverse().map(r => ({
+    return [...enrichedReports].reverse().map((r: any) => ({
       label: r.title.replace("Post-Sweep Report \u2014 ", "").replace("Post-Sweep Report - ", ""),
       greenPct: r.greenPct,
       redCount: r.redCount,
@@ -195,10 +226,10 @@ function SweepReportHistorySection() {
       engPct: r.overallEngagementPct,
       id: r.id,
     }));
-  }, [savedReports]);
+  }, [enrichedReports]);
 
   if (isLoading) return null;
-  if (!savedReports || savedReports.length === 0) return null;
+  if (!enrichedReports || enrichedReports.length === 0) return null;
 
   return (
     <Card className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl">
@@ -246,9 +277,11 @@ function SweepReportHistorySection() {
 
         {/* Report list */}
         <div className="divide-y divide-border rounded-xl overflow-hidden border border-white/[0.08]">
-          {savedReports.map((report, i) => {
-            const onTrackColor = report.greenPct >= 70 ? "text-emerald-400" : report.greenPct >= 50 ? "text-yellow-200" : "text-red-400";
-            const engColor = report.overallEngagementPct >= 80 ? "text-emerald-400" : report.overallEngagementPct >= 60 ? "text-yellow-200" : "text-red-400";
+          {enrichedReports.map((report: any, i: number) => {
+            const greenPct = Number(report.greenPct ?? 0);
+            const engPct = Number(report.overallEngagementPct ?? 0);
+            const onTrackColor = greenPct >= 70 ? "text-emerald-400" : greenPct >= 50 ? "text-yellow-200" : "text-red-400";
+            const engColor = engPct >= 80 ? "text-emerald-400" : engPct >= 60 ? "text-yellow-200" : "text-red-400";
             return (
               <button
                 key={report.id}
@@ -272,16 +305,16 @@ function SweepReportHistorySection() {
                 </div>
                 <div className="flex items-center gap-4 shrink-0 text-xs">
                   <div className="text-center">
-                    <div className={`font-bold tabular-nums ${onTrackColor}`}>{report.greenPct.toFixed(0)}%</div>
+                    <div className={`font-bold tabular-nums ${onTrackColor}`}>{greenPct.toFixed(0)}%</div>
                     <div className="text-white/50">On Track</div>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-400" /><span className="text-emerald-400 font-semibold">{report.greenCount}</span></span>
-                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-yellow-200/80" /><span className="text-yellow-200 font-semibold">{report.yellowCount}</span></span>
-                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-400" /><span className="text-red-400 font-semibold">{report.redCount}</span></span>
+                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-400" /><span className="text-emerald-400 font-semibold">{report.greenCount ?? 0}</span></span>
+                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-yellow-200/80" /><span className="text-yellow-200 font-semibold">{report.yellowCount ?? 0}</span></span>
+                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-400" /><span className="text-red-400 font-semibold">{report.redCount ?? 0}</span></span>
                   </div>
                   <div className="text-center hidden sm:block">
-                    <div className={`font-bold tabular-nums ${engColor}`}>{report.overallEngagementPct.toFixed(0)}%</div>
+                    <div className={`font-bold tabular-nums ${engColor}`}>{engPct.toFixed(0)}%</div>
                     <div className="text-white/50">Engagement</div>
                   </div>
                   <div className="text-white/50 hidden md:block">

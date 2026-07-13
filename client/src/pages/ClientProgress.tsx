@@ -7,6 +7,12 @@ import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useLocation } from "wouter";
 
+/** Safe wrapper: any nullish or non-finite value becomes 0 so .toFixed never crashes. */
+function n(v: any): number {
+  const x = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(x) ? x : 0;
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Rating = "green" | "yellow" | "red" | "blue";
 const TARGET_PCT = 70;
@@ -991,7 +997,7 @@ export default function ClientProgress() {
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-semibold text-white/80">Business Wide{excludeRich ? " (excl. Rich)" : ""}</span>
                 <span className={`text-2xl font-bold ${pctColor(displayKpiData.overall.greenPct).text} ${pctColor(displayKpiData.overall.greenPct).glow}`}>
-                  {displayKpiData.overall.greenPct.toFixed(1)}%
+                  {n(displayKpiData.overall.greenPct).toFixed(1)}%
                 </span>
               </div>
               <KpiBar pct={displayKpiData.overall.greenPct} target={displayKpiData.target} />
@@ -1028,7 +1034,7 @@ export default function ClientProgress() {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-white/80 group-hover:text-emerald-300 transition-colors">{c.coachName}</span>
                     <span className={`text-lg font-bold ${pctColor(c.greenPct).text} ${pctColor(c.greenPct).glow}`}>
-                      {c.greenPct.toFixed(1)}%
+                      {n(c.greenPct).toFixed(1)}%
                     </span>
                   </div>
                   <KpiBar pct={c.greenPct} target={displayKpiData.target} />

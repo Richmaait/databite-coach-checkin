@@ -31,6 +31,12 @@ import { useLocation } from "wouter";
 
 type RangeKey = "today" | "wtd" | "7d" | "14d" | "30d" | "90d" | "180d" | "12m" | "custom";
 
+/** Safe wrapper: any nullish or non-finite value becomes 0 so .toFixed never crashes. */
+function n(v: any): number {
+  const x = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(x) ? x : 0;
+}
+
 /** Returns the Monday of the current work week.
  *  Mon–Sat: returns this week's Monday.
  *  Sunday: the work week (Mon–Fri) is over, so "this week" = the week that just finished.
@@ -138,7 +144,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <div key={i} className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full" style={{ background: p.color }} />
           <span className="text-white/50">{p.name}:</span>
-          <span className="text-white/90 font-semibold">{typeof p.value === "number" ? (p.name.includes("%") ? `${p.value.toFixed(1)}%` : p.value) : p.value}</span>
+          <span className="text-white/90 font-semibold">{typeof p.value === "number" ? (p.name.includes("%") ? `${n(p.value).toFixed(1)}%` : p.value) : p.value}</span>
         </div>
       ))}
     </div>
@@ -164,7 +170,7 @@ const EngagementTooltip = ({ active, payload, label }: any) => {
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ background: p.color }} />
               <span className="text-white/90 font-semibold">{p.name}</span>
-              <span className="text-white/50 ml-auto">{typeof p.value === "number" ? `${p.value.toFixed(1)}%` : p.value}</span>
+              <span className="text-white/50 ml-auto">{typeof p.value === "number" ? `${n(p.value).toFixed(1)}%` : p.value}</span>
             </div>
             {completed !== undefined && scheduled !== undefined && (
               <p className="text-white/50 pl-4">{completed} / {scheduled} clients</p>
@@ -260,7 +266,7 @@ function SweepReportHistorySection() {
                           <div key={i} className="flex items-center gap-2">
                             <div className="h-2 w-2 rounded-full" style={{ background: p.color }} />
                             <span className="text-white/50">{p.name}:</span>
-                            <span className="text-white/90 font-semibold">{typeof p.value === "number" ? `${p.value.toFixed(1)}%` : p.value}</span>
+                            <span className="text-white/90 font-semibold">{typeof p.value === "number" ? `${n(p.value).toFixed(1)}%` : p.value}</span>
                           </div>
                         ))}
                       </div>
@@ -305,7 +311,7 @@ function SweepReportHistorySection() {
                 </div>
                 <div className="flex items-center gap-4 shrink-0 text-xs">
                   <div className="text-center">
-                    <div className={`font-bold tabular-nums ${onTrackColor}`}>{greenPct.toFixed(0)}%</div>
+                    <div className={`font-bold tabular-nums ${onTrackColor}`}>{n(greenPct).toFixed(0)}%</div>
                     <div className="text-white/50">On Track</div>
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -314,7 +320,7 @@ function SweepReportHistorySection() {
                     <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-400" /><span className="text-red-400 font-semibold">{report.redCount ?? 0}</span></span>
                   </div>
                   <div className="text-center hidden sm:block">
-                    <div className={`font-bold tabular-nums ${engColor}`}>{engPct.toFixed(0)}%</div>
+                    <div className={`font-bold tabular-nums ${engColor}`}>{n(engPct).toFixed(0)}%</div>
                     <div className="text-white/50">Engagement</div>
                   </div>
                   <div className="text-white/50 hidden md:block">
@@ -946,7 +952,7 @@ export default function Dashboard() {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs text-white/50 uppercase tracking-wider">Avg Engagement</p>
-                  <p className="text-3xl font-bold text-white/90 mt-1">{avgEngagement.toFixed(1)}%</p>
+                  <p className="text-3xl font-bold text-white/90 mt-1">{n(avgEngagement).toFixed(1)}%</p>
                   {avgEngagement >= 80 && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-400/15 text-emerald-400 border border-emerald-400/20 mt-1">
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
@@ -1086,7 +1092,7 @@ export default function Dashboard() {
               <div className="mb-4">
                 <div className="flex flex-col items-center gap-1 mb-2">
                   <span className={`text-2xl font-bold ${currentWeek.achieved ? "text-emerald-400" : "text-red-400"}`}>
-                    {currentWeek.pct.toFixed(1)}%
+                    {n(currentWeek.pct).toFixed(1)}%
                   </span>
                   {currentWeek.achieved
                     ? <span className="text-[10px] font-bold text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-400/10 border border-emerald-400/20">KPI ACHIEVED</span>
@@ -1109,7 +1115,7 @@ export default function Dashboard() {
                     {priorWeeks.map(w => (
                       <div key={w.weekStart} className={`flex-1 glass rounded-xl px-3 py-2 text-center border ${w.achieved ? "border-emerald-400/15" : "border-red-400/15"}`}>
                         <span className={`text-sm font-bold block ${w.achieved ? "text-emerald-400" : "text-red-400"}`}>
-                          {w.pct.toFixed(1)}%
+                          {n(w.pct).toFixed(1)}%
                         </span>
                         <span className="text-[9px] text-white/30 block mt-0.5">{w.label}</span>
                         {w.achieved
@@ -1211,7 +1217,7 @@ export default function Dashboard() {
                             <div className="flex justify-between gap-4 border-t border-white/[0.08] pt-1 mt-1">
                               <span className="text-white/50">Engagement</span>
                               <span className="font-semibold" style={{ color: engPct >= 80 ? "oklch(0.72 0.17 145)" : engPct >= 60 ? "oklch(0.85 0.12 85)" : "oklch(0.65 0.22 25)" }}>
-                                {(engPct as number).toFixed(1)}%
+                                {n(engPct).toFixed(1)}%
                               </span>
                             </div>
                           )}
@@ -1248,7 +1254,7 @@ export default function Dashboard() {
                                   stroke={isTeam ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.10)"}
                                   strokeWidth={1} />
                                 <text x={pairCx} y={badgeTopY + 8} textAnchor="middle" fontSize={11} fontWeight={700} fill={badgeColor}>
-                                  {engPct.toFixed(0)}%
+                                  {n(engPct).toFixed(0)}%
                                 </text>
                               </g>
                             )}
@@ -1374,7 +1380,7 @@ export default function Dashboard() {
                             <div key={i} className="flex items-center gap-2">
                               <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ background: p.color }} />
                               <span className="text-white/50">{p.name}:</span>
-                              <span className="font-semibold text-white/90 ml-auto">{(p.value as number).toFixed(1)}%</span>
+                              <span className="font-semibold text-white/90 ml-auto">{n(p.value).toFixed(1)}%</span>
                             </div>
                           ))}
                           {scheduled !== undefined && completed !== undefined && missed !== undefined && (

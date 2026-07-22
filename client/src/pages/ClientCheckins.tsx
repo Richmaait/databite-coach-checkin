@@ -385,7 +385,7 @@ export default function ClientCheckins() {
         if (raw) {
           const match = raw.match(/\(([^)]+)\)/);
           const tag = match?.[1]?.trim();
-          if (tag && !/UPFRONT|DEC.OFFER/i.test(tag) && !/paus/i.test(tag) && /\d/.test(tag)) {
+          if (tag && !/UPFRONT|DEC.OFFER/i.test(tag) && !/paus/i.test(tag) && !/\d+\s*wk\b/i.test(tag) && /\d/.test(tag)) {
             cancelled++;
           }
         }
@@ -401,7 +401,7 @@ export default function ClientCheckins() {
         if (raw) {
           const match = raw.match(/\(([^)]+)\)/);
           const tag = match?.[1]?.trim();
-          if (tag && !/UPFRONT|DEC.OFFER/i.test(tag) && /\d/.test(tag)) {
+          if (tag && !/UPFRONT|DEC.OFFER/i.test(tag) && !/paus/i.test(tag) && !/\d+\s*wk\b/i.test(tag) && /\d/.test(tag)) {
             uniqueCancelled.add(name);
           }
         }
@@ -881,8 +881,11 @@ export default function ClientCheckins() {
                           const dateTag = dateMatch?.[1]?.trim() ?? null;
                           const isUpfrontOrDec = dateTag && /UPFRONT|DEC.OFFER/i.test(dateTag);
                           const isPauseTag = dateTag && /paus/i.test(dateTag);
-                          // Only treat as cancellation if the tag looks like a date (has a number) and is NOT a pause or upfront/dec offer
-                          const isCancellation = dateTag && !isUpfrontOrDec && !isPauseTag && /\d/.test(dateTag);
+                          // Package tag: "26 Wk", "14 Wk" etc. — coaching package length, NOT a cancellation
+                          const packageMatch = dateTag?.match(/(\d+)\s*wk\b/i);
+                          const packageWeeks = packageMatch ? parseInt(packageMatch[1], 10) : null;
+                          // Only treat as cancellation if the tag looks like a date (has a number) and is NOT a pause, upfront/dec offer, or package
+                          const isCancellation = dateTag && !isUpfrontOrDec && !isPauseTag && !packageWeeks && /\d/.test(dateTag);
 
                           return (
                             <div
@@ -934,6 +937,12 @@ export default function ClientCheckins() {
                                   <span className="cancel-tip shrink-0">
                                     <span className="w-5 h-5 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center text-[9px] font-bold text-red-400 cursor-default">C</span>
                                     <span className="cancel-tip-text">Finishes {dateTag}</span>
+                                  </span>
+                                )}
+                                {packageWeeks && (
+                                  <span className="cancel-tip shrink-0">
+                                    <span className="px-1.5 h-5 rounded-full bg-violet-500/20 border border-violet-500/30 flex items-center justify-center text-[9px] font-bold text-violet-300 cursor-default whitespace-nowrap">{packageWeeks}wk</span>
+                                    <span className="cancel-tip-text">{packageWeeks}-week package</span>
                                   </span>
                                 )}
                               </div>

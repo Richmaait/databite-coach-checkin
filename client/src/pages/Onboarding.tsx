@@ -25,6 +25,11 @@ const COACH_COLORS: Record<string, string> = {
   Rich: "text-violet-600", "Alex ": "text-amber-600", Alex: "text-amber-600",
 };
 
+// Alex is retired from new coach assignments — hide her from the onboarding coach
+// dropdowns, but keep her selectable for clients already allocated to her so their
+// existing coach still displays. (Handles the "Alex " trailing-space name in the DB.)
+const isRetiredCoach = (name?: string | null) => (name ?? "").trim().toLowerCase().startsWith("alex");
+
 const MONTH_COLORS = [
   "border-l-blue-400", "border-l-emerald-400", "border-l-violet-400", "border-l-pink-400",
   "border-l-cyan-400", "border-l-amber-400", "border-l-rose-400", "border-l-teal-400",
@@ -415,7 +420,7 @@ function OnboardingRow({ client, coaches, idx, isPending, onUpdate, onAlertVideo
             <select value={client.coach || ""} onChange={e => onUpdate("coach", e.target.value || null)}
               className={`w-full px-2 py-1.5 rounded border text-xs font-semibold focus:outline-none focus:border-violet-400 ${bg}`}>
               <option value="">—</option>
-              {coaches.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+              {coaches.filter(c => !isRetiredCoach(c.name) || c.name === client.coach).map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select>
           );
         })()}
@@ -521,7 +526,7 @@ function CompletedTable({ groupedByMonth, coaches, onUpdateCoach, onUpdatePaymen
                       className={`text-[11px] font-semibold bg-transparent border border-gray-200 rounded px-1.5 py-0.5 focus:outline-none focus:border-violet-400 ${COACH_COLORS[c.coach] || "text-gray-400"}`}
                       title="Change coach">
                       <option value="">—</option>
-                      {coaches.map(co => <option key={co.id} value={co.name}>{co.name}</option>)}
+                      {coaches.filter(co => !isRetiredCoach(co.name) || co.name === c.coach).map(co => <option key={co.id} value={co.name}>{co.name}</option>)}
                     </select>
                   </td>
                   <td className="text-center px-2 py-2">
@@ -606,7 +611,7 @@ function AddClientForm({ coaches, onSubmit, onCancel, isPending }: {
       <label className="flex flex-col gap-1"><span className={labelCls}>Coach</span>
         <select value={coach} onChange={e => setCoach(e.target.value)} className={inputCls}>
           <option value="">—</option>
-          {coaches.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+          {coaches.filter(c => !isRetiredCoach(c.name)).map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
         </select>
       </label>
       <div className="col-span-3 flex gap-2 justify-end pt-1">

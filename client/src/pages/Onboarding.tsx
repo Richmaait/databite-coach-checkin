@@ -196,6 +196,7 @@ export default function Onboarding() {
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px]">Month</th>
                     <th className="text-center px-3 py-2.5 font-semibold text-gray-500 uppercase tracking-wider text-[10px] border-l border-gray-200">Total</th>
                     <th className="text-center px-3 py-2.5 font-semibold text-pink-500 uppercase tracking-wider text-[10px] border-l border-gray-200 bg-pink-50/40">Suzie</th>
+                    <th className="text-center px-3 py-2.5 font-semibold text-sky-500 uppercase tracking-wider text-[10px] border-l border-gray-200 bg-sky-50/40">Alix</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -207,12 +208,13 @@ export default function Onboarding() {
                         <td className="px-4 py-2 font-semibold text-gray-800">{MONTH_NAMES[mi]} {y}</td>
                         <td className="text-center px-3 py-2 font-bold text-gray-900 text-sm border-l border-gray-100">{row.total}</td>
                         <td className="text-center px-3 py-2 font-semibold text-pink-600 border-l border-gray-100 bg-pink-50/20">{row.bySeller?.Suzie || "—"}</td>
+                        <td className="text-center px-3 py-2 font-semibold text-sky-600 border-l border-gray-100 bg-sky-50/20">{row.bySeller?.Alix || "—"}</td>
                       </tr>
                     );
                   })}
                   {salesStats.length > 5 && (
                     <tr>
-                      <td colSpan={3} className="text-center py-2">
+                      <td colSpan={4} className="text-center py-2">
                         <button onClick={() => setShowAllMonths(!showAllMonths)}
                           className="text-[10px] font-semibold text-violet-600 hover:text-violet-800 transition-colors">
                           {showAllMonths ? "Show less" : `Show all ${salesStats.length} months`}

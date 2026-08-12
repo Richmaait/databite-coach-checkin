@@ -450,9 +450,11 @@ function OnboardingRow({ client, coaches, idx, isPending, onUpdate, onAlertVideo
         <select value={client.salesPerson || ""} onChange={e => onUpdate("salesPerson", e.target.value || null)}
           className={`w-full px-2 py-1.5 rounded text-xs font-semibold focus:outline-none border ${
             client.salesPerson === "Suzie" ? "bg-pink-50 border-pink-200 text-pink-600"
+            : client.salesPerson === "Alix" ? "bg-sky-50 border-sky-200 text-sky-600"
             : "bg-transparent border-gray-200 text-gray-400"}`}>
           <option value="">—</option>
           <option value="Suzie">Suzie</option>
+          <option value="Alix">Alix</option>
         </select>
       </td>
       {/* Notes */}
@@ -514,7 +516,7 @@ function CompletedTable({ groupedByMonth, coaches, onUpdateCoach, onUpdatePaymen
                     <EditableName initial={c.clientName} onSave={(name) => onUpdateName(c.id, name)} />
                   </td>
                   <td className="text-center px-2 py-2">
-                    <span className={`text-[10px] font-semibold ${c.salesPerson === "Suzie" ? "text-pink-600" : "text-gray-300"}`}>{c.salesPerson || "—"}</span>
+                    <span className={`text-[10px] font-semibold ${c.salesPerson === "Suzie" ? "text-pink-600" : c.salesPerson === "Alix" ? "text-sky-600" : "text-gray-300"}`}>{c.salesPerson || "—"}</span>
                   </td>
                   <td className="px-2 py-2 text-gray-500 text-[10px]">{c.datePaid ? c.datePaid.split("-").reverse().join("/") : "—"}</td>
                   <td className="px-2 py-2 text-gray-500 text-[10px]">{c.dateDue ? c.dateDue.split("-").reverse().join("/") : "—"}</td>
@@ -600,7 +602,7 @@ function AddClientForm({ coaches, onSubmit, onCancel, isPending }: {
       </label>
       <label className="flex flex-col gap-1"><span className={labelCls}>Sale By</span>
         <select value={salesPerson} onChange={e => setSalesPerson(e.target.value)} className={inputCls}>
-          <option value="">—</option><option value="Suzie">Suzie</option>
+          <option value="">—</option><option value="Suzie">Suzie</option><option value="Alix">Alix</option>
         </select>
       </label>
       <label className="flex flex-col gap-1"><span className={labelCls}>Payment Type</span>

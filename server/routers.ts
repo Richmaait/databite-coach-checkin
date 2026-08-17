@@ -20,6 +20,7 @@ import {
   HIDDEN_COACH_NAMES,
   EXCLUDED_FROM_STATS,
   STATS_INCLUSION_DATE,
+  HEAD_COACH_EMAILS,
   TEAM_SLACK_CHANNEL,
   ONBOARDING_SLACK_CHANNEL,
 } from "../shared/const";
@@ -234,6 +235,21 @@ const adminProcedure = t.procedure.use(async ({ ctx, next }) => {
     throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
   }
   return next({ ctx: { ...ctx, user: ctx.user } });
+});
+
+/** Elevated access for the Client Progress section only.
+ * Admins (Rich, Suzie) and head coaches (Steve) can call these. */
+const headCoachProcedure = t.procedure.use(async ({ ctx, next }) => {
+  if (!ctx.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
+  }
+  const email = (ctx.user.email ?? "").toLowerCase();
+  const isAdmin = ctx.user.role === "admin";
+  const isHeadCoach = HEAD_COACH_EMAILS.includes(email);
+  if (!isAdmin && !isHeadCoach) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Head coach or admin access required" });
+  }
+  return next({ ctx: { ...ctx, user: ctx.user, isAdmin, isHeadCoach } });
 });
 
 // ─── Coach submission notification to manager ─────────────────────────────────
@@ -1263,7 +1279,7 @@ const clientCheckinsRouter = t.router({
   }),
 
   /** New clients from roster_client_starts — includes computed weeksOnRoster. */
-  getClientTenure: adminProcedure.query(async () => {
+  getClientTenure: headCoachProcedure.query(async () => {
     const db = await requireDb();
     const today = getTodayMelbourne();
     const currentMonday = getMonday(today);
@@ -2483,13 +2499,16 @@ const coachesRouter = t.router({
 
 const performanceRouter = t.router({
   /** Business-wide and per-coach green/yellow/red counts vs 70% target. */
-  kpiSummary: protectedProcedure.query(async () => {
+  kpiSummary: protectedProcedure.query(async ({ ctx }) => {
     const db = await requireDb();
 
-    const coachList = await db
+    const allCoachRows = await db
       .select({ id: coaches.id, name: coaches.name })
       .from(coaches)
       .where(eq(coaches.isActive, 1));
+    // Head coaches and non-admins never see hidden coaches (Rich)
+    const isAdmin = ctx.user?.role === "admin";
+    const coachList = isAdmin ? allCoachRows : allCoachRows.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
 
     const allRatings = await db.select().from(clientRatings);
 
@@ -2665,10 +2684,16 @@ const performanceRouter = t.router({
       return { ok: true };
     }),
 
-  /** All client ratings. */
-  allRatings: adminProcedure.query(async () => {
+  /** All client ratings.
+   * Head coaches (Steve) get this too but with hidden coaches (Rich) filtered out. */
+  allRatings: headCoachProcedure.query(async ({ ctx }) => {
     const db = await requireDb();
-    return db.select().from(clientRatings).orderBy(asc(clientRatings.coachId), asc(clientRatings.clientName));
+    const rows = await db.select().from(clientRatings).orderBy(asc(clientRatings.coachId), asc(clientRatings.clientName));
+    if (ctx.isAdmin) return rows;
+    // Head coach: exclude hidden coaches
+    const hiddenCoachRows = await db.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq(coaches.isActive, 1));
+    const hiddenIds = new Set(hiddenCoachRows.filter(c => HIDDEN_COACH_NAMES.includes(c.name)).map(c => c.id));
+    return rows.filter(r => !hiddenIds.has(r.coachId));
   }),
 
   /** Milestone contact status for all clients (for showing contacted badges on Client Progress). */
@@ -3051,18 +3076,37 @@ const performanceRouter = t.router({
       return { success: true };
     }),
 
-  /** Clear all ratings, or for a specific coach if coachId provided. */
-  resetAllRatings: adminProcedure
+  /** Clear all ratings, or for a specific coach if coachId provided.
+   * Head coaches can reset — but their reset excludes hidden coaches (Rich). */
+  resetAllRatings: headCoachProcedure
     .input(z.object({ coachId: z.number().optional() }).optional())
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
 
-      // Backup all ratings before clearing (for undo)
-      const ratingsToBackup = input?.coachId
-        ? await db.select().from(clientRatings).where(eq(clientRatings.coachId, input.coachId))
-        : await db.select().from(clientRatings);
+      // Head coaches cannot reset the hidden coach's ratings
+      if (!ctx.isAdmin && input?.coachId) {
+        const [target] = await db.select().from(coaches).where(eq(coaches.id, input.coachId)).limit(1);
+        if (target && HIDDEN_COACH_NAMES.includes(target.name)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cannot reset this coach's ratings" });
+        }
+      }
 
-      // Store backup as a sweep report snapshot with a special title
+      // Compute hidden coach IDs so we can exclude them from head-coach reset scope
+      let hiddenIds = new Set<number>();
+      if (!ctx.isAdmin) {
+        const activeCoaches = await db.select({ id: coaches.id, name: coaches.name }).from(coaches).where(eq(coaches.isActive, 1));
+        hiddenIds = new Set(activeCoaches.filter(c => HIDDEN_COACH_NAMES.includes(c.name)).map(c => c.id));
+      }
+
+      // Backup ratings before clearing (for undo) — scoped to the caller's permissions
+      let ratingsToBackup;
+      if (input?.coachId) {
+        ratingsToBackup = await db.select().from(clientRatings).where(eq(clientRatings.coachId, input.coachId));
+      } else {
+        const all = await db.select().from(clientRatings);
+        ratingsToBackup = ctx.isAdmin ? all : all.filter(r => !hiddenIds.has(r.coachId));
+      }
+
       const backupSnapshot = {
         _isRatingBackup: true,
         ratings: ratingsToBackup.map(r => ({
@@ -3074,26 +3118,33 @@ const performanceRouter = t.router({
       };
       const [backupResult] = await db.insert(sweepReports).values({
         title: `[Rating Backup] ${new Date().toISOString()}`,
-        createdByUserId: 0,
-        createdByName: "System Backup",
+        createdByUserId: ctx.user.id,
+        createdByName: ctx.user.name ?? "System Backup",
         snapshotJson: backupSnapshot,
         weekStart: new Date().toISOString().slice(0, 10),
         scopeType: input?.coachId ? "coach" : "all",
         scopeCoachId: input?.coachId ?? null,
       });
 
-      // Now clear
+      // Now clear — respecting the same scoping rules
       if (input?.coachId) {
         await db.delete(clientRatings).where(eq(clientRatings.coachId, input.coachId));
-      } else {
+      } else if (ctx.isAdmin) {
         await db.delete(clientRatings);
+      } else {
+        // Head coach: delete all EXCEPT hidden coaches
+        for (const r of ratingsToBackup) {
+          await db.delete(clientRatings).where(
+            and(eq(clientRatings.coachId, r.coachId), eq(clientRatings.clientName, r.clientName)),
+          );
+        }
       }
 
       return { success: true, backupId: backupResult.insertId, backedUp: ratingsToBackup.length };
     }),
 
   /** Undo a rating reset by restoring from backup. */
-  undoResetRatings: adminProcedure
+  undoResetRatings: headCoachProcedure
     .input(z.object({ backupId: z.number() }))
     .mutation(async ({ input }) => {
       const db = await requireDb();
@@ -3139,7 +3190,7 @@ const performanceRouter = t.router({
 
 const sweepReportRouter = t.router({
   /** Create sweep report snapshot. */
-  create: adminProcedure
+  create: headCoachProcedure
     .input(
       z.object({
         title: z.string(),
@@ -3150,10 +3201,22 @@ const sweepReportRouter = t.router({
     .mutation(async ({ input, ctx }) => {
       const db = await requireDb();
 
+      // Head coach cannot create a sweep for a hidden coach (Rich)
+      if (!ctx.isAdmin && input.coachId) {
+        const [target] = await db.select().from(coaches).where(eq(coaches.id, input.coachId)).limit(1);
+        if (target && HIDDEN_COACH_NAMES.includes(target.name)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Cannot create sweep for this coach" });
+        }
+      }
+
       // Build snapshot data — aggregate current performance data
-      const coachList = input.coachId
+      let coachList = input.coachId
         ? await db.select().from(coaches).where(eq(coaches.id, input.coachId))
         : await db.select().from(coaches).where(eq(coaches.isActive, 1));
+      // Head coach team-wide sweeps exclude hidden coaches
+      if (!ctx.isAdmin && !input.coachId) {
+        coachList = coachList.filter(c => !HIDDEN_COACH_NAMES.includes(c.name));
+      }
 
       const snapshot: Record<string, any> = { coaches: [] };
 
@@ -3220,7 +3283,7 @@ const sweepReportRouter = t.router({
     }),
 
   /** Mark report as saved. */
-  save: adminProcedure
+  save: headCoachProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const db = await requireDb();
@@ -3239,13 +3302,13 @@ const sweepReportRouter = t.router({
     }),
 
   /** All reports. */
-  list: adminProcedure.query(async () => {
+  list: headCoachProcedure.query(async () => {
     const db = await requireDb();
     return db.select().from(sweepReports).orderBy(desc(sweepReports.createdAt));
   }),
 
   /** Saved reports only. */
-  listSaved: adminProcedure.query(async () => {
+  listSaved: headCoachProcedure.query(async () => {
     const db = await requireDb();
     return db
       .select()

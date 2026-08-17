@@ -6,6 +6,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useLocation } from "wouter";
+import { HEAD_COACH_EMAILS } from "../../../shared/const";
 
 /** Safe wrapper: any nullish or non-finite value becomes 0 so .toFixed never crashes. */
 function n(v: any): number {
@@ -610,6 +611,9 @@ function ClientTenureTable() {
 export default function ClientProgress() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  // Head coaches (Steve) get admin-level Client Progress access but never see Rich
+  const isHeadCoach = !isAdmin && HEAD_COACH_EMAILS.includes((user?.email ?? "").toLowerCase());
+  const hasAdminAccess = isAdmin || isHeadCoach;
   const [filterRating, setFilterRating] = useState<FilterRating>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [clientSort, setClientSort] = useState<"alpha" | "status">("alpha");
@@ -653,7 +657,7 @@ export default function ClientProgress() {
 
   const { data: allRatingsData, refetch: refetchRatings } = trpc.performance.allRatings.useQuery(
     undefined,
-    { enabled: isAdmin, staleTime: 30 * 1000 }
+    { enabled: hasAdminAccess, staleTime: 30 * 1000 }
   );
   const { data: milestoneStatus } = trpc.performance.milestoneStatusAll.useQuery(
     undefined,
@@ -661,17 +665,17 @@ export default function ClientProgress() {
   );
   const { data: myRatingsData, refetch: refetchMyRatings } = trpc.performance.myRatings.useQuery(
     undefined,
-    { enabled: !isAdmin, staleTime: 30 * 1000 }
+    { enabled: !hasAdminAccess, staleTime: 30 * 1000 }
   );
 
   const { data: kpiData, refetch: refetchKpi } = trpc.performance.kpiSummary.useQuery(
     undefined,
-    { enabled: isAdmin, staleTime: 30 * 1000 }
+    { enabled: hasAdminAccess, staleTime: 30 * 1000 }
   );
 
   // Build a lookup: coachId → { clientName → { rating, notes, updatedAt } }
   const ratingsMap = useMemo(() => {
-    const raw = isAdmin ? (allRatingsData ?? []) : (myRatingsData ?? []);
+    const raw = hasAdminAccess ? (allRatingsData ?? []) : (myRatingsData ?? []);
     const map: Record<number, Record<string, { rating: Rating; notes: string | null; updatedAt: Date }>> = {};
     for (const r of raw) {
       if (!map[r.coachId]) map[r.coachId] = {};
@@ -682,7 +686,7 @@ export default function ClientProgress() {
       };
     }
     return map;
-  }, [allRatingsData, myRatingsData, isAdmin]);
+  }, [allRatingsData, myRatingsData, hasAdminAccess]);
 
   // Build milestone lookup: coachName → { clientName → contact dates }
   const milestonesMap = useMemo(() => {
@@ -788,10 +792,10 @@ export default function ClientProgress() {
     }
   };
 
-  // Past sweep reports (admin only)
+  // Past sweep reports (admin + head coach)
   const { data: pastReports, refetch: refetchPastReports } = trpc.sweepReport.list.useQuery(
     undefined,
-    { enabled: isAdmin, staleTime: 60 * 1000 }
+    { enabled: hasAdminAccess, staleTime: 60 * 1000 }
   );
 
   const createSweepReportMutation = trpc.sweepReport.create.useMutation({
@@ -817,14 +821,18 @@ export default function ClientProgress() {
   };
 
   const allVisibleCoaches = useMemo(() => {
-    const base = isAdmin
-      ? orderedActiveCoaches
-      : (() => {
-          const myCoach = activeCoaches.find(c => c.userId === user?.id);
-          return myCoach ? [myCoach] : [];
-        })();
+    let base: typeof orderedActiveCoaches;
+    if (isAdmin) {
+      base = orderedActiveCoaches;
+    } else if (isHeadCoach) {
+      // Head coach sees everyone except Rich
+      base = orderedActiveCoaches.filter(c => c.name !== "Rich");
+    } else {
+      const myCoach = activeCoaches.find(c => c.userId === user?.id);
+      base = myCoach ? [myCoach] : [];
+    }
     return excludeRich ? base.filter(c => c.name !== "Rich") : base;
-  }, [isAdmin, orderedActiveCoaches, activeCoaches, user?.id, excludeRich]);
+  }, [isAdmin, isHeadCoach, orderedActiveCoaches, activeCoaches, user?.id, excludeRich]);
 
   // KPI data with Rich filtered out when toggle is on
   const displayKpiData = useMemo(() => {
@@ -880,7 +888,7 @@ export default function ClientProgress() {
               Click a client to assign a rating and add a note.
             </p>
           </div>
-          {isAdmin && (
+          {hasAdminAccess && (
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowResetConfirm(true)}
@@ -982,8 +990,8 @@ export default function ClientProgress() {
           </div>
         )}
 
-        {/* KPI Summary (admin only) */}
-        {isAdmin && displayKpiData && (
+        {/* KPI Summary (admin + head coach) */}
+        {hasAdminAccess && displayKpiData && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-white/50">
@@ -1168,8 +1176,8 @@ export default function ClientProgress() {
           )}
         </div>
 
-        {/* Past Sweep Reports (admin only) */}
-        {isAdmin && pastReports && pastReports.length > 0 && (
+        {/* Past Sweep Reports (admin + head coach) */}
+        {hasAdminAccess && pastReports && pastReports.length > 0 && (
           <div className="flex flex-col gap-3">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-white/50">Past Sweep Reports</h2>
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
@@ -1212,8 +1220,8 @@ export default function ClientProgress() {
           </div>
         )}
 
-        {/* Client Tenure Table (admin only) */}
-        {isAdmin && <ClientTenureTable />}
+        {/* Client Tenure Table (admin + head coach) */}
+        {hasAdminAccess && <ClientTenureTable />}
       </div>
 
       {/* Title Dialog for generating sweep report */}

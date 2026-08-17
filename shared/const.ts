@@ -7,6 +7,13 @@ export const ADMIN_EMAILS = [
   "suzie@databite.com.au",
 ];
 
+/** Coaches with elevated access to the Client Progress section only.
+ * They can view all coaches' ratings (except hidden ones), run sweeps,
+ * and reset ratings — but have no elevated access anywhere else. */
+export const HEAD_COACH_EMAILS = [
+  "steve@databite.com.au",
+];
+
 /** Coach names hidden from non-admin users */
 export const HIDDEN_COACH_NAMES = ["Rich"];
 

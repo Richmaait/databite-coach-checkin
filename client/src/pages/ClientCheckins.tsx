@@ -827,9 +827,11 @@ export default function ClientCheckins() {
                           const excuseEntry = approvedExcuseMap.get(`${clientName}|${day}`);
                           const isExcused = !!excuseEntry;
                           const isPaused = pausedSet.has(clientName);
-                          const isMissedStreak = missedSet.has(`${clientName}|${day}`);
                           const isOverdue = isClientOverdue(weekStart, day, isCompleted || isExcused || isPaused);
-                          const showRed = (isOverdue || isMissedStreak) && !isCompleted && !isExcused && !isPaused;
+                          // Red only means "day has fully passed and still not marked/excused".
+                          // A missed-streak from prior weeks is tracked separately (disengagement),
+                          // but does not force the current-week row red before its day arrives.
+                          const showRed = isOverdue && !isCompleted && !isExcused && !isPaused;
                           const isActionable = canEdit && !isCompleted && !isExcused && !isPaused;
 
                           // Status logic — excused OVERRIDES submitted/completed appearance

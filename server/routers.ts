@@ -2598,6 +2598,56 @@ const performanceRouter = t.router({
         }
       }
 
+      // ── Historical roster filter ──────────────────────────────────────────
+      // When viewing a past week, hide clients who weren't on the roster yet.
+      // "First seen" for a client is derived from the earliest clientCheckIns
+      // row (submitted OR completed) for this coach + client on any day.
+      // Manual overrides in rosterClientStarts (per client+day) take priority.
+      if (input.weekStart && coachId) {
+        const currentMon = getMonday(getTodayMelbourne());
+        // Only filter for PAST weeks — current & future always show everyone
+        if (input.weekStart < currentMon) {
+          const rows = await db
+            .select({ clientName: clientCheckIns.clientName, weekStart: clientCheckIns.weekStart })
+            .from(clientCheckIns)
+            .where(eq(clientCheckIns.coachId, coachId));
+          const firstSeenFromCheckins = new Map<string, string>();
+          for (const r of rows) {
+            const cur = firstSeenFromCheckins.get(r.clientName);
+            if (!cur || r.weekStart < cur) firstSeenFromCheckins.set(r.clientName, r.weekStart);
+          }
+          // Manual override table wins if present
+          const startOverrides = await db
+            .select({ clientName: rosterClientStarts.clientName, firstWeekStart: rosterClientStarts.firstWeekStart })
+            .from(rosterClientStarts)
+            .where(eq(rosterClientStarts.coachId, coachId));
+          const firstSeenOverride = new Map<string, string>();
+          for (const s of startOverrides) {
+            const cur = firstSeenOverride.get(s.clientName);
+            if (!cur || s.firstWeekStart < cur) firstSeenOverride.set(s.clientName, s.firstWeekStart);
+          }
+          const firstSeen = (name: string): string | null => {
+            const ov = firstSeenOverride.get(name);
+            if (ov) return ov;
+            const fromChecks = firstSeenFromCheckins.get(name);
+            return fromChecks ?? null; // null = never seen → treat as brand new
+          };
+          for (const d of DAYS) {
+            roster[d] = (roster[d] ?? []).filter(name => {
+              const seen = firstSeen(name);
+              if (seen == null) return false;      // never had activity → not on roster for any past week
+              return seen <= input.weekStart!;      // only show if first-seen week is <= viewed week
+            });
+            rawRoster[d] = (rawRoster[d] ?? []).filter(rawName => {
+              const cleaned = rawName.replace(/\s*\(.*?\)\s*/g, "").replace(/\*+$/, "").trim();
+              const seen = firstSeen(cleaned);
+              if (seen == null) return false;
+              return seen <= input.weekStart!;
+            });
+          }
+        }
+      }
+
       // Build a map of clean name → raw name for clients with dates/tags
       const rawNameMap: Record<string, string> = {};
       for (const day of DAYS) {

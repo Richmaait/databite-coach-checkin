@@ -4,6 +4,7 @@ import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerAuthRoutes } from "./auth";
+import { ensureCurrentColumns } from "../db";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -37,6 +38,10 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // Make sure the "Current" column fields exist before we start serving, so the
+  // milestones query never selects a column the DB doesn't have yet.
+  await ensureCurrentColumns();
+
   const app = express();
   const server = createServer(app);
 

@@ -43,6 +43,37 @@ export async function getDb() {
   }
 }
 
+/**
+ * Idempotently ensure the "Current" column fields exist on onboarding_clients.
+ * Additive + nullable only — never drops or alters existing data. Safe to run
+ * on every boot; it no-ops once the columns are present. Wrapped so a failure
+ * can never crash startup.
+ */
+export async function ensureCurrentColumns(): Promise<void> {
+  if (!ENV.databaseUrl) return;
+  let conn: mysql.Connection | undefined;
+  try {
+    conn = await mysql.createConnection({ uri: ENV.databaseUrl });
+    const [rows] = await conn.query(
+      "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'onboarding_clients'",
+    );
+    const existing = new Set((rows as any[]).map(r => r.COLUMN_NAME));
+    const needed = [
+      { name: "currentRating", ddl: "ADD COLUMN `currentRating` varchar(16) NULL" },
+      { name: "currentNote", ddl: "ADD COLUMN `currentNote` text NULL" },
+      { name: "currentWeek", ddl: "ADD COLUMN `currentWeek` int NULL" },
+    ];
+    const missing = needed.filter(n => !existing.has(n.name));
+    if (missing.length === 0) return;
+    await conn.query("ALTER TABLE `onboarding_clients` " + missing.map(m => m.ddl).join(", "));
+    console.log(`[schema] added Current columns: ${missing.map(m => m.name).join(", ")}`);
+  } catch (err) {
+    console.error("[schema] ensureCurrentColumns failed (non-fatal):", err);
+  } finally {
+    if (conn) await conn.end().catch(() => {});
+  }
+}
+
 // ─── Helper functions used by Slack / Typeform / PDF modules ──────────────────
 
 /** Get all coaches. */

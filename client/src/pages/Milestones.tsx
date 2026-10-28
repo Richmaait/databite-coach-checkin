@@ -231,7 +231,6 @@ export default function Milestones() {
                   <th className="text-center px-2 py-2 font-medium text-violet-300/60">Wk 8</th>
                   <th className="text-center px-2 py-2 font-medium text-cyan-300/60">Wk 12</th>
                   <th className="text-center px-2 py-2 font-medium text-emerald-300/70 border-l border-white/[0.08]">Current</th>
-                  <th className="text-left px-2 py-2 font-medium text-white/50">Next</th>
                 </tr>
               </thead>
               <tbody>
@@ -330,6 +329,7 @@ export default function Milestones() {
                         const gRating = (c as any).generalRating as string | null;
                         const gNotes = (c as any).generalNotes as string | null;
                         const gEmoji = gRating === "green" ? "🟢" : gRating === "yellow" ? "🟡" : gRating === "red" ? "🔴" : gRating === "blue" ? "🔵" : null;
+                        const gWeek = (c as any).generalWeek as number | null;
                         const gHasData = !!(gRating || gNotes);
                         const gEditing = editing?.id === c.id && editing?.week === 0;
                         return (
@@ -364,6 +364,9 @@ export default function Milestones() {
                                     {gNotes && (
                                       <span className="text-[8px] leading-tight text-left w-full text-white/50">{gNotes}</span>
                                     )}
+                                    {gWeek != null && (
+                                      <span className="text-[7px] uppercase tracking-wide text-emerald-300/50 w-full text-left">added wk {gWeek}</span>
+                                    )}
                                   </div>
                                 ) : (
                                   <span className="text-white/15 hover:text-white/50">＋</span>
@@ -373,9 +376,6 @@ export default function Milestones() {
                           </td>
                         );
                       })()}
-                      <td className="px-2 py-2 text-white/40">
-                        {c.nextMilestone ? `Wk ${c.nextMilestone.week}` : "—"}
-                      </td>
                     </tr>
                   );
                 })}

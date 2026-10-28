@@ -4064,6 +4064,16 @@ const onboardingRouter = t.router({
 
 // ─── Milestones Router ─────────────────────────────────────────────────────────
 
+// The client's current program week from their start date (same maths as the
+// milestone weekNumber). Used to stamp a Current rating/note with "added wk N".
+function computeCurrentWeek(sentToClient: string | null | undefined): number | null {
+  if (!sentToClient) return null;
+  const startMon = getMonday(sentToClient);
+  const todayMon = getMonday(getTodayMelbourne());
+  const wk = Math.floor((new Date(todayMon + "T00:00:00").getTime() - new Date(startMon + "T00:00:00").getTime()) / (7 * 86400000)) + 1;
+  return wk < 1 ? 1 : wk;
+}
+
 const MILESTONES = [
   { week: 2, label: "Check-in", description: "How are they settling in?" },
   { week: 4, label: "First Milestone", description: "Celebrate their first month" },
@@ -4125,19 +4135,8 @@ const milestonesRouter = t.router({
       } catch { /* roster fetch errors don't break milestones */ }
     }));
 
-    // General (non-milestone) rating + note per client — the shared clientRatings
-    // store that also powers the Client Progress page. Lets a rating/note be set
-    // for a client at ANY time, independent of milestone weeks (e.g. past wk 12).
-    const allCoachRows = await db.select().from(coaches);
-    const coachIdByName = new Map(allCoachRows.map(co => [co.name, co.id] as const));
-    const allRatingRows = await db.select().from(clientRatings);
-    const generalByKey = new Map<string, { rating: string | null; notes: string | null }>();
-    for (const r of allRatingRows) generalByKey.set(`${r.coachId}|${r.clientName}`, { rating: r.rating, notes: r.notes });
-
     const todayMon = getMonday(getTodayMelbourne());
     return clients.map(c => {
-      const generalCoachId = c.coach ? coachIdByName.get(c.coach) : undefined;
-      const general = generalCoachId != null ? generalByKey.get(`${generalCoachId}|${c.clientName}`) : undefined;
       let weekNumber: number | null = null;
       let currentMilestone: typeof MILESTONES[number] | null = null;
       if (c.sentToClient) {
@@ -4174,8 +4173,11 @@ const milestonesRouter = t.router({
         currentMilestone,
         nextMilestone,
         milestoneHistory,
-        generalRating: general?.rating ?? null,
-        generalNotes: general?.notes ?? null,
+        // "Current" column — a standalone rating/note set any time, on its OWN
+        // columns, fully independent of the milestone data (no cross-contamination).
+        generalRating: (c as any).currentRating ?? null,
+        generalNotes: (c as any).currentNote ?? null,
+        generalWeek: (c as any).currentWeek ?? null,
       };
     }).filter(c => {
       if (c.weekNumber == null || c.weekNumber <= 0 || c.weekNumber > 17) return false;
@@ -4357,47 +4359,40 @@ const milestonesRouter = t.router({
       return { ok: true };
     }),
 
-  // "Current" rating — NOT tied to a milestone week. Writes straight to the
-  // shared clientRatings store (same one the Client Progress page uses), so a
-  // client can be rated at any time (e.g. once they're past wk 12).
+  // The client's current week (from their start date), used to stamp a Current
+  // rating/note with "added wk N". Returns null if we can't work it out.
+  // (helper hoisted below as computeCurrentWeek)
+
+  // "Current" rating — NOT tied to a milestone week. Writes to this client's OWN
+  // currentRating/currentNote/currentWeek columns, completely separate from the
+  // milestone fields + clientRatings, so milestone notes never bleed in here.
+  // Stamps currentWeek with the week the client is in right now.
   setGeneralRating: adminProcedure
     .input(z.object({ id: z.number(), rating: z.enum(["green", "yellow", "red", "blue"]) }))
     .mutation(async ({ input }) => {
       const db = await requireDb();
       const [client] = await db.select().from(onboardingClients).where(eq(onboardingClients.id, input.id)).limit(1);
-      if (!client || !client.coach) return { ok: false };
-      const [coach] = await db.select().from(coaches).where(eq(coaches.name, client.coach)).limit(1);
-      if (!coach) return { ok: false };
-      const existing = await db.select().from(clientRatings).where(
-        and(eq(clientRatings.coachId, coach.id), eq(clientRatings.clientName, client.clientName)),
-      ).limit(1);
-      if (existing.length > 0) {
-        await db.update(clientRatings).set({ rating: input.rating }).where(eq(clientRatings.id, existing[0].id));
-      } else {
-        await db.insert(clientRatings).values({ coachId: coach.id, clientName: client.clientName, rating: input.rating, notes: null });
-      }
+      if (!client) return { ok: false };
+      const week = computeCurrentWeek(client.sentToClient);
+      await db.update(onboardingClients)
+        .set({ currentRating: input.rating, ...(week != null ? { currentWeek: week } : {}) } as any)
+        .where(eq(onboardingClients.id, input.id));
       return { ok: true };
     }),
 
-  // "Current" note — not tied to a milestone week. clientRatings.rating is
-  // required, so a note set before any colour defaults to the neutral "blue".
+  // "Current" note — same OWN columns, independent of milestones. Also stamps
+  // currentWeek so you can see which week you left the note in.
   setGeneralNote: adminProcedure
     .input(z.object({ id: z.number(), notes: z.string() }))
     .mutation(async ({ input }) => {
       const db = await requireDb();
       const cleanNotes = input.notes || null;
       const [client] = await db.select().from(onboardingClients).where(eq(onboardingClients.id, input.id)).limit(1);
-      if (!client || !client.coach) return { ok: false };
-      const [coach] = await db.select().from(coaches).where(eq(coaches.name, client.coach)).limit(1);
-      if (!coach) return { ok: false };
-      const existing = await db.select().from(clientRatings).where(
-        and(eq(clientRatings.coachId, coach.id), eq(clientRatings.clientName, client.clientName)),
-      ).limit(1);
-      if (existing.length > 0) {
-        await db.update(clientRatings).set({ notes: cleanNotes }).where(eq(clientRatings.id, existing[0].id));
-      } else {
-        await db.insert(clientRatings).values({ coachId: coach.id, clientName: client.clientName, rating: "blue", notes: cleanNotes });
-      }
+      if (!client) return { ok: false };
+      const week = computeCurrentWeek(client.sentToClient);
+      await db.update(onboardingClients)
+        .set({ currentNote: cleanNotes, ...(cleanNotes != null && week != null ? { currentWeek: week } : {}) } as any)
+        .where(eq(onboardingClients.id, input.id));
       return { ok: true };
     }),
 

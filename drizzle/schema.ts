@@ -314,6 +314,11 @@ export const onboardingClients = mysqlTable("onboarding_clients", {
   milestone12ContactedAt: varchar("milestone12ContactedAt", { length: 10 }),
   milestone12Rating: varchar("milestone12Rating", { length: 16 }),
   milestone12Notes: text("milestone12Notes"),
+  // "Current" column (All Active Clients) — a standalone rating/note set any
+  // time, independent of the milestone weeks. currentWeek = the week it was set.
+  currentRating: varchar("currentRating", { length: 16 }),
+  currentNote: text("currentNote"),
+  currentWeek: int("currentWeek"),
   assignedDay: mysqlEnum("assignedDay", ["monday", "tuesday", "wednesday", "thursday", "friday"]),
   paymentType: mysqlEnum("paymentType", ["subscription", "upfront"]).default("subscription"),
   salesPerson: varchar("salesPerson", { length: 64 }),

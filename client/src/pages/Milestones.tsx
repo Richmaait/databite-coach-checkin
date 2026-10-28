@@ -19,6 +19,8 @@ export default function Milestones() {
 
   const [search, setSearch] = useState("");
   const [coachFilter, setCoachFilter] = useState("");
+  // Which Wk cell in the All Active Clients list is being edited (lets you backfill a rating/note any time)
+  const [editing, setEditing] = useState<{ id: number; week: number } | null>(null);
 
   const utils = trpc.useUtils();
   const { data: alerts, refetch: refetchAlerts } = trpc.milestones.getAlerts.useQuery();
@@ -266,19 +268,48 @@ export default function Milestones() {
                         const ratingEmoji = h.rating === "green" ? "🟢" : h.rating === "yellow" ? "🟡" : h.rating === "red" ? "🔴" : h.rating === "blue" ? "🔵" : null;
                         const past = (c.weekNumber ?? 0) >= h.week;
                         const mColors = MILESTONE_COLORS[h.week];
+                        // Show the dot when a rating has been set OR the client was marked contacted
+                        const hasData = !!(h.contactedAt || h.rating);
+                        const isEditing = editing?.id === c.id && editing?.week === h.week;
                         return (
-                          <td key={h.week} className="text-center px-2 py-2 max-w-[120px]">
-                            {h.contactedAt ? (
-                              <div className="flex flex-col items-center gap-0.5">
-                                <span className="text-[10px]">{ratingEmoji ?? "✓"}</span>
-                                {h.notes && (
-                                  <span className={`text-[8px] leading-tight text-left w-full ${mColors?.text ?? "text-white/40"}`}>{h.notes}</span>
-                                )}
+                          <td key={h.week} className="text-center px-1 py-2 max-w-[120px] align-top">
+                            {isEditing ? (
+                              <div className="flex flex-col items-center gap-1">
+                                <div className="flex rounded-lg overflow-hidden border border-white/10">
+                                  {([["blue", "🔵"], ["green", "🟢"], ["yellow", "🟡"], ["red", "🔴"]] as const).map(([val, emoji]) => (
+                                    <button key={val}
+                                      onClick={() => ratingMutation.mutate({ id: c.id, week: h.week, rating: val })}
+                                      disabled={ratingMutation.isPending}
+                                      className={`px-1 py-0.5 text-[10px] transition-colors ${h.rating === val
+                                        ? val === "green" ? "bg-emerald-500/30" : val === "yellow" ? "bg-amber-500/30" : val === "red" ? "bg-red-500/30" : "bg-sky-500/30"
+                                        : "bg-white/5 hover:bg-white/10 opacity-50 hover:opacity-100"}`}>
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                                <input type="text" defaultValue={h.notes || ""} placeholder="Note…" autoFocus
+                                  onBlur={e => { const v = e.target.value; if (v !== (h.notes || "")) notesMutation.mutate({ id: c.id, week: h.week, notes: v }); }}
+                                  onKeyDown={e => { if (e.key === "Enter") { (e.target as HTMLInputElement).blur(); setEditing(null); } if (e.key === "Escape") setEditing(null); }}
+                                  className="w-[110px] px-1 py-0.5 rounded bg-white/5 border border-white/10 text-white/70 text-[9px] placeholder:text-white/20 focus:outline-none focus:border-violet-500/40" />
+                                <button onClick={() => setEditing(null)} className="text-[8px] text-white/40 hover:text-white/80">done</button>
                               </div>
-                            ) : past ? (
-                              <span className="text-white/15">—</span>
                             ) : (
-                              <span className="text-white/10">·</span>
+                              <button onClick={() => setEditing({ id: c.id, week: h.week })}
+                                title={`Set / edit Week ${h.week} rating + note`}
+                                className="w-full rounded px-1 py-0.5 hover:bg-white/5 transition-colors cursor-pointer">
+                                {hasData ? (
+                                  <div className="flex flex-col items-center gap-0.5">
+                                    <span className="text-[10px]">{ratingEmoji ?? "✓"}</span>
+                                    {h.notes && (
+                                      <span className={`text-[8px] leading-tight text-left w-full ${mColors?.text ?? "text-white/40"}`}>{h.notes}</span>
+                                    )}
+                                  </div>
+                                ) : past ? (
+                                  <span className="text-white/15 hover:text-white/50">—</span>
+                                ) : (
+                                  <span className="text-white/10 hover:text-white/40">·</span>
+                                )}
+                              </button>
                             )}
                           </td>
                         );

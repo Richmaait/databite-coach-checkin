@@ -4125,8 +4125,19 @@ const milestonesRouter = t.router({
       } catch { /* roster fetch errors don't break milestones */ }
     }));
 
+    // General (non-milestone) rating + note per client — the shared clientRatings
+    // store that also powers the Client Progress page. Lets a rating/note be set
+    // for a client at ANY time, independent of milestone weeks (e.g. past wk 12).
+    const allCoachRows = await db.select().from(coaches);
+    const coachIdByName = new Map(allCoachRows.map(co => [co.name, co.id] as const));
+    const allRatingRows = await db.select().from(clientRatings);
+    const generalByKey = new Map<string, { rating: string | null; notes: string | null }>();
+    for (const r of allRatingRows) generalByKey.set(`${r.coachId}|${r.clientName}`, { rating: r.rating, notes: r.notes });
+
     const todayMon = getMonday(getTodayMelbourne());
     return clients.map(c => {
+      const generalCoachId = c.coach ? coachIdByName.get(c.coach) : undefined;
+      const general = generalCoachId != null ? generalByKey.get(`${generalCoachId}|${c.clientName}`) : undefined;
       let weekNumber: number | null = null;
       let currentMilestone: typeof MILESTONES[number] | null = null;
       if (c.sentToClient) {
@@ -4163,6 +4174,8 @@ const milestonesRouter = t.router({
         currentMilestone,
         nextMilestone,
         milestoneHistory,
+        generalRating: general?.rating ?? null,
+        generalNotes: general?.notes ?? null,
       };
     }).filter(c => {
       if (c.weekNumber == null || c.weekNumber <= 0 || c.weekNumber > 17) return false;
@@ -4340,6 +4353,50 @@ const milestonesRouter = t.router({
             });
           }
         }
+      }
+      return { ok: true };
+    }),
+
+  // "Current" rating — NOT tied to a milestone week. Writes straight to the
+  // shared clientRatings store (same one the Client Progress page uses), so a
+  // client can be rated at any time (e.g. once they're past wk 12).
+  setGeneralRating: adminProcedure
+    .input(z.object({ id: z.number(), rating: z.enum(["green", "yellow", "red", "blue"]) }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      const [client] = await db.select().from(onboardingClients).where(eq(onboardingClients.id, input.id)).limit(1);
+      if (!client || !client.coach) return { ok: false };
+      const [coach] = await db.select().from(coaches).where(eq(coaches.name, client.coach)).limit(1);
+      if (!coach) return { ok: false };
+      const existing = await db.select().from(clientRatings).where(
+        and(eq(clientRatings.coachId, coach.id), eq(clientRatings.clientName, client.clientName)),
+      ).limit(1);
+      if (existing.length > 0) {
+        await db.update(clientRatings).set({ rating: input.rating }).where(eq(clientRatings.id, existing[0].id));
+      } else {
+        await db.insert(clientRatings).values({ coachId: coach.id, clientName: client.clientName, rating: input.rating, notes: null });
+      }
+      return { ok: true };
+    }),
+
+  // "Current" note — not tied to a milestone week. clientRatings.rating is
+  // required, so a note set before any colour defaults to the neutral "blue".
+  setGeneralNote: adminProcedure
+    .input(z.object({ id: z.number(), notes: z.string() }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      const cleanNotes = input.notes || null;
+      const [client] = await db.select().from(onboardingClients).where(eq(onboardingClients.id, input.id)).limit(1);
+      if (!client || !client.coach) return { ok: false };
+      const [coach] = await db.select().from(coaches).where(eq(coaches.name, client.coach)).limit(1);
+      if (!coach) return { ok: false };
+      const existing = await db.select().from(clientRatings).where(
+        and(eq(clientRatings.coachId, coach.id), eq(clientRatings.clientName, client.clientName)),
+      ).limit(1);
+      if (existing.length > 0) {
+        await db.update(clientRatings).set({ notes: cleanNotes }).where(eq(clientRatings.id, existing[0].id));
+      } else {
+        await db.insert(clientRatings).values({ coachId: coach.id, clientName: client.clientName, rating: "blue", notes: cleanNotes });
       }
       return { ok: true };
     }),

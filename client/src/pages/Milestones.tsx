@@ -47,6 +47,16 @@ export default function Milestones() {
     onSuccess: () => refetch(),
     onError: (e) => toast.error(e.message),
   });
+  // "Current" column — a rating/note NOT tied to a milestone week (e.g. a client
+  // past wk 12, or any ad-hoc check-in). Writes to the shared clientRatings store.
+  const generalRatingMutation = trpc.milestones.setGeneralRating.useMutation({
+    onSuccess: () => refetch(),
+    onError: (e) => toast.error(e.message),
+  });
+  const generalNoteMutation = trpc.milestones.setGeneralNote.useMutation({
+    onSuccess: () => refetch(),
+    onError: (e) => toast.error(e.message),
+  });
   const syncSweepMutation = trpc.milestones.syncFromSweep.useMutation({
     onSuccess: (res) => {
       refetch();
@@ -220,6 +230,7 @@ export default function Milestones() {
                   <th className="text-center px-2 py-2 font-medium text-pink-300/60">Wk 4</th>
                   <th className="text-center px-2 py-2 font-medium text-violet-300/60">Wk 8</th>
                   <th className="text-center px-2 py-2 font-medium text-cyan-300/60">Wk 12</th>
+                  <th className="text-center px-2 py-2 font-medium text-emerald-300/70 border-l border-white/[0.08]">Current</th>
                   <th className="text-left px-2 py-2 font-medium text-white/50">Next</th>
                 </tr>
               </thead>
@@ -314,6 +325,54 @@ export default function Milestones() {
                           </td>
                         );
                       })}
+                      {/* Current / general rating + note — not tied to any milestone week */}
+                      {(() => {
+                        const gRating = (c as any).generalRating as string | null;
+                        const gNotes = (c as any).generalNotes as string | null;
+                        const gEmoji = gRating === "green" ? "🟢" : gRating === "yellow" ? "🟡" : gRating === "red" ? "🔴" : gRating === "blue" ? "🔵" : null;
+                        const gHasData = !!(gRating || gNotes);
+                        const gEditing = editing?.id === c.id && editing?.week === 0;
+                        return (
+                          <td className="text-center px-1 py-2 max-w-[140px] align-top border-l border-white/[0.06]">
+                            {gEditing ? (
+                              <div className="flex flex-col items-center gap-1">
+                                <div className="flex rounded-lg overflow-hidden border border-white/10">
+                                  {([["blue", "🔵"], ["green", "🟢"], ["yellow", "🟡"], ["red", "🔴"]] as const).map(([val, emoji]) => (
+                                    <button key={val}
+                                      onClick={() => generalRatingMutation.mutate({ id: c.id, rating: val })}
+                                      disabled={generalRatingMutation.isPending}
+                                      className={`px-1 py-0.5 text-[10px] transition-colors ${gRating === val
+                                        ? val === "green" ? "bg-emerald-500/30" : val === "yellow" ? "bg-amber-500/30" : val === "red" ? "bg-red-500/30" : "bg-sky-500/30"
+                                        : "bg-white/5 hover:bg-white/10 opacity-50 hover:opacity-100"}`}>
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                                <input type="text" defaultValue={gNotes || ""} placeholder="Note…" autoFocus
+                                  onBlur={e => { const v = e.target.value; if (v !== (gNotes || "")) generalNoteMutation.mutate({ id: c.id, notes: v }); }}
+                                  onKeyDown={e => { if (e.key === "Enter") { (e.target as HTMLInputElement).blur(); setEditing(null); } if (e.key === "Escape") setEditing(null); }}
+                                  className="w-[130px] px-1 py-0.5 rounded bg-white/5 border border-white/10 text-white/70 text-[9px] placeholder:text-white/20 focus:outline-none focus:border-violet-500/40" />
+                                <button onClick={() => setEditing(null)} className="text-[8px] text-white/40 hover:text-white/80">done</button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setEditing({ id: c.id, week: 0 })}
+                                title="Set / edit a current rating + note (any time — not tied to a milestone week)"
+                                className="w-full rounded px-1 py-0.5 hover:bg-white/5 transition-colors cursor-pointer">
+                                {gHasData ? (
+                                  <div className="flex flex-col items-center gap-0.5">
+                                    <span className="text-[10px]">{gEmoji ?? "✓"}</span>
+                                    {gNotes && (
+                                      <span className="text-[8px] leading-tight text-left w-full text-white/50">{gNotes}</span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-white/15 hover:text-white/50">＋</span>
+                                )}
+                              </button>
+                            )}
+                          </td>
+                        );
+                      })()}
                       <td className="px-2 py-2 text-white/40">
                         {c.nextMilestone ? `Wk ${c.nextMilestone.week}` : "—"}
                       </td>

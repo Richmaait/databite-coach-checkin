@@ -57,6 +57,10 @@ export default function Milestones() {
     onSuccess: () => refetch(),
     onError: (e) => toast.error(e.message),
   });
+  const generalClearMutation = trpc.milestones.clearGeneral.useMutation({
+    onSuccess: () => refetch(),
+    onError: (e) => toast.error(e.message),
+  });
   const syncSweepMutation = trpc.milestones.syncFromSweep.useMutation({
     onSuccess: (res) => {
       refetch();
@@ -352,7 +356,14 @@ export default function Milestones() {
                                   onBlur={e => { const v = e.target.value; if (v !== (gNotes || "")) generalNoteMutation.mutate({ id: c.id, notes: v }); }}
                                   onKeyDown={e => { if (e.key === "Enter") { (e.target as HTMLInputElement).blur(); setEditing(null); } if (e.key === "Escape") setEditing(null); }}
                                   className="w-[130px] px-1 py-0.5 rounded bg-white/5 border border-white/10 text-white/70 text-[9px] placeholder:text-white/20 focus:outline-none focus:border-violet-500/40" />
-                                <button onClick={() => setEditing(null)} className="text-[8px] text-white/40 hover:text-white/80">done</button>
+                                <div className="flex items-center gap-2">
+                                  {gHasData && (
+                                    <button onClick={() => { generalClearMutation.mutate({ id: c.id }); setEditing(null); }}
+                                      disabled={generalClearMutation.isPending}
+                                      className="text-[8px] text-red-300/70 hover:text-red-300">clear</button>
+                                  )}
+                                  <button onClick={() => setEditing(null)} className="text-[8px] text-white/40 hover:text-white/80">done</button>
+                                </div>
                               </div>
                             ) : (
                               <button onClick={() => setEditing({ id: c.id, week: 0 })}

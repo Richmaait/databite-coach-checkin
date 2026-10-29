@@ -4396,6 +4396,17 @@ const milestonesRouter = t.router({
       return { ok: true };
     }),
 
+  // Clear the whole "Current" entry (rating + note + week) for a client.
+  clearGeneral: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      await db.update(onboardingClients)
+        .set({ currentRating: null, currentNote: null, currentWeek: null } as any)
+        .where(eq(onboardingClients.id, input.id));
+      return { ok: true };
+    }),
+
   /**
    * Pull the Client Progress "sweep" (clientRatings: 🟢🟡🔴 + notes set per
    * client) INTO the milestone fields. For every ACTIVE client currently AT a

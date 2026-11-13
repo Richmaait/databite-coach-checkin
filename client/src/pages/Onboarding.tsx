@@ -456,7 +456,7 @@ function OnboardingRow({ client, coaches, idx, isPending, onUpdate, onAlertVideo
             : "bg-transparent border-gray-200 text-gray-400"}`}>
           <option value="">—</option>
           <option value="Suzie">Suzie</option>
-          <option value="Alix">Alix</option>
+          {client.salesPerson === "Alix" && <option value="Alix">Alix</option>}
         </select>
       </td>
       {/* Notes */}
@@ -585,7 +585,7 @@ function AddClientForm({ coaches, onSubmit, onCancel, isPending }: {
   const [name, setName] = useState("");
   const [datePaid, setDatePaid] = useState("");
   const [dateDue, setDateDue] = useState("");
-  const [salesPerson, setSalesPerson] = useState("");
+  const [salesPerson, setSalesPerson] = useState("Suzie");
   const [paymentType, setPaymentType] = useState("subscription");
   const [coach, setCoach] = useState("");
 
@@ -604,7 +604,7 @@ function AddClientForm({ coaches, onSubmit, onCancel, isPending }: {
       </label>
       <label className="flex flex-col gap-1"><span className={labelCls}>Sale By</span>
         <select value={salesPerson} onChange={e => setSalesPerson(e.target.value)} className={inputCls}>
-          <option value="">—</option><option value="Suzie">Suzie</option><option value="Alix">Alix</option>
+          <option value="">—</option><option value="Suzie">Suzie</option>
         </select>
       </label>
       <label className="flex flex-col gap-1"><span className={labelCls}>Payment Type</span>

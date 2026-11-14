@@ -142,6 +142,7 @@ export default function ClientCheckins() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
   const isAdmin = user?.role === "admin";
+  const isRich = user?.email?.toLowerCase() === "rich@databite.com.au";
 
   // ── Week navigation ────────────────────────────────────────────────────────
   const [weekStart, setWeekStart] = useState(() => getMonday());
@@ -463,6 +464,57 @@ export default function ClientCheckins() {
     onError: (e) => toast.error(e.message),
   });
 
+  const [bulkCompleteDialog, setBulkCompleteDialog] = useState(false);
+  const [bulkCompleting, setBulkCompleting] = useState(false);
+
+  // Submitted-but-not-completed pairs on the currently viewed roster (excused skipped).
+  const submittedPending = useMemo(() => {
+    const out: Array<{ clientName: string; day: DayKey }> = [];
+    if (!roster) return out;
+    for (const day of DAYS) {
+      for (const name of (roster[day] ?? [])) {
+        const key = `${name}|${day}`;
+        if (!localSubmitted.has(key)) continue;
+        if (localCompleted.has(key)) continue;
+        if (localExcused.has(key)) continue;
+        out.push({ clientName: name, day });
+      }
+    }
+    return out;
+  }, [roster, localSubmitted, localCompleted, localExcused]);
+
+  async function handleBulkMarkSubmittedComplete() {
+    if (!effectiveCoachId || !effectiveCoachName) return;
+    if (submittedPending.length === 0) {
+      setBulkCompleteDialog(false);
+      return;
+    }
+    setBulkCompleting(true);
+    let ok = 0;
+    let fail = 0;
+    for (const { clientName, day } of submittedPending) {
+      try {
+        await markCompleteMutation.mutateAsync({
+          coachId: effectiveCoachId,
+          coachName: effectiveCoachName,
+          clientName,
+          dayOfWeek: day,
+          weekStart,
+        });
+        ok++;
+      } catch {
+        fail++;
+      }
+    }
+    setBulkCompleting(false);
+    setBulkCompleteDialog(false);
+    if (fail === 0) {
+      toast.success(`Marked ${ok} submitted check-in${ok === 1 ? "" : "s"} complete`);
+    } else {
+      toast.error(`Marked ${ok} complete, ${fail} failed`);
+    }
+  }
+
   const moveClientDayMutation = trpc.performance.moveClientDay.useMutation({
     onSuccess: (_data, variables) => {
       refetchRoster();
@@ -740,6 +792,20 @@ export default function ClientCheckins() {
                     <div className="text-2xl font-bold text-white/90 -mt-0.5">{coachStats.excused}</div>
                   </div>
                 </div>
+              )}
+              {isRich && canEdit && (
+                <button
+                  onClick={() => setBulkCompleteDialog(true)}
+                  disabled={submittedPending.length === 0 || bulkCompleting}
+                  className="ml-auto glass rounded-2xl px-5 py-4 flex items-center gap-2.5 text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Manager: mark every client who submitted but hasn't been completed yet"
+                >
+                  <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                  Mark all submitted complete
+                  {submittedPending.length > 0 && (
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">{submittedPending.length}</span>
+                  )}
+                </button>
               )}
             </div>
           )}
@@ -1477,6 +1543,44 @@ export default function ClientCheckins() {
               {markCompleteMutation.isPending
                 ? "Saving..."
                 : "Mark Complete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Bulk Mark Submitted Complete Dialog (Rich only) ─────────────────── */}
+      <Dialog
+        open={bulkCompleteDialog}
+        onOpenChange={(open) => !bulkCompleting && !open && setBulkCompleteDialog(false)}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Mark all submitted complete?</DialogTitle>
+            <DialogDescription>
+              {submittedPending.length === 0 ? (
+                <>No submitted check-ins are waiting to be completed on this roster.</>
+              ) : (
+                <>
+                  This will mark <strong>{submittedPending.length}</strong> submitted check-in
+                  {submittedPending.length === 1 ? "" : "s"} as completed for
+                  {" "}<strong>{effectiveCoachName}</strong> this week.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setBulkCompleteDialog(false)}
+              disabled={bulkCompleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBulkMarkSubmittedComplete}
+              disabled={bulkCompleting || submittedPending.length === 0}
+            >
+              {bulkCompleting ? "Marking..." : `Mark ${submittedPending.length} complete`}
             </Button>
           </DialogFooter>
         </DialogContent>
